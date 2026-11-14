@@ -15,7 +15,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 
 ## Struktūra
 - `index.html` – sākumlapa ("Labdien!", spēļu kartītes). Jaunu spēli pievieno `GAMES` sarakstā.
-- `grafiti/` – Graffiti RPG (UI angliski; plānota valodas izvēle LV/EN iestatījumos).
+- `grafiti/` – Graffiti RPG. Kods raksta tekstus angliski; valodas slānis (skripts `<head>` sākumā, `PHRASES`/`WORDS`) pārtulko visu redzamo latviski. Noklusējums – latviešu; iestatījumos LV/EN slēdzis (localStorage `twLang`). Jaunam tekstam pievieno tulkojumu `PHRASES` sarakstā.
 
 ## Firebase (projekts `tailers-world`, bezmaksas Spark plāns)
 - Konti: lietotājvārds + parole (iekšēji `vards@players.tailersworld.lv`, īstus e-pastus nevācam). Bez ielogošanās spēles aizved uz sākumlapu.
@@ -31,4 +31,3 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 ## Plānots
 - Sasniegumi (achievements).
 - "Atbalsti mani" saite sākumlapā.
-- Valodas izvēle (latviešu / angļu) iestatījumos.

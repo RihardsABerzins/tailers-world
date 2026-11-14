@@ -2,6 +2,129 @@
 <html lang="lv">
 <head>
 <meta charset="utf-8">
+<script>
+// Valodas slānis: spēles kods raksta angliski, šis fails pārtulko visu redzamo tekstu latviski.
+// Valoda tiek glabāta localStorage ('twLang'); noklusējums – latviešu.
+(function(){
+  let lang='lv'; try{ lang=localStorage.getItem('twLang')||'lv'; }catch(e){}
+  window.TW_LANG=lang;
+  window.setLang=l=>{ try{ localStorage.setItem('twLang',l); }catch(e){} location.reload(); };
+  if(lang!=='lv'){ window.tr=s=>s; return; }
+
+  // Garākās frāzes vispirms. [angliski, latviski]
+  const PHRASES=[
+    // sākuma padoms un garie paziņojumi
+    ['Run along the street with','Skrien pa ielu ar'],['at a brick wall and paint.','pie ķieģeļu sienas un zīmē.'],['The Paint Depot (pink sign) sells colors and vehicles.','Krāsu depo (rozā izkārtne) – krāsas un transports.'],
+    ['People with 📱 can report you to the police – hide with','Cilvēki ar 📱 var paziņot policijai – slēpies ar'],
+    ['The sun is up –','Uzlēca saule –'],['police are more active by day','dienā policija aktīvāka'],['(more officers), and people see farther.','(vairāk policistu), un cilvēki redz tālāk.'],
+    ['Night falls –','Iestājās nakts –'],['police are less active at night',"naktī policija mazāk aktīva"],[', it is darker and people see less far.',', ir tumšāks, un cilvēki redz tuvāk.'],
+    ['Acceptable work – police not interested.','Pieņemams darbs – policija neinteresējas.'],
+    ['You were taken back to the start of the street.','Tevi aizveda līdz ielas sākumam.'],['of your money)','no naudas)'],
+    ['Nowhere to hide here – look for a dumpster by a wall or crates by a shop (green arrow).','Te nav kur paslēpties – meklē konteineru pie sienas vai kastes pie veikala (zaļā bulta).'],
+    ['The officer saw where you hid!','Policists redzēja, kur tu paslēpies!'],['Hidden! Wait for them to leave.','Paslēpies! Gaidi, kamēr aizies.'],
+    ['You left the hiding spot.','Iznāci no slēptuves.'],
+    ['You are starving! You move slower and cannot paint – eat at a café.','Tu esi izsalcis! Kusties lēnāk un nevari zīmēt – paēd kafejnīcā.'],
+    ['You are getting hungry – eat at a café (orange dot on the map).','Sāc kļūt izsalcis – paēd kafejnīcā (oranžais punkts kartē).'],
+    ['Too hungry to paint – eat at a café first!','Pārāk izsalcis, lai zīmētu – vispirms paēd kafejnīcā!'],
+    ['You are not hungry yet.','Tu vēl neesi izsalcis.'],['Yum! You are full for the day.','Mmm! Tu esi paēdis visai dienai.'],
+    ['A meal costs','Maltīte maksā'],['– paint a wall to earn money.','– nokrāso sienu, lai nopelnītu.'],
+    ['Someone is calling the police!','Kāds zvana policijai!'],
+    ['is searching for you! Get out of the spotlight.','tevi meklē! Tiec prom no prožektora.'],['The helicopter found your hiding spot!','Helikopters atrada tavu slēptuvi!'],
+    ['The police drove away.','Policija aizbrauca.'],
+    ['City limit – take the metro to travel to another city.','Pilsētas robeža – uz citu pilsētu brauc ar metro.'],
+    ['you may paint here, but drawings are harder and the police are stricter','drīksti zīmēt, bet zīmējumi ir grūtāki un policija stingrāka'],
+    ['painting here needs level','zīmēšanai vajag līmeni'],
+    ['Paint easier walls and earn XP.','Zīmē vieglākas sienas un krāj XP.'],
+    ['Paint still drying – come back later or find another wall!','Krāsa vēl žūst – nāc vēlāk vai meklē citu sienu!'],
+    ['Paint still drying – try another bonus wall.','Krāsa vēl žūst – pamēģini citu bonusa sienu.'],
+    ['The shoe shop opens soon – buy faster running shoes there!','Apavu veikals drīz atvērsies – tur varēs nopirkt ātrākus skriešanas apavus!'],
+    ['Smoke bomb! The police lost you.','Dūmu bumba! Policija tevi pazaudēja.'],['Energy! Run 40% faster for 40 seconds.','Enerģija! Skrien 40% ātrāk 40 sekundes.'],
+    ['Double XP for 5 minutes!','Dubultais XP 5 minūtes!'],['Mask! Witnesses will not call the police for 3 minutes.','Maska! Liecinieki 3 minūtes nezvanīs policijai.'],
+    ['The train stands in the middle of the station – walk to it and press E.','Vilciens stāv stacijas vidū – aizej līdz tam un spied E.'],
+    ['Teleporting is metro only! Nearest station:','Teleportēties var tikai ar metro! Tuvākā stacija:'],['(blue arrow).','(zilā bulta).'],
+    ['The police are after you – teleport unavailable!','Policija tevi ķer – teleports nav pieejams!'],
+    ['The police are looking for you – metro unavailable!','Policija tevi meklē – metro nav pieejams!'],
+    ['Each city has 10 levels. New cities open as you level up. Travel instantly, no waiting.','Katrā pilsētā ir 10 līmeņi. Jaunas pilsētas atveras, kad pieaug tavs līmenis. Brauc uzreiz, nav jāgaida.'],
+    ['You found a hidden lootbox!','Tu atradi paslēptu lootbox!'],['Tip: lootboxes are rare. Some are hidden in dumpsters and crates.','Padoms: lootboxi ir reti. Daži ir paslēpti konteineros un kastēs.'],
+    ['No lootbox this time','Šoreiz lootbox nav'],['– but you earned','– bet tu nopelnīji'],
+    ['Drag along the faint outline. The more accurate and clean, the more money. Pricier colors give a bonus.','Velc pa blāvo kontūru. Jo precīzāk un tīrāk, jo vairāk naudas. Dārgākas krāsas dod bonusu.'],
+    ['more accurate = better box!','precīzāk = labāka kaste!'],['Draw the outline!','Uzzīmē kontūru!'],
+    ['A D – run · W – jump · E – paint / metro / shop · ↓ S – hide · T – metro · Z X C V – items · M – music · F – fullscreen','A D – skriet · W – lēkt · E – zīmēt / metro / veikals · ↓ S – slēpties · T – metro · Z X C V – priekšmeti · M – mūzika · F – pilnekrāns'],
+    ['A D – run · W – jump','A D – skriet · W – lēkt'],['E – action · ↓ – hide','E – darbība · ↓ – slēpties'],['T – metro · Z X C V – items','T – metro · Z X C V – priekšmeti'],['Esc – pause / settings','Esc – pauze / iestatījumi'],
+    // policija un aizdomas
+    ['Police on the way!','Policija ceļā!'],['Hide (↓ / S) or run!','Slēpies (↓ / S) vai bēdz!'],['Being chased!','Dzenas pakaļ!'],['Searching for you…','Meklē tevi…'],['Helicopter overhead!','Helikopters virs tevis!'],
+    ['Wanted level','Meklēšanas līmenis'],['the whole city is after you!','visa pilsēta tevi meklē!'],['officers and a helicopter!','policisti un helikopters!'],['several officers on your tail','vairāki policisti dzenas pakaļ'],
+    ['officers closing in','policisti tuvojas'],['one officer','viens policists'],['witness calls the police','liecinieks zvana policijai'],['very bad drawing','ļoti slikts zīmējums'],['too many in one area','par daudz vienā apkaimē'],
+    ['same wall again','tā pati siena atkārtoti'],['too fast','pārāk ātri'],['stricter','stingrāk'],['Suspicion','Aizdomas'],['Suspicious','Aizdomīgi'],['Leaving…','Aiziet…'],['Busted!','Pieķerts!'],['Fine:','Sods:'],
+    ['Police: more','Policija: vairāk'],['Police: fewer','Policija: mazāk'],['👮 POLICE 🚨','👮 POLICIJA 🚨'],
+    // uzvednes
+    ['↓ / S – leave hiding spot','↓ / S – iznākt no slēptuves'],['↓ / S – hide','↓ / S – paslēpties'],['E – enter the paint shop and car dealer','E – ieiet krāsu veikalā un auto salonā'],['E – fast shoes (coming soon!)','E – ātrie apavi (drīzumā!)'],
+    ['E – enter the metro','E – ieiet metro'],['E – train: choose a district (travel instantly)','E – vilciens: izvēlies pilsētu (brauc uzreiz)'],['E – to the street','E – uz ielu'],['E – bonus wall','E – bonusa siena'],
+    ['E – eat','E – paēst'],['E – paint','E – zīmēt'],['Paint still drying…','Krāsa vēl žūst…'],['Paint drying…','Krāsa žūst…'],['up to €','līdz €'],['you have','tev ir'],['needs level','vajag līmeni'],
+    // metro un ceļošana
+    ['Train – choose a city','Vilciens – izvēlies pilsētu'],['Go straight to level','Brauc uzreiz uz līmeni'],['To the street','Uz ielu'],['CENTRAL STATION','CENTRĀLĀ STACIJA'],['STATION · ','STACIJA · '],
+    ['▼ METRO ENTRANCE ▼','▼ IEEJA METRO ▼'],['▼ TRAIN · E – choose a district ▼','▼ VILCIENS · E – izvēlies pilsētu ▼'],['↑ TO STREET','↑ UZ IELU'],['CITY LIMIT','PILSĒTAS ROBEŽA'],['🚇 take the metro','🚇 brauc ar metro'],
+    ['BONUS · shape','BONUSS · forma'],['Bonus task (metro)','Bonusa uzdevums (metro)'],['drying','žūst'],
+    // zīmēšana, rezultāts, līmeņi
+    ['Masterpiece!','Šedevrs!'],['Scribble','Škrebelis'],['Accuracy','Precizitāte'],['coverage','aptvērums'],['cleanliness','tīrība'],['Earned:','Nopelnīts:'],['color bonus','krāsas bonuss'],
+    ['New level','Jauns līmenis'],['unlocked','atvērta'],['Done (Enter)','Gatavs (Enter)'],['Undo (Z)','Atcelt (Z)'],['Clear (C)','Notīrīt (C)'],['Leave (Esc)','Aiziet (Esc)'],
+    // lootbox un priekšmeti
+    ['Congratulations!','Apsveicam!'],['Open box','Atvērt kasti'],['opened!','atvērta!'],['Awesome!','Lieliski!'],['New color:','Jauna krāsa:'],
+    ['Bronze box','Bronzas kaste'],['Silver box','Sudraba kaste'],['Gold box','Zelta kaste'],['Diamond box','Dimanta kaste'],
+    ['Smoke bomb','Dūmu bumba'],['police lose you, suspicion −35','policija tevi pazaudē, aizdomas −35'],['Energy drink','Enerģijas dzēriens'],['+40% speed for 40 s','+40% ātrums 40 s'],
+    ['Double XP','Dubultais XP'],['XP ×2 for 5 min','XP ×2 5 min'],['witnesses will not call for 3 min','liecinieki nezvana 3 min'],
+    // veikals un HUD
+    ['Paint Depot','Krāsu depo'],['Colors','Krāsas'],['Vehicles','Transports'],['✔ selected','✔ izvēlēta'],['✔ in use','✔ lieto'],['Close (E / Esc)','Aizvērt (E / Esc)'],
+    ['Color:','Krāsa:'],['Vehicle:','Transports:'],['Walls painted:','Nokrāsotas sienas:'],['Food','Ēdiens'],['(max)','(maks.)'],
+    // iestatījumi un atskaņotājs
+    ['⏸ Pause · Settings','⏸ Pauze · Iestatījumi'],['Game volume (master)','Spēles skaļums (kopējais)'],['Music volume (M – mute)','Mūzikas skaļums (M – izslēgt)'],['Music volume','Mūzikas skaļums'],
+    ['Effects volume','Efektu skaļums'],['Brightness','Gaišums'],['▶ Resume (Esc)','▶ Turpināt (Esc)'],['Fullscreen','Pilnekrāns'],['Settings (Esc)','Iestatījumi (Esc)'],
+    ['🔇 Mute','🔇 Izslēgt'],['🔊 Unmute','🔊 Ieslēgt'],['PL song','PL dziesma'],['Papīra Lidmašīnas song now (R)','Papīra Lidmašīnu dziesma tagad (R)'],['Quieter (-)','Klusāk (-)'],['Louder (+)','Skaļāk (+)'],
+    ['Sound effects (on / off)','Skaņas efekti (iesl. / izsl.)'],['Play / pause','Atskaņot / pauze'],['Previous','Iepriekšējā'],['unavailable, try ⏭','nav pieejams, spied ⏭'],
+    // dienas laiks
+    ['Morning','Rīts'],['Evening','Vakars'],['Night','Nakts'],
+    // vietas un nosaukumi (pilsētas – pirms vārdiem)
+    ['Old Town','Vecpilsēta'],['Neon Heights','Neona kalni'],['Parkside','Parka mala'],['Market Quarter','Tirgus kvartāls'],['Art Block','Mākslas kvartāls'],['Skyline','Debesskrāpji'],
+    ['Riverside','Upmala'],['Uptown','Augšpilsēta'],['Crown Hill','Kroņkalns'],
+    ['PAINT DEPOT','KRĀSU DEPO'],['CAFÉ','KAFEJNĪCA'],['PIZZERIA','PICĒRIJA'],['BIKES','VELO'],['SHOES','APAVI'],['ARCADE','SPĒĻU ZĀLE'],['FLOWERS','ZIEDI'],['BARBER','FRIZIERIS'],
+    ['On foot','Kājām'],['Skateboard','Skrituļdēlis'],['Scooter','Skūteris'],['Hatchback','Hečbeks'],['Sports car','Sporta auto'],['Supercar','Superauto'],
+    ['Hiding spot','Slēptuve'],['hiding spot','slēptuve'],['Wall (lvl','Siena (līm.'],['Wall –','Siena –'],
+  ];
+  // Atsevišķi vārdi (tikai veseli vārdi)
+  const WORDS=[
+    ['Officer','Policists'],['Police','Policija'],['Train','Vilciens'],['Exit','Izeja'],['Hidden','Paslēpies'],['Calm','Mierīgi'],['Day','Diena'],['Good','Labi'],['Poor','Švaki'],
+    ['City','Pilsēta'],['Level','Līmenis'],['level','līmenis'],['levels','līmeņi'],['district','rajons'],['shape','forma'],['Wall','Siena'],['Walls','Sienas'],['hiding','paslēpies'],
+    ['Select','Izvēlēties'],['Use','Lietot'],['speed','ātrums'],['bonus','bonuss'],['Go','Braukt'],['Close','Aizvērt'],['Music','Mūzika'],['Next','Nākamā'],
+    ['Black','Melna'],['Red','Sarkana'],['Blue','Zila'],['Green','Zaļa'],['Yellow','Dzeltena'],['Pink','Rozā'],['Orange','Oranža'],['Purple','Violeta'],['Gold','Zelta'],['Neon','Neona'],
+    ['Sun','Saules'],['Moon','Mēness'],['Star','Zvaigžņu'],['Apple','Ābeļu'],['Birch','Bērzu'],['Oak','Ozolu'],['Linden','Liepu'],['Rose','Rožu'],['Wind','Vēja'],['Water','Ūdens'],['Sand','Smilšu'],
+    ['Street','iela'],['Boulevard','bulvāris'],['Quarter','kvartāls'],['Square','laukums'],['Park','parks'],['Embankment','krastmala'],['Harbor','osta'],['Bridge','tilts'],['Garden','dārzs'],
+    ['STREET','IELA'],['BOULEVARD','BULVĀRIS'],['QUARTER','KVARTĀLS'],['SQUARE','LAUKUMS'],['PARK','PARKS'],['EMBANKMENT','KRASTMALA'],['HARBOR','OSTA'],['BRIDGE','TILTS'],['GARDEN','DĀRZS'],
+    ['SUN','SAULES'],['MOON','MĒNESS'],['STAR','ZVAIGŽŅU'],['APPLE','ĀBEĻU'],['BIRCH','BĒRZU'],['OAK','OZOLU'],['LINDEN','LIEPU'],['ROSE','ROŽU'],['WIND','VĒJA'],['WATER','ŪDENS'],['SAND','SMILŠU'],
+    ['Press','Spied'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
+  ];
+  const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const RULES=[...PHRASES.sort((a,b)=>b[0].length-a[0].length).map(([e,l])=>[new RegExp(esc(e),'g'),l]),
+               ...WORDS.map(([e,l])=>[new RegExp('(^|[^A-Za-zĀ-ž])'+esc(e)+'(?=$|[^A-Za-zĀ-ž])','g'),'$1'+l])];
+  const cache=new Map();
+  const tr=s=>{ if(typeof s!=='string'||!/[A-Za-z]/.test(s)) return s; let r=cache.get(s); if(r!==undefined) return r;
+    r=s; for(const [re,l] of RULES) r=r.replace(re,l); if(cache.size>4000) cache.clear(); cache.set(s,r); return r; };
+  window.tr=tr;
+
+  // Uz kanvas zīmētie uzraksti
+  const C=CanvasRenderingContext2D.prototype, f=C.fillText, st=C.strokeText;
+  C.fillText=function(t,...a){ return f.call(this,tr(String(t)),...a); };
+  C.strokeText=function(t,...a){ return st.call(this,tr(String(t)),...a); };
+
+  // HTML teksts un title atribūti
+  const SKIP=new Set(['SCRIPT','STYLE','INPUT','TEXTAREA']);
+  const doNode=n=>{ if(n.nodeType===3){ if(n.parentNode&&SKIP.has(n.parentNode.nodeName)) return; const t=tr(n.nodeValue); if(t!==n.nodeValue) n.nodeValue=t; }
+    else if(n.nodeType===1&&!SKIP.has(n.nodeName)){ if(n.title){ const t=tr(n.title); if(t!==n.title) n.title=t; } for(const c of n.childNodes) doNode(c); } };
+  const start=()=>{ document.documentElement.lang='lv'; doNode(document.body);
+    new MutationObserver(ms=>{ for(const m of ms){ if(m.type==='characterData') doNode(m.target); else if(m.type==='attributes') doNode(m.target); else m.addedNodes.forEach(doNode); } })
+      .observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['title']}); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
 <title>Grafiti RPG</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -159,6 +282,7 @@
   <div class="row"><div class="n">🎵 Music volume</div><input id="pVol2" type="range" min="0" max="100"></div>
   <div class="row"><div class="n">🔔 Effects volume</div><input id="pFxVol" type="range" min="0" max="100"></div>
   <div class="row"><div class="n">☀ Brightness</div><input id="sBright" type="range" min="60" max="160"></div>
+  <div class="row"><div class="n">🌐 Valoda / Language</div><button id="lgLv" class="sec">🇱🇻 LV</button><button id="lgEn" class="sec">🇬🇧 EN</button></div>
   <div class="row"><div class="n">Music</div><button id="pzPrev">⏮</button><button id="pzPlay">⏯</button><button id="pzNext">⏭</button><button id="pzMute" class="sec">🔇 Mute</button></div>
   <div style="margin:12px 0;font-size:13px;color:#aab;line-height:1.7">A D – run · W – jump · E – paint / metro / shop · ↓ S – hide · T – metro · Z X C V – items · M – music · F – fullscreen</div>
   <button id="pzResume">▶ Resume (Esc)</button> <button class="sec" id="pzFs">⛶ Fullscreen</button> <a href="../index.html" class="sec" style="display:inline-block;background:#444;color:#eee;border-radius:8px;padding:8px 16px;font-weight:700;font-size:14px;text-decoration:none">🏠 Tailers World</a>
@@ -455,7 +579,8 @@ document.getElementById('pzPrev').onclick=()=>document.getElementById('pPrev').c
 document.getElementById('pzMute').onclick=()=>{ music.muted=!music.muted; syncPlayer(); syncSettings(); };
 function openPause(){ if(mode!=='world') return; mode='pause'; for(const k in keys) keys[k]=false; promptEl.style.display='none'; syncSettings(); pauseOv.classList.add('on'); if(AC&&AC.state==='running') AC.suspend(); }
 function closePause(){ pauseOv.classList.remove('on'); mode='world'; if(AC&&AC.state==='suspended') AC.resume(); }
-document.getElementById('pzResume').onclick=closePause; document.getElementById('pzFs').onclick=()=>toggleFS(); document.getElementById('setBtn').onclick=openPause;
+document.getElementById('pzResume').onclick=closePause;
+{ const cur=window.TW_LANG||'lv', lv=document.getElementById('lgLv'), en=document.getElementById('lgEn'); (cur==='lv'?lv:en).className=''; lv.onclick=()=>{ if(cur!=='lv') setLang('lv'); }; en.onclick=()=>{ if(cur!=='en') setLang('en'); }; } document.getElementById('pzFs').onclick=()=>toggleFS(); document.getElementById('setBtn').onclick=openPause;
 document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='world') openPause(); });
 applyBrightness(); syncSettings();
 pPlay.onclick=()=>{ audioInit(); if(!music.el) return; music.el.paused?music.el.play().catch(()=>{}):music.el.pause(); };
