@@ -1199,7 +1199,7 @@ function render(){
     if(!wanted){ let b=null,bd=1e9; walls.forEach(w=>{ if(w.city===curCity&&w.cool<=0&&!locked(w)){ const d=Math.abs(w.cx-player.x); if(d>350&&d<bd){bd=d;b=w;} } }); if(b) tg.push({x:b.cx,t:'Wall (lvl '+(b.tier+1)+')',c:TIER_COL[b.tier]}); }
     if(inMetro){ tg.length=0; const tr_=metroObjs.find(o=>o.kind==='mtrain'); tg.push({x:tr_.cx,t:'Train',c:'#5aa8e8'}); tg.push({x:metroObjs[0].cx,t:'Exit',c:'#7cff8a'}); tg.push({x:metroObjs[6].cx,t:'Exit',c:'#7cff8a'}); }
     tg.forEach((t,i)=>{ const sx=SX(t.x); if(sx>70&&sx<W-70) return; const left=sx<=70, ey=H*.3+i*44, m=Math.round(Math.abs(t.x-player.x)/10);
-      ctx.save(); ctx.font='bold 14px system-ui'; const pw=Math.min(196,ctx.measureText(tr(`${t.t} · ${m} m`)).width+54); ctx.fillStyle='#000b'; ctx.beginPath(); ctx.roundRect(left?8:W-8-pw,ey-17,pw,34,17); ctx.fill(); ctx.strokeStyle=t.c; ctx.lineWidth=2; ctx.stroke();
+      ctx.save(); ctx.font='bold 14px system-ui'; const pw=Math.min(196,ctx.measureText(window.tr(`${t.t} · ${m} m`)).width+54); ctx.fillStyle='#000b'; ctx.beginPath(); ctx.roundRect(left?8:W-8-pw,ey-17,pw,34,17); ctx.fill(); ctx.strokeStyle=t.c; ctx.lineWidth=2; ctx.stroke();
       ctx.fillStyle=t.c; ctx.beginPath(); if(left){ ctx.moveTo(18,ey); ctx.lineTo(32,ey-9); ctx.lineTo(32,ey+9); } else { ctx.moveTo(W-18,ey); ctx.lineTo(W-32,ey-9); ctx.lineTo(W-32,ey+9); } ctx.closePath(); ctx.fill();
       ctx.font='bold 14px system-ui'; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText(`${t.t} · ${m} m`,left?42:W-pw+4,ey); ctx.restore(); }); }
   // ielas josla
@@ -1359,7 +1359,7 @@ const BOXES=[{n:'Bronze box',c:'#cd7f32',i:'📦'},{n:'Silver box',c:'#c0c8d4',i
 const buff={energy:0,xp2:0,mask:0};
 const invEl=document.getElementById('inv'); let invShown='';
 function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.items[id]||0),0), anyBuff=Object.values(buff).some(v=>v>0);
-  const s_=(total||anyBuff?`<button class="bag" data-bag="1">🎒 ${total}</button>`:'')+(!invOpen?'':Object.keys(ITEMS).filter(id=>(save.items[id]||0)>0||buff[id]>0||!isTouch).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">${Math.ceil(buff[id])}s</span>`:''; return `<button data-it="${id}" ${n?'':'disabled'} title="${it.n}: ${it.d} (${it.k})">${it.i} ×${n} <small>${it.k}</small>${b}</button>`; }).join('');
+  const s_=(total||anyBuff?`<button class="bag" data-bag="1">🎒 ${total}</button>`:'')+(!invOpen?'':Object.keys(ITEMS).filter(id=>(save.items[id]||0)>0||buff[id]>0||!isTouch).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">${Math.ceil(buff[id])}s</span>`:''; return `<button data-it="${id}" ${n?'':'disabled'} title="${it.n}: ${it.d} (${it.k})">${it.i} ×${n} <small>${it.k}</small>${b}</button>`; }).join(''));
   if(s_!==invShown){ invShown=s_; invEl.innerHTML=s_; invEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(b.dataset.bag){ invOpen=!invOpen; renderInv(); } else useItem(b.dataset.it); }); } }
 let invOpen=!isTouch;
 setInterval(renderInv,400); renderInv();
