@@ -43,27 +43,27 @@
     "roles": {
       ".read": true,
       "$uid": {
-        ".write": "auth != null && root.child('usernames/tailerboi').val() === auth.uid",
+        ".write": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid)",
         ".validate": "newData.val() === 'mod'"
       }
     },
     "kicks": {
-      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      ".read": "auth != null && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || root.child('roles/'+auth.uid).val() === 'mod')",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && $uid !== root.child('usernames/tailerboi').val() && (root.child('usernames/tailerboi').val() === auth.uid || (root.child('roles/'+auth.uid).val() === 'mod' && root.child('roles/'+$uid).val() !== 'mod'))",
+        ".write": "auth != null && $uid !== root.child('usernames/tailerboi').val() && $uid !== root.child('usernames/rihardsgod').val() && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || (root.child('roles/'+auth.uid).val() === 'mod' && root.child('roles/'+$uid).val() !== 'mod'))",
         ".validate": "!newData.exists() || newData.hasChildren(['by','until','t'])"
       }
     },
     "ideas": {
-      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      ".read": "auth != null && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || root.child('roles/'+auth.uid).val() === 'mod')",
       "$id": {
-        ".write": "(auth != null && !data.exists() && newData.child('uid').val() === auth.uid) || (auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod') && !newData.exists())",
+        ".write": "(auth != null && !data.exists() && newData.child('uid').val() === auth.uid) || (auth != null && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || root.child('roles/'+auth.uid).val() === 'mod') && !newData.exists())",
         ".validate": "newData.hasChildren(['uid','name','text','t']) && newData.child('text').isString() && newData.child('text').val().length >= 3 && newData.child('text').val().length <= 500"
       }
     },
     "online": {
-      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      ".read": "auth != null && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || root.child('roles/'+auth.uid).val() === 'mod')",
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "!newData.exists() || newData.hasChildren(['game','t'])"
@@ -121,9 +121,9 @@
       }
     },
     "reports": {
-      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      ".read": "auth != null && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || root.child('roles/'+auth.uid).val() === 'mod')",
       "$id": {
-        ".write": "(auth != null && !data.exists() && newData.child('by').val() === auth.uid) || (auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod') && !newData.exists())",
+        ".write": "(auth != null && !data.exists() && newData.child('by').val() === auth.uid) || (auth != null && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || root.child('roles/'+auth.uid).val() === 'mod') && !newData.exists())",
         ".validate": "newData.hasChildren(['by','about','t'])"
       }
     }

@@ -14,6 +14,6 @@ window.TW_VAPID = "BB1NfDDOWNveuikJ72DotNFfr2arnI5SOhKhUvyprqA5MuhluLHtux75pKYwf
 window.TW_USER_DOMAIN = "players.tailersworld.lv";
 window.twUserEmail = name => name.toLowerCase() + "@" + window.TW_USER_DOMAIN;
 // Admini (lietotājvārdi mazajiem burtiem). Kroni var parādīt tikai īstais vārda īpašnieks – to pārbauda drošības noteikumi.
-window.TW_ADMINS = ["tailerboi"];
+window.TW_ADMINS = ["tailerboi", "rihardsgod"];
 window.twIsAdmin = name => !!name && window.TW_ADMINS.includes(String(name).toLowerCase());
 if (window.firebase && !firebase.apps.length) firebase.initializeApp(window.TW_FIREBASE);

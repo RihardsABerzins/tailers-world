@@ -1,16 +1,17 @@
 // Kopīgās funkcijas visām lapām: lomas (admins / moderatori), iesaukas, tiešsaiste.
 // Lomas nosaka pēc konta (uid), nevis pēc vārda – tāpēc ar iesauku nevar uzdoties par adminu.
 (function(){
-  const TW = window.TW = { adminUid: null, mods: {}, off: 0 };
+  const TW = window.TW = { adminUid: null, admins: {}, mods: {}, off: 0 };
   const db = firebase.database();
   TW.BAD = ['fuck','shit','bitch','dick','sex','porn','nazi','hitler','pimp','pis','dirs','sūd','sud','kak','huj','hui','bljad','blyat','suka','pidar','pedik','idiot','muļķ','mulk'];
   TW.ready = (async () => {
-    try { TW.adminUid = (await db.ref('usernames/tailerboi').get()).val(); } catch (e) {}
+    // Admini: lietotājvārdi no TW_ADMINS (tiem jāsakrīt ar firebase/database.rules.json)
+    await Promise.all((window.TW_ADMINS || ['tailerboi']).map(async n => { try { const u = (await db.ref('usernames/' + n).get()).val(); if (u) { TW.admins[u] = n; TW.adminUid = TW.adminUid || u; } } catch (e) {} }));
     db.ref('roles').on('value', s => { TW.mods = s.val() || {}; document.dispatchEvent(new Event('tw-roles')); }, () => {});
     db.ref('.info/serverTimeOffset').on('value', s => { TW.off = s.val() || 0; });
   })();
   TW.now = () => Date.now() + TW.off;
-  TW.role = uid => !uid ? '' : uid === TW.adminUid ? 'admin' : TW.mods[uid] === 'mod' ? 'mod' : '';
+  TW.role = uid => !uid ? '' : TW.admins[uid] ? 'admin' : TW.mods[uid] === 'mod' ? 'mod' : '';
   TW.isStaff = uid => !!TW.role(uid);
   TW.badge = role => role === 'admin' ? '👑' : role === 'mod' ? '🛡️' : '';
   // Iesauka: burti (arī latviešu), cipari, atstarpe, _ . - ; bez emoji; 2–16 zīmes
