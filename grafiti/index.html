@@ -1512,9 +1512,10 @@ function pickTarget(wx,wy){
   return null; }
 cv.addEventListener('pointerdown',e=>{ if(mode!=='world'||lootOpen) return; audioInit();
   const Zs=cam.zoom, wx=(e.clientX-W/2)/Zs+cam.x, wy=(e.clientY-H/2)/Zs+cam.y, hit=pickTarget(wx,wy);
-  ripples.push({x:e.clientX,y:e.clientY,t:0,c:hit?(hit.act==='hide'?'#69f0ae':'#ffd34d'):'#ffffff'});
-  if(hidden){ if(hit&&hit.act==='hide'&&hit.obj===hideAt){ buzz(15); toggleHide(); } return; }
-  autoT=hit?Object.assign(hit,{arrived:false}):{act:'walk',x:wx,arrived:false}; buzz(8); });
+  if(!hit) return; // staigāšana tikai ar bultiņām – spiediens strādā tikai uz objektiem
+  ripples.push({x:e.clientX,y:e.clientY,t:0,c:hit.act==='hide'?'#69f0ae':'#ffd34d'});
+  if(hidden){ if(hit.act==='hide'&&hit.obj===hideAt){ buzz(15); toggleHide(); } return; }
+  autoT=Object.assign(hit,{arrived:false}); buzz(8); });
 function ctxInfo(){ if(mode!=='world') return null;
   if(hidden) return null;
   const l=nearLot; if(!l) return null;
