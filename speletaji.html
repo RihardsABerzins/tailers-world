@@ -33,6 +33,8 @@
   .lvl{font-weight:900;font-size:18px;color:var(--yellow);text-align:right}
   .empty{color:var(--muted);text-align:center;padding:30px}
   @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px #ffcc3399);animation:shine 2.6s linear infinite;font-weight:900}
+  @keyframes shine{to{background-position:-250% 0}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
@@ -55,7 +57,7 @@ async function load(){
     const rows=[]; snap.forEach(c=>{ rows.push(Object.assign({uid:c.key},c.val())); });
     rows.sort((a,b)=>(b.level-a.level)||((b.xp||0)-(a.xp||0)));
     $('list').innerHTML=rows.length?rows.map((r,i)=>`<div class="row${r.uid===myUid?' me':''}" style="animation-delay:${i*.04}s"><div class="rank${i<3?' r'+(i+1):''}">${i+1}</div>
-      <div class="name">${twIsAdmin(r.name)?'👑 ':''}${esc(r.name)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas</div></div>
+      <div class="name">${twIsAdmin(r.name)?'👑 <span class="gold">'+esc(r.name)+'</span>':esc(r.name)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas</div></div>
       <div class="lvl">Līm. ${r.level}<div class="meta">${r.xp||0} XP</div></div></div>`).join(''):'<div class="empty">Vēl neviena spēlētāja – esi pirmais!</div>';
   }catch(e){ $('list').innerHTML='<div class="empty">Neizdevās ielādēt sarakstu.</div>'; }
   try{

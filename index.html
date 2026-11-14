@@ -95,6 +95,8 @@
   .supbtn[aria-disabled="true"]{background:#ffffff26;box-shadow:none;color:var(--muted);pointer-events:none}
   .loading{text-align:center;color:var(--muted);padding:30px;font-size:18px}
   footer{margin-top:34px;color:var(--muted);font-size:13px;text-align:center}
+  .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px #ffcc3399);animation:shine 2.6s linear infinite;font-weight:900}
+  @keyframes shine{to{background-position:-250% 0}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -142,6 +144,16 @@
     <p><b>Ieslēdz paziņojumus</b> un uzzini pirmais, kad iznāks jauna spēle!<small id="nHint"></small></p>
     <button class="btn play" id="nBtn">Ieslēgt</button>
   </div>
+
+  <!-- E-pasts (neobligāts) -->
+  <form class="notify" id="emailBox" style="border-color:#ffd34d66;background:linear-gradient(135deg,#ffd34d22,#ff5fa222)">
+    <div class="bell" style="animation:none">📧</div>
+    <p style="flex:1 1 260px"><b>Pievieno e-pastu</b> – jaunumiem un paroles nozaudēšanas gadījumā.<small>Vēlams vecāku e-pasts. To neredz neviens cits spēlētājs.</small>
+      <input id="eMail" type="email" autocomplete="email" placeholder="piem. mamma@epasts.lv" style="margin-top:10px" required>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:8px;color:var(--text);font-weight:600"><input id="eNews" type="checkbox" style="width:22px;height:22px"> Gribu saņemt jaunumus par jaunām spēlēm</label>
+      <span class="err" id="eErr" style="display:block"></span></p>
+    <div style="display:flex;flex-direction:column;gap:8px"><button class="btn play" type="submit">Saglabāt</button><button class="btn ghost" type="button" id="eLater">Vēlāk</button></div>
+  </form>
 
   <div class="games" id="games">
     <h2>🕹️ Spēles</h2>
@@ -204,12 +216,24 @@ $('logout').onclick=()=>auth.signOut();
 
 auth.onAuthStateChanged(async u=>{
   $('loading').style.display='none';
-  if(!u){ $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
-  let name=u.email.split('@')[0]; try{ const s=await db.ref('users/'+u.uid+'/name').get(); if(s.exists()) name=s.val(); }catch(e){}
-  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; $('meName').textContent=(twIsAdmin(name)?'👑 ':'👤 ')+name;
-  $('hello').innerHTML=`Sveiks, ${name}${twIsAdmin(name)?' 👑':''}! <span class="wave">👋</span>`;
-  setupNotify(u.uid);
+  if(!u){ $('emailBox').style.display='none'; $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
+  let name=u.email.split('@')[0], prof={}; try{ const s=await db.ref('users/'+u.uid).get(); if(s.exists()){ prof=s.val()||{}; if(prof.name) name=prof.name; } }catch(e){}
+  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; $('meName').innerHTML=twIsAdmin(name)?`👑 <span class="gold">${name}</span>`:'👤 '+name;
+  $('hello').innerHTML=twIsAdmin(name)?`Sveiks, <span class="gold">${name}</span> 👑! <span class="wave">👋</span>`:`Sveiks, ${name}! <span class="wave">👋</span>`;
+  setupNotify(u.uid); setupEmail(u.uid,prof);
 });
+
+// ---- e-pasts (neobligāts, privāts) ----
+function setupEmail(uid,prof){ const box=$('emailBox');
+  let later=false; try{ later=localStorage.getItem('twEmailLater_'+uid)==='1'; }catch(e){}
+  if(prof.email||later){ box.style.display='none'; return; }
+  box.style.display='flex';
+  $('eLater').onclick=()=>{ try{ localStorage.setItem('twEmailLater_'+uid,'1'); }catch(e){} box.style.display='none'; };
+  box.onsubmit=async e=>{ e.preventDefault(); const m=$('eMail').value.trim(); $('eErr').textContent='';
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)){ $('eErr').textContent='Pārbaudi e-pasta adresi.'; return; }
+    try{ await db.ref('users/'+uid).update({email:m,news:$('eNews').checked,emailAdded:TS}); box.innerHTML='<div class="bell" style="animation:none">✅</div><p><b>Paldies!</b> E-pasts saglabāts.</p>'; setTimeout(()=>box.style.display='none',3000); }
+    catch(err){ $('eErr').textContent='Neizdevās saglabāt. Mēģini vēlreiz.'; } };
+}
 
 // ---- paziņojumi ----
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
