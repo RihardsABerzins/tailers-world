@@ -100,7 +100,7 @@
     ['Street','iela'],['Boulevard','bulvāris'],['Quarter','kvartāls'],['Square','laukums'],['Park','parks'],['Embankment','krastmala'],['Harbor','osta'],['Bridge','tilts'],['Garden','dārzs'],
     ['STREET','IELA'],['BOULEVARD','BULVĀRIS'],['QUARTER','KVARTĀLS'],['SQUARE','LAUKUMS'],['PARK','PARKS'],['EMBANKMENT','KRASTMALA'],['HARBOR','OSTA'],['BRIDGE','TILTS'],['GARDEN','DĀRZS'],
     ['SUN','SAULES'],['MOON','MĒNESS'],['STAR','ZVAIGŽŅU'],['APPLE','ĀBEĻU'],['BIRCH','BĒRZU'],['OAK','OZOLU'],['LINDEN','LIEPU'],['ROSE','ROŽU'],['WIND','VĒJA'],['WATER','ŪDENS'],['SAND','SMILŠU'],
-    ['Press','Spied'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
+    ['Press','Spied'],['Paint','Zīmēt'],['Shop','Veikals'],['Eat','Ēst'],['Travel','Braukt'],['Bonus','Bonuss'],['Hide','Slēpties'],['Out','Iznākt'],['Soon','Drīz'],['Hungry','Izsalcis'],['Exit','Izeja'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
   ];
   const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const RULES=[...PHRASES.sort((a,b)=>b[0].length-a[0].length).map(([e,l])=>[new RegExp(esc(e),'g'),l]),
@@ -131,6 +131,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="../firebase-config.js?v=3"></script>
+<script src="../tw-common.js?v=1"></script>
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -249,6 +250,27 @@
     #toast{top:110px;max-width:92vw}
     #policeSign{top:76px}
   }
+  /* mobilā vadība: salokāmi paneļi, kontekstuālā poga */
+  #hud{pointer-events:auto;cursor:pointer}
+  #hud:not(.open) .hx,#hud:not(.open) .hcity{display:none}
+  #hud:not(.open):not(.heat-on) #heatTxt,#hud:not(.open):not(.heat-on) #heatBar{display:none}
+  #hud:not(.open):not(.food-low) #foodTxt{display:none}
+  #hud .more{opacity:.55;font-size:10px;margin-left:4px}
+  #hud.open .more{display:none}
+  #player:not(.open)>:not(#pToggle):not(#pSet){display:none}
+  #player:not(.open){padding:3px;gap:3px}
+  #pToggle{font-size:15px}
+  #inv .bag{background:#000c;border:1px solid #fff4}
+  #touch .rgt{align-items:flex-end}
+  #touch button small{display:block;font-size:10px;font-weight:800;line-height:1;margin-top:2px}
+  #touch .ctx{width:84px;height:84px;font-size:30px;background:#ffd34dcc;color:#1a1300;border-color:#fff;box-shadow:0 0 0 0 #ffd34d88;animation:ctxPulse 1.6s infinite;flex-direction:column;display:flex;align-items:center;justify-content:center}
+  #touch .ctx.off{visibility:hidden;animation:none}
+  #touch .tsmall{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#69f0ae55;border-color:#69f0ae}
+  #touch .tsmall.off{display:none}
+  @keyframes ctxPulse{70%{box-shadow:0 0 0 14px #ffd34d00}}
+  body.touch #prompt{display:none!important}
+  @media (orientation:portrait) and (max-width:760px){ #touch .ctx{width:72px;height:72px;font-size:26px} }
+  @media (prefers-reduced-motion:reduce){ #touch .ctx{animation:none} }
 </style>
 </head>
 <body>
@@ -257,7 +279,7 @@
 <div id="help">A D – run · W – jump<br>E – action · ↓ – hide<br>T – metro · Z X C V – items<br>Esc – pause / settings</div>
 <div id="clock"></div>
 <div id="policeSign"></div>
-<div id="player"><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pSet" title="Settings (Esc)">⚙</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
+<div id="player"><button id="pToggle" title="Music">🎵</button><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pSet" title="Settings (Esc)">⚙</button><button id="pStaff" title="Admina rīki" style="display:none">🛠</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
 <div id="prompt"></div>
 <div id="toast"></div>
 <button id="fsBtn" class="sec">⛶ Fullscreen</button><button id="tpBtn" class="sec">🚇 Metro (T)</button><button id="setBtn" class="sec">⚙ Settings (Esc)</button>
@@ -293,7 +315,7 @@
 <canvas id="fx" class="full"></canvas>
 <div id="touch">
   <div><button data-k="a">◀</button><button data-k="d">▶</button></div>
-  <div><button id="tT">⚡</button><button id="tS">🫣</button><button data-k="w">⤒</button><button id="tE">E</button></div>
+  <div class="rgt"><button id="tS" class="tsmall">🫣<small>Hide</small></button><button data-k="w">⤒</button><button id="tAct" class="ctx"><span id="tActI">✋</span><small id="tActL"></small></button></div>
 </div>
 
 <script>
@@ -585,7 +607,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='w
 applyBrightness(); syncSettings();
 pPlay.onclick=()=>{ audioInit(); if(!music.el) return; music.el.paused?music.el.play().catch(()=>{}):music.el.pause(); };
 document.getElementById('pNext').onclick=()=>{ audioInit(); if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else playRadio(music.radio+1); };
-document.getElementById('pSet').onclick=()=>openPause();
+document.getElementById('pSet').onclick=()=>openPause(); document.getElementById('pStaff').onclick=()=>openStaff();
 document.getElementById('pPrev').onclick=()=>{ audioInit(); playRadio(music.pl?music.radio:music.radio-1); };
 pFx.onclick=()=>{ fxOn=!fxOn; saveAudioPrefs(); syncPlayer(); };
 document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('button')) sfx('click'); });
@@ -802,7 +824,6 @@ function updateHeatUi(){ const st=starsOf(heat), o=police.off, h=Math.round(heat
   heatTxt.innerHTML=`<span class="stars${police.active?' hot':''}">${'★'.repeat(st)}${'☆'.repeat(5-st)}</span> ${label}${hidden?' · hiding':''}`;
   policeSign.style.display=police.active?'block':'none';
   if(police.active) policeSign.innerHTML=`<div class="psBig">👮 POLICE 🚨</div><div class="psSmall">${'★'.repeat(st)}${'☆'.repeat(5-st)} · ${label}</div>`;
-  { const f_=Math.round(save.food); const ft=document.getElementById('foodTxt'); const fs_=`🍔 Food ${f_}%`; if(ft.textContent!==fs_){ ft.textContent=fs_; ft.style.color=f_<=0?'#ff5252':f_<25?'#ffca28':'#cfd'; } }
   heatFill.style.width=h+'%'; heatFill.style.background=st===0?'#66bb6a':st<3?'#ffca28':'#ef5350'; }
 function addHeatFromPaint(w,acc){ recent=recent.filter(r=>time-r.t<120);
   const tooFast=recent.length&&time-recent[recent.length-1].t<35, nearCnt=recent.filter(r=>Math.abs(r.x-w.cx)<1600).length, again=w.timesPainted>0;
@@ -898,8 +919,12 @@ function updateLaw(dt){
     else if(car.state==='leave'){ car.x+=car.dir*430*dt; if(Math.abs(car.x-player.x)>W/(2*baseZoom())+600){ police.car=null; police.active=false; police.offs=[]; } } }
   for(let i=police.offs.length-1;i>=0;i--){ const o=police.offs[i]; if(updateOfficer(o,dt,stars)==='bust') return; if(o.gone) police.offs.splice(i,1); }
   police.off=police.offs[0]||null;
-  updateHeatUi();
+  updateHeatUi(); updateFoodUi();
 }
+const hudBox=document.getElementById('hud');
+function updateFoodUi(){ const f_=Math.round(save.food), ft=document.getElementById('foodTxt'), fs_=`🍔 Food ${f_}%`;
+  if(ft.textContent!==fs_){ ft.textContent=fs_; ft.style.color=f_<=0?'#ff5252':f_<25?'#ffca28':'#cfd'; }
+  hudBox.classList.toggle('food-low',f_<50); hudBox.classList.toggle('heat-on',heat>=1||police.active); }
 function drawOfficer(o){ if(!o) return;
   drawPerson(ctx,o.x,o.y,PS,{face:o.face,flip:o.flip,step:o.step,hood:o.hood,skin:o.skin,cap:o.cap,pants:o.pants,mask:o.mask,still:o.state==='search'||o.face==='down'});
   if(o.state==='search'||o.state==='goHide'){ ctx.save(); ctx.globalCompositeOperation='lighter'; const dir=o.flip||1, g=ctx.createLinearGradient(o.x,0,o.x+dir*170,0); g.addColorStop(0,'rgba(255,255,200,.35)'); g.addColorStop(1,'rgba(255,255,200,0)'); ctx.fillStyle=g;
@@ -922,7 +947,7 @@ const hud=document.getElementById('hudMain'), promptEl=document.getElementById('
 let toastT=0, shownMoney=-1, dispMoney=save.money;
 function toast(msg){ toastEl.innerHTML=msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('on'),3800); }
 function updateHud(){ const c=colorById(save.color), car=carById(save.car);
-  hud.innerHTML=`<b>€ ${Math.round(dispMoney)}</b><span class="hx"><br>Color: <span style="color:${c.hex==='#111111'?'#999':c.hex}">●</span> ${c.name} (x${c.mult})<br>Vehicle: ${car.name}<br>Walls painted: ${save.painted}</span><br>📍 City ${curCity+1} · ${CITY_NAMES[curCity]}<br>Level <b style="font-size:15px;color:#7cff8a;text-shadow:none">${level()}</b> · XP ${xpTxt()}<div class="xpbar"><div style="width:${xpPct()}%"></div></div>`; }
+  hud.innerHTML=`<b>€ ${Math.round(dispMoney)}</b><span class="more">▾</span><span class="hx"><br>Color: <span style="color:${c.hex==='#111111'?'#999':c.hex}">●</span> ${c.name} (x${c.mult})<br>Vehicle: ${car.name}<br>Walls painted: ${save.painted}</span><span class="hcity"><br>📍 City ${curCity+1} · ${CITY_NAMES[curCity]}</span><br>Level <b style="font-size:15px;color:#7cff8a;text-shadow:none">${level()}</b> · XP ${xpTxt()}<div class="xpbar"><div style="width:${xpPct()}%"></div></div>`; }
 
 let last=performance.now(), nearLot=null, tr=null;
 function frame(t){ const dt=Math.min(.05,(t-last)/1000); last=t; if(mode!=='pause'){ time+=dt; update(dt); } render(); requestAnimationFrame(frame); }
@@ -935,7 +960,9 @@ function update(dt){
     if(ride.t>1.0){ rideOv.classList.remove('on'); mode='world'; } }
   if(mode==='world'){
     const dd=districtOf(player.x); if(dd!==curDist){ curDist=dd; toast(`📍 <b>${DIST_NAMES[dd]}</b> – district ${dd+1}: ${level()>=dd+1?'you may paint here, but drawings are harder and the police are stricter':'🔒 painting here needs level '+(dd+1)}`); }
-    const dir=hidden?0:(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+    let dir=hidden?0:(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+    if(dir) autoT=null;
+    else if(autoT&&!hidden){ const bd2=bounds(), tx2=clamp(autoT.x,bd2[0],bd2[1]), dx2=tx2-player.x; if(Math.abs(dx2)>Math.max(14,Math.abs(player.vx)*.08)) dir=Math.sign(dx2); else autoT.arrived=true; }
     const sp=car.speed*(buff.energy>0?1.4:1)*(save.food<=0?.6:1);
     player.vx=lerp(player.vx,dir*sp,Math.min(1,dt*(car.kind==='car'?4:9)));
     { const bd_=bounds(), nx_=player.x+player.vx*dt; player.x=clamp(nx_,bd_[0],bd_[1]); if(!inMetro&&nx_!==player.x&&time>edgeT){ edgeT=time+6; toast('🚧 City limit – take the metro to travel to another city.'); } }
@@ -955,6 +982,8 @@ function update(dt){
     nearLot=null; let bestD=170;
     for(const l of (inMetro?metroObjs:lots)){ const px=l.kind==='wall'?l.cx:l.door+34, d=Math.abs(px-player.x); if((l.kind==='wall'||l.kind==='paint'||l.kind==='shoes'||l.kind==='metro'||l.kind==='mwall'||l.kind==='mtrain'||l.kind==='mexit'||l.kind==='cafe'||l.kind==='pizza')&&d<bestD){ bestD=d; nearLot=l; } }
     nearHide=null; { let hb=95; hideSpots.forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<hb){ hb=d; nearHide=s; } }); }
+    if(autoT&&autoT.arrived){ const a=autoT; autoT=null; if(a.act==='lot'&&nearLot===a.obj){ buzz(15); actionE(); } else if(a.act==='hide'&&nearHide){ buzz(15); toggleHide(); } }
+    updateCtx();
     if(hidden){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – leave hiding spot'; }
     else if(nearLot){ promptEl.style.display='block';
       promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='cafe'||nearLot.kind==='pizza'?`E – eat (€${foodPrice()})`:nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):'E – fast shoes (coming soon!)'); }
@@ -1073,6 +1102,22 @@ function render(){
     ctx.fillStyle='#14131a'; ctx.fillRect(x-3,BASE-150,6,170); rr(ctx,x-110,BASE-190,220,52,8,'#0d0c14');
     ctx.strokeStyle=TIER_COL[d]; ctx.lineWidth=3; ctx.shadowColor=DCOL[d]; ctx.shadowBlur=14; ctx.beginPath(); ctx.roundRect(x-107,BASE-187,214,46,6); ctx.stroke(); ctx.shadowBlur=0;
     ctx.textAlign='center'; ctx.fillStyle='#fff'; ctx.font='bold 13px system-ui'; ctx.fillText(`DISTRICT ${d+1}${lk?' 🔒 needs level '+(d+1):''}`,x,BASE-168); ctx.font='bold 15px system-ui'; ctx.fillStyle=DCOL[d]; ctx.fillText(DIST_NAMES[d].toUpperCase(),x,BASE-148); ctx.restore(); });
+  // ikonas virs objektiem, ar ko var darboties
+  { const badge=(x,y,ic,near)=>{ const pulse=near?1+.12*Math.sin(time*6):1, r=17*pulse; ctx.save(); ctx.globalAlpha=near?1:.8;
+      ctx.fillStyle='#0d0c14dd'; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill(); ctx.lineWidth=near?3:2; ctx.strokeStyle=near?'#ffd34d':'#ffffff88'; ctx.stroke();
+      ctx.font=`${Math.round(18*pulse)}px system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(ic,x,y+1); ctx.restore(); };
+    const objs=inMetro?metroObjs:lots.filter(l=>l.city===curCity);
+    objs.forEach(l=>{ const x=lotX(l); if(x<vx0-80||x>vx1+80) return; const near=nearLot===l&&mode==='world'&&!hidden;
+      if(l.kind==='wall') badge(l.px+PANEL.w-6,l.py+6,locked(l)?'🔒':l.cool>0?'⏳':'🎨',near);
+      else if(l.kind==='mwall') badge(l.px+PANEL.w-6,l.py+6,l.cool>0?'⏳':'🎁',near);
+      else if(l.kind==='mtrain') badge(l.cx,372,'🚆',near);
+      else if(l.kind==='mexit') badge(l.cx,310,'⬆️',near);
+      else if(l.kind==='metro') badge(l.cx,LY0+246,'🚇',near);
+      else if(l.kind==='paint') badge(x,LY0+300,'🛒',near);
+      else if(l.kind==='cafe'||l.kind==='pizza') badge(x,LY0+300,l.kind==='cafe'?'🍔':'🍕',near);
+      else if(l.kind==='shoes') badge(x,LY0+300,'👟',near); });
+    if(autoT&&mode==='world'){ const ax=autoT.x, ay=GROUND-120+Math.sin(time*8)*6; ctx.save(); ctx.fillStyle=autoT.act==='hide'?'#69f0ae':autoT.act==='lot'?'#ffd34d':'#ffffffaa';
+      ctx.beginPath(); ctx.moveTo(ax-10,ay-14); ctx.lineTo(ax+10,ay-14); ctx.lineTo(ax,ay); ctx.closePath(); ctx.fill(); ctx.globalAlpha=.35; ctx.beginPath(); ctx.ellipse(ax,GROUND+4,26,7,0,0,7); ctx.fill(); ctx.restore(); } }
   // pilsētas robežas
   if(!inMetro){ const cr=cityRange[curCity]; [[cr[0]+40,curCity>0],[cr[1]-40,curCity<9]].forEach(([x,show])=>{ if(!show||x<vx0-120||x>vx1+120) return; ctx.save();
     for(let i=0;i<5;i++){ ctx.fillStyle=i%2?'#f4f1ea':'#e53935'; ctx.fillRect(x-60+i*24,BASE+2,24,14); } ctx.fillStyle='#333'; ctx.fillRect(x-56,BASE+16,6,30); ctx.fillRect(x+50,BASE+16,6,30);
@@ -1095,7 +1140,7 @@ function render(){
   police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
   if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
-  if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) drawNameTag(player.x,GROUND-player.h-104,NET.name);
+  if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid);
   // satiksme (priekšplānā)
   traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.color,{spin:c.spin}); });
   if(police.car){ const c=police.car, L=175, Hh=L*.3; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir});
@@ -1154,9 +1199,9 @@ function render(){
     if(!wanted){ let b=null,bd=1e9; walls.forEach(w=>{ if(w.city===curCity&&w.cool<=0&&!locked(w)){ const d=Math.abs(w.cx-player.x); if(d>350&&d<bd){bd=d;b=w;} } }); if(b) tg.push({x:b.cx,t:'Wall (lvl '+(b.tier+1)+')',c:TIER_COL[b.tier]}); }
     if(inMetro){ tg.length=0; const tr_=metroObjs.find(o=>o.kind==='mtrain'); tg.push({x:tr_.cx,t:'Train',c:'#5aa8e8'}); tg.push({x:metroObjs[0].cx,t:'Exit',c:'#7cff8a'}); tg.push({x:metroObjs[6].cx,t:'Exit',c:'#7cff8a'}); }
     tg.forEach((t,i)=>{ const sx=SX(t.x); if(sx>70&&sx<W-70) return; const left=sx<=70, ey=H*.3+i*44, m=Math.round(Math.abs(t.x-player.x)/10);
-      ctx.save(); ctx.fillStyle='#000b'; ctx.beginPath(); ctx.roundRect(left?8:W-204,ey-17,196,34,17); ctx.fill(); ctx.strokeStyle=t.c; ctx.lineWidth=2; ctx.stroke();
+      ctx.save(); ctx.font='bold 14px system-ui'; const pw=Math.min(196,ctx.measureText(tr(`${t.t} · ${m} m`)).width+54); ctx.fillStyle='#000b'; ctx.beginPath(); ctx.roundRect(left?8:W-8-pw,ey-17,pw,34,17); ctx.fill(); ctx.strokeStyle=t.c; ctx.lineWidth=2; ctx.stroke();
       ctx.fillStyle=t.c; ctx.beginPath(); if(left){ ctx.moveTo(18,ey); ctx.lineTo(32,ey-9); ctx.lineTo(32,ey+9); } else { ctx.moveTo(W-18,ey); ctx.lineTo(W-32,ey-9); ctx.lineTo(W-32,ey+9); } ctx.closePath(); ctx.fill();
-      ctx.font='bold 14px system-ui'; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText(`${t.t} · ${m} m`,left?42:W-196,ey); ctx.restore(); }); }
+      ctx.font='bold 14px system-ui'; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText(`${t.t} · ${m} m`,left?42:W-pw+4,ey); ctx.restore(); }); }
   // ielas josla
   if((mode==='world'||mode==='shop')&&!inMetro){ const bw=Math.min(520,W*.55,W-40), bx=(W-bw)/2, by=H-(H>W&&isTouch?96:26);
     ctx.fillStyle='#000a'; ctx.beginPath(); ctx.roundRect(bx-8,by-9,bw+16,18,9); ctx.fill();
@@ -1166,6 +1211,7 @@ function render(){
     if(police.car){ ctx.fillStyle=Math.sin(police.car.siren)>0?'#ff1744':'#2979ff'; ctx.beginPath(); ctx.arc(mx_(police.off?police.off.x:police.car.x),by,4.5,0,7); ctx.fill(); }
     ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(mx_(player.x),by,5,0,7); ctx.fill();
     ctx.fillStyle='#ccd'; ctx.font='bold 11px system-ui'; ctx.textAlign='center'; ctx.fillText(`City ${curCity+1} · ${CITY_NAMES[curCity]}`,bx+bw/2,by-14); }
+  for(let i=ripples.length-1;i>=0;i--){ const r=ripples[i]; r.t+=1/60; if(r.t>.5){ ripples.splice(i,1); continue; } ctx.save(); ctx.globalAlpha=1-r.t/.5; ctx.strokeStyle=r.c; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(r.x,r.y,10+r.t*70,0,7); ctx.stroke(); ctx.restore(); }
   renderFx();
 }
 const hexN=h=>{ if(h==='#111111') h='#8899aa'; const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -1312,9 +1358,14 @@ const ITEMS={ smoke:{n:'Smoke bomb',i:'💨',k:'Z',d:'police lose you, suspicion
 const BOXES=[{n:'Bronze box',c:'#cd7f32',i:'📦'},{n:'Silver box',c:'#c0c8d4',i:'🎁'},{n:'Gold box',c:'#ffd34d',i:'🎁'},{n:'Diamond box',c:'#7ee8ff',i:'💎'}];
 const buff={energy:0,xp2:0,mask:0};
 const invEl=document.getElementById('inv'); let invShown='';
-function renderInv(){ const s_=Object.keys(ITEMS).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">${Math.ceil(buff[id])}s</span>`:''; return `<button data-it="${id}" ${n?'':'disabled'} title="${it.n}: ${it.d} (${it.k})">${it.i} ×${n} <small>${it.k}</small>${b}</button>`; }).join('');
-  if(s_!==invShown){ invShown=s_; invEl.innerHTML=s_; invEl.querySelectorAll('button').forEach(b=>b.onclick=()=>useItem(b.dataset.it)); } }
+function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.items[id]||0),0), anyBuff=Object.values(buff).some(v=>v>0);
+  const s_=(total||anyBuff?`<button class="bag" data-bag="1">🎒 ${total}</button>`:'')+(!invOpen?'':Object.keys(ITEMS).filter(id=>(save.items[id]||0)>0||buff[id]>0||!isTouch).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">${Math.ceil(buff[id])}s</span>`:''; return `<button data-it="${id}" ${n?'':'disabled'} title="${it.n}: ${it.d} (${it.k})">${it.i} ×${n} <small>${it.k}</small>${b}</button>`; }).join('');
+  if(s_!==invShown){ invShown=s_; invEl.innerHTML=s_; invEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(b.dataset.bag){ invOpen=!invOpen; renderInv(); } else useItem(b.dataset.it); }); } }
+let invOpen=!isTouch;
 setInterval(renderInv,400); renderInv();
+hudBox.classList.toggle('open',!isTouch); hudBox.addEventListener('pointerdown',e=>{ hudBox.classList.toggle('open'); e.stopPropagation(); });
+{ const pl=document.getElementById('player'); let plT=0; pl.classList.toggle('open',!isTouch);
+  document.getElementById('pToggle').onclick=()=>{ pl.classList.toggle('open'); clearTimeout(plT); if(isTouch&&pl.classList.contains('open')) plT=setTimeout(()=>pl.classList.remove('open'),8000); }; }
 function useItem(id){ if(mode!=='world'||!(save.items[id]>0)) return; save.items[id]--; persist();
   if(id==='smoke'){ heat=Math.max(0,heat-35); police.offs.forEach(o=>{ if(o.state==='chase'||o.state==='goHide'){ o.state='search'; o.lastX=player.x; o.t=0; o.wdT=0; o.knows=false; o.bubble='❓'; o.bt=1.5; } });
     for(let i=0;i<22;i++) puff('smoke',player.x+rnd(-20,20),GROUND-rnd(0,60),{vx:rnd(-60,60),vy:rnd(-10,10),vz:rnd(10,40),size:11,life:1.6,max:1.6}); sfx('hide'); toast('💨 Smoke bomb! The police lost you.'); }
@@ -1444,6 +1495,36 @@ function renderShop(){
 }
 
 // ================= Ievade =================
+// ---- pieskārienu vadība: spied uz objektiem pasaulē ----
+let autoT=null, ctxShown='';
+const ripples=[];
+const buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
+const lotX=l=>l.kind==='wall'||l.kind==='mwall'?l.cx:l.door+34;
+function pickTarget(wx,wy){
+  if(!inMetro){ for(const s_ of hideSpots){ if(s_.lot.city===curCity&&Math.abs(wx-s_.x)<75&&wy>BASE-110&&wy<BASE+40) return {act:'hide',x:s_.x,obj:s_}; } }
+  const list=inMetro?metroObjs:lots.filter(l=>l.city===curCity);
+  for(const l of list){
+    if(l.kind==='wall'||l.kind==='mwall'){ if(wx>l.px-20&&wx<l.px+PANEL.w+20&&wy>l.py-40&&wy<l.py+PANEL.h+60) return {act:'lot',x:l.cx,obj:l}; continue; }
+    if(l.kind==='mtrain'){ if(Math.abs(wx-l.cx)<440&&wy>370&&wy<BASE+20) return {act:'lot',x:l.cx,obj:l}; continue; }
+    if(l.kind==='mexit'){ if(Math.abs(wx-l.cx)<120&&wy>320&&wy<BASE+20) return {act:'lot',x:l.cx,obj:l}; continue; }
+    if(['paint','cafe','pizza','shoes','metro'].includes(l.kind)&&wx>l.x&&wx<l.x+l.w&&wy>LY0+150&&wy<BASE+20) return {act:'lot',x:lotX(l),obj:l};
+  }
+  return null; }
+cv.addEventListener('pointerdown',e=>{ if(mode!=='world'||lootOpen) return; audioInit();
+  const Zs=cam.zoom, wx=(e.clientX-W/2)/Zs+cam.x, wy=(e.clientY-H/2)/Zs+cam.y, hit=pickTarget(wx,wy);
+  ripples.push({x:e.clientX,y:e.clientY,t:0,c:hit?(hit.act==='hide'?'#69f0ae':'#ffd34d'):'#ffffff'});
+  if(hidden){ if(hit&&hit.act==='hide'&&hit.obj===hideAt){ buzz(15); toggleHide(); } return; }
+  autoT=hit?Object.assign(hit,{arrived:false}):{act:'walk',x:wx,arrived:false}; buzz(8); });
+function ctxInfo(){ if(mode!=='world') return null;
+  if(hidden) return null;
+  const l=nearLot; if(!l) return null;
+  if(l.kind==='wall') return locked(l)?{i:'🔒',t:'Lv '+(l.tier+1)}:l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:save.food<=0?{i:'🍔',t:'Hungry'}:{i:'🎨',t:'Paint'};
+  if(l.kind==='mwall') return l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎁',t:'Bonus'};
+  return {paint:{i:'🛒',t:'Shop'},cafe:{i:'🍔',t:'Eat'},pizza:{i:'🍕',t:'Eat'},shoes:{i:'👟',t:'Soon'},metro:{i:'🚇',t:'Metro'},mtrain:{i:'🚆',t:'Travel'},mexit:{i:'⬆️',t:'Exit'}}[l.kind]||null; }
+function updateCtx(){ if(!isTouch) return; const c=ctxInfo(), hs=hidden?'out':nearHide?'in':'';
+  const key=(c?c.i+c.t:'-')+'|'+hs; if(key===ctxShown) return; ctxShown=key;
+  const b=document.getElementById('tAct'); b.classList.toggle('off',!c); if(c){ document.getElementById('tActI').textContent=c.i; document.getElementById('tActL').textContent=c.t; }
+  const h=document.getElementById('tS'); h.classList.toggle('off',!hs); h.innerHTML=hidden?'↩️<small>Out</small>':'🫣<small>Hide</small>'; }
 function actionE(){
   if(mode!=='world'||!nearLot||hidden) return;
   if(nearLot.kind==='wall'&&save.food<=0){ toast('🍔 Too hungry to paint – eat at a café first!'); return; }
@@ -1490,10 +1571,9 @@ addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; });
 // skārienvadība
 document.querySelectorAll('#touch button[data-k]').forEach(b=>{ const k=b.dataset.k; b.addEventListener('pointerdown',e=>{ audioInit(); keys[k]=true; e.preventDefault(); }); ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false)); });
-document.getElementById('tE').addEventListener('pointerdown',e=>{ audioInit(); actionE(); e.preventDefault(); });
+document.getElementById('tAct').addEventListener('pointerdown',e=>{ audioInit(); autoT=null; buzz(15); actionE(); e.preventDefault(); });
 document.getElementById('tpBtn').onclick=openTeleport;
-document.getElementById('tT').addEventListener('pointerdown',e=>{ audioInit(); openTeleport(); e.preventDefault(); });
-document.getElementById('tS').addEventListener('pointerdown',e=>{ audioInit(); toggleHide(); e.preventDefault(); });
+document.getElementById('tS').addEventListener('pointerdown',e=>{ audioInit(); autoT=null; buzz(15); toggleHide(); e.preventDefault(); });
 
 // ================= Tiešsaiste: konts, citi spēlētāji, rezultāti =================
 const NET={on:false,uid:null,name:'',others:{},city:-2,ref:null,sub:null,off:0,lastSent:0,lastStats:0,db:null};
@@ -1503,8 +1583,13 @@ if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
     fa.onAuthStateChanged(async u=>{
       if(!u){ location.href='../index.html'; return; }
       NET.uid=u.uid; NET.name=u.email.split('@')[0];
-      try{ const s=await NET.db.ref('users/'+u.uid+'/name').get(); if(s.exists()) NET.name=s.val(); }catch(e){}
-      NET.on=true; netStats(true); toast(`👋 Sveiks, ${NET.name}${window.twIsAdmin&&twIsAdmin(NET.name)?' 👑':''}!`);
+      try{ const s=await NET.db.ref('users/'+u.uid).get(); const v=s.val()||{}; if(v.name) NET.name=v.name; NET.nick=v.nick||''; }catch(e){}
+      if(window.TW) await TW.ready;
+      NET.on=true; netStats(true); toast(`👋 Sveiks, ${TW.display(NET.name,NET.nick)}${TW.badge(TW.role(NET.uid))?' '+TW.badge(TW.role(NET.uid)):''}!`);
+      TW.heartbeat(NET.uid,()=>({game:'Graffiti RPG',where:inMetro?'Metro':`City ${curCity+1} · Līm. ${level()}`,name:NET.name,nick:NET.nick||''}));
+      NET.db.ref('kicks/'+NET.uid).on('value',s=>{ const k=s.val(); if(k&&k.until>TW.now()) kickedOut(k); },()=>{});
+      let st=''; try{ st=sessionStorage.getItem('twMode'); }catch(e){}
+      const showStaff=()=>{ document.getElementById('pStaff').style.display=(TW.isStaff(NET.uid)&&st==='staff')?'':'none'; }; showStaff(); document.addEventListener('tw-roles',showStaff);
     });
   }catch(e){}
 }
@@ -1512,23 +1597,46 @@ function netTick(){ if(!NET.on) return; const c=inMetro?-1:curCity;
   if(c!==NET.city){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } if(NET.sub){ NET.sub.off(); NET.sub=null; } NET.others={}; NET.city=c;
     if(c>=0){ NET.ref=NET.db.ref('presence/'+c+'/'+NET.uid); NET.ref.onDisconnect().remove();
       NET.sub=NET.db.ref('presence/'+c); NET.sub.on('value',s=>{ const now=Date.now()+NET.off, o={};
-        s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
+        s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({uid:p.key,dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
   const now=Date.now();
-  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,hid:hidden?1:0,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
+  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,hid:hidden?1:0,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
 function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000) return; NET.lastStats=now;
-  NET.db.ref('stats/'+NET.uid).set({name:NET.name,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); }
-function drawNameTag(x,y,name){ if(!name) return; const adm=window.twIsAdmin&&twIsAdmin(name), lab=(adm?'👑 ':'')+name;
+  NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); }
+function drawNameTag(x,y,name,uid){ if(!name) return; const role=window.TW?TW.role(uid):'', adm=role==='admin', mod=role==='mod', lab=(adm?'👑 ':mod?'🛡️ ':'')+name;
   ctx.save(); ctx.font='900 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
   if(adm){ const w=ctx.measureText(lab).width, sh=((time*120)%(w+160))-80;
     const g=ctx.createLinearGradient(x-w/2,y-9,x-w/2,y+9); g.addColorStop(0,'#fff8d0'); g.addColorStop(.35,'#ffd34d'); g.addColorStop(.6,'#b07a12'); g.addColorStop(1,'#ffe68a');
     ctx.lineWidth=5; ctx.strokeStyle='#2a1a00'; ctx.strokeText(lab,x,y); ctx.shadowColor='#ffcc33'; ctx.shadowBlur=12; ctx.fillStyle=g; ctx.fillText(lab,x,y); ctx.shadowBlur=0;
     const hl=ctx.createLinearGradient(x-w/2+sh-30,0,x-w/2+sh+30,0); hl.addColorStop(0,'rgba(255,255,255,0)'); hl.addColorStop(.5,'rgba(255,255,255,.85)'); hl.addColorStop(1,'rgba(255,255,255,0)');
     ctx.globalCompositeOperation='source-atop'; ctx.fillStyle=hl; ctx.fillText(lab,x,y); }
+  else if(mod){ const fl=.85+.15*Math.sin(time*9)*(Math.sin(time*1.3)>.9?1:0); ctx.lineWidth=5; ctx.strokeStyle='#00243a'; ctx.strokeText(lab,x,y);
+    ctx.shadowColor='#2ec5ff'; ctx.shadowBlur=16; ctx.globalAlpha=fl; ctx.fillStyle='#bff3ff'; ctx.fillText(lab,x,y); ctx.shadowBlur=6; ctx.fillText(lab,x,y); }
   else { ctx.lineWidth=4; ctx.strokeStyle='#000'; ctx.strokeText(lab,x,y); ctx.fillStyle='#fff'; ctx.fillText(lab,x,y); }
   ctx.restore(); }
+// ---- izmešana no spēles ----
+let kickShown=false;
+function kickedOut(k){ if(kickShown) return; kickShown=true; mode='pause'; spraySound&&spraySound(false);
+  if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref=null; } NET.on=false;
+  const mins=Math.max(1,Math.ceil((k.until-TW.now())/60000)), d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;z-index:100;background:#000d;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:system-ui';
+  d.innerHTML=`<div style="background:#1f1a3a;border:2px solid #ff6b7a88;border-radius:22px;padding:24px;max-width:420px;color:#fff"><div style="font-size:54px">🚫</div><h2 style="margin:8px 0">Tevi uz laiku izmeta no spēles</h2><p style="color:#c4bde6">Varēsi atgriezties pēc ~${mins} min. Spēlē draudzīgi! 🙂</p><a href="../index.html" style="display:inline-block;margin-top:10px;background:#ffd34d;color:#1a1300;font-weight:900;padding:14px 22px;border-radius:16px;text-decoration:none">Uz sākumlapu</a></div>`;
+  document.body.appendChild(d); setTimeout(()=>{ location.href='../index.html'; },8000); }
+// ---- admina / moderatora rīki spēlē ----
+async function openStaff(){ if(!NET.on||!TW.isStaff(NET.uid)||mode!=='world') return; mode='shop'; promptEl.style.display='none'; tpOv.classList.add('on');
+  tpEl.innerHTML='<h2>🛠 Spēlētāji tiešsaistē</h2><div style="color:#aab">Ielādē…</div>';
+  const now=TW.now(), rows=[]; const snaps=await Promise.all(Array.from({length:10},(_,c)=>NET.db.ref('presence/'+c).get().catch(()=>null)));
+  snaps.forEach((s,c)=>{ if(s) s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<30000) rows.push({uid:p.key,c,x:v.x,name:v.nk||v.n,user:v.n}); }); });
+  const canKick=uid=>{ const r=TW.role(uid), me=TW.role(NET.uid); return r!=='admin'&&!(me==='mod'&&r==='mod'); };
+  const esc=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  tpEl.innerHTML=`<h2>🛠 Spēlētāji tiešsaistē (${rows.length})</h2>`+(rows.length?rows.map((r,i)=>`<div class="row"><div class="n">${TW.badge(TW.role(r.uid))} <b>${esc(r.name)}</b> <small>(${esc(r.user)}) · City ${r.c+1}</small></div><button data-go="${i}" class="sec">📍 Iet pie</button>${canKick(r.uid)?`<button data-kick="${i}" style="background:#ff6b7a">🚫 Izmest</button>`:''}</div>`).join(''):'<p style="color:#aab">Pilsētās šobrīd neviena cita nav.</p>')
+    +'<p style="color:#aab;font-size:13px">Izmešana ir uz 10 minūtēm. Pilnu sarakstu redzi admina panelī.</p><br><button class="sec" id="tpClose">Aizvērt</button>';
+  tpEl.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ const r=rows[+b.dataset.go]; travel(()=>{ inMetro=false; curCity=r.c; shownMoney=-1; player.x=r.x; },`Pie ${r.name}`); });
+  tpEl.querySelectorAll('[data-kick]').forEach(b=>b.onclick=async()=>{ const r=rows[+b.dataset.kick]; b.disabled=true;
+    try{ await NET.db.ref('kicks/'+r.uid).set({by:NET.name,until:TW.now()+600000,t:firebase.database.ServerValue.TIMESTAMP}); b.textContent='✓ Izmests'; }catch(e){ b.textContent='Nav atļauts'; } });
+  document.getElementById('tpClose').onclick=closeShop; }
 function drawOther(o,mv){ ctx.save(); ctx.globalAlpha=.93;
   drawPerson(ctx,o.dx,GROUND-2,PS,{face:mv?'side':'down',flip:o.f||1,step:o.step,hood:o.h||'#888',skin:'#f2c9a0',cap:'#1b1b1f',pants:'#2b3a67',mask:'#b71c1c',still:!mv}); ctx.restore();
-  drawNameTag(o.dx,GROUND-104,o.n); }
+  drawNameTag(o.dx,GROUND-104,o.nk||o.n,o.uid); }
 setInterval(netTick,500);
 
 updateHud();

@@ -12,6 +12,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=3"></script>
 <script>window.twIsAdmin=window.twIsAdmin||(()=>false);</script>
+<script src="tw-common.js?v=1"></script>
 <style>
   :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--yellow:#ffd34d;--green:#7cff8a}
   *{box-sizing:border-box}
@@ -34,6 +35,7 @@
   .lvl{font-weight:900;font-size:18px;color:var(--yellow);text-align:right}
   .empty{color:var(--muted);text-align:center;padding:30px}
   @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .neon{color:#7fdcff;text-shadow:0 0 6px #2ec5ff,0 0 14px #2ec5ff,0 0 24px #0a84ff;font-weight:900}
   .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px #ffcc3399);animation:shine 2.6s linear infinite;font-weight:900}
   @keyframes shine{to{background-position:-250% 0}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
@@ -53,12 +55,13 @@ let myUid=null;
 const CITY=['Old Town','Harbor','Neon Heights','Parkside','Market Quarter','Art Block','Skyline','Riverside','Uptown','Crown Hill'];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function load(){
+  await TW.ready;
   try{
     const snap=await db.ref('stats').orderByChild('level').limitToLast(50).get();
     const rows=[]; snap.forEach(c=>{ rows.push(Object.assign({uid:c.key},c.val())); });
     rows.sort((a,b)=>(b.level-a.level)||((b.xp||0)-(a.xp||0)));
     $('list').innerHTML=rows.length?rows.map((r,i)=>`<div class="row${r.uid===myUid?' me':''}" style="animation-delay:${i*.04}s"><div class="rank${i<3?' r'+(i+1):''}">${i+1}</div>
-      <div class="name">${twIsAdmin(r.name)?'👑 <span class="gold">'+esc(r.name)+'</span>':esc(r.name)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas</div></div>
+      <div class="name">${TW.nameHTML(TW.display(r.name,r.nick),r.uid)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas</div></div>
       <div class="lvl">Līm. ${r.level}<div class="meta">${r.xp||0} XP</div></div></div>`).join(''):'<div class="empty">Vēl neviena spēlētāja – esi pirmais!</div>';
   }catch(e){ $('list').innerHTML='<div class="empty">Neizdevās ielādēt sarakstu.</div>'; }
   try{
@@ -70,7 +73,7 @@ async function load(){
   }catch(e){ $('online').textContent='Tiešsaistes skaits nav pieejams'; }
 }
 auth.onAuthStateChanged(u=>{ myUid=u?u.uid:null; load(); });
-setInterval(load,30000);
+setInterval(load,30000); document.addEventListener('tw-roles',()=>load());
 </script>
 </body>
 </html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="lv">
+<head>
+<meta charset="utf-8">
+<title>Panelis – Tailers World LV</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#120f24">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js?v=3"></script>
+<script src="tw-common.js?v=1"></script>
+<style>
+  :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--yellow:#ffd34d;--green:#7cff8a;--red:#ff6b7a;--blue:#5ac8ff}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;min-height:100vh;background:radial-gradient(900px 600px at 10% -10%,#3a2a8a 0%,transparent 60%),var(--bg);color:var(--text);font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 14px 50px}
+  .top{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  h1{font-size:clamp(26px,7vw,38px);margin:12px 0 4px}
+  h2{font-size:20px;margin:26px 0 10px;display:flex;align-items:center;gap:8px}
+  .sub{color:var(--muted);margin:0 0 6px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:10px 14px;border-radius:14px;font:inherit;font-weight:900;font-size:15px;text-decoration:none;border:0;cursor:pointer;color:var(--text);background:#ffffff1a;border:2px solid #ffffff33}
+  .btn.play{background:var(--yellow);color:#1a1300;border:0;box-shadow:0 5px 0 #c49a1b}
+  .btn.sm{min-height:38px;padding:6px 10px;font-size:13px;border-radius:11px}
+  .btn.red{background:#ff6b7a22;border-color:#ff6b7a88}
+  .btn.blue{background:#5ac8ff22;border-color:#5ac8ff88}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px;flex-wrap:wrap}
+  .nm{flex:1 1 160px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .meta{color:var(--muted);font-size:13px;font-weight:600}
+  .acts{display:flex;gap:6px;flex-wrap:wrap}
+  .empty{color:var(--muted);padding:14px;text-align:center;background:#ffffff08;border-radius:14px}
+  input{width:100%;font:inherit;font-size:16px;padding:11px 13px;border-radius:13px;border:2px solid #ffffff2a;background:#0f0c20;color:var(--text);outline:none;margin-bottom:10px}
+  .idea{white-space:pre-wrap;font-weight:600}
+  .pill{display:inline-block;background:#7cff8a22;border:1px solid #7cff8a66;border-radius:10px;padding:2px 8px;font-size:12px;font-weight:800}
+  .kicked{background:#ff6b7a22;border-color:#ff6b7a66}
+  .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 2.6s linear infinite;font-weight:900}
+  @keyframes shine{to{background-position:-250% 0}}
+  .neon{color:#7fdcff;text-shadow:0 0 6px #2ec5ff,0 0 14px #2ec5ff;font-weight:900}
+  #deny{display:none;text-align:center;padding:40px 10px;font-size:18px}
+  #panel{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a class="btn" href="index.html">🏠 Sākumlapa</a><a class="btn play" id="playStaff" href="grafiti/index.html">🎮 Spēlēt ar admina rīkiem</a></div>
+  <div id="deny">🔒 Šī lapa ir tikai adminam un moderatoriem.<br><br><a class="btn" href="index.html">← Atpakaļ</a></div>
+  <div id="panel">
+    <h1 id="title">🛠 Panelis</h1>
+    <p class="sub" id="who"></p>
+
+    <h2>🟢 Tagad tiešsaistē <span class="pill" id="onCount">0</span></h2>
+    <div class="list" id="online"><div class="empty">Ielādē…</div></div>
+
+    <h2>👥 Visi spēlētāji <span class="pill" id="allCount">0</span></h2>
+    <input id="search" placeholder="Meklēt pēc vārda…" autocomplete="off">
+    <div class="list" id="all"></div>
+
+    <h2>💡 Spēļu idejas <span class="pill" id="ideaCount">0</span></h2>
+    <div class="list" id="ideas"><div class="empty">Ielādē…</div></div>
+  </div>
+</div>
+<script>
+const auth=firebase.auth(), db=firebase.database(), TS=firebase.database.ServerValue.TIMESTAMP, $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let ME=null, MYROLE='', STATS={}, ONLINE={}, KICKS={}, IDEAS={};
+const fmt=t=>t?new Date(t).toLocaleString('lv-LV',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+const kicked=uid=>KICKS[uid]&&KICKS[uid].until>TW.now();
+
+auth.onAuthStateChanged(async u=>{
+  if(!u){ location.href='index.html'; return; }
+  await TW.ready; ME=u.uid; MYROLE=TW.role(u.uid);
+  if(!MYROLE){ $('deny').style.display='block'; $('playStaff').style.display='none'; return; }
+  $('panel').style.display='block';
+  const nm=(STATS[ME]&&STATS[ME].name)||u.email.split('@')[0];
+  $('title').innerHTML=MYROLE==='admin'?'👑 Admina panelis':'🛡️ Moderatora panelis';
+  $('who').innerHTML=MYROLE==='admin'?'Tu vari iecelt moderatorus, izmest spēlētājus un lasīt idejas.':'Tu vari izmest spēlētājus un lasīt idejas. Tiesības dot var tikai admins.';
+  $('playStaff').onclick=()=>{ try{ sessionStorage.setItem('twMode','staff'); }catch(e){} };
+  db.ref('stats').on('value',s=>{ STATS=s.val()||{}; renderAll(); renderOnline(); });
+  db.ref('online').on('value',s=>{ ONLINE=s.val()||{}; renderOnline(); });
+  db.ref('kicks').on('value',s=>{ KICKS=s.val()||{}; renderAll(); renderOnline(); });
+  db.ref('ideas').on('value',s=>{ IDEAS=s.val()||{}; renderIdeas(); });
+  document.addEventListener('tw-roles',()=>{ renderAll(); renderOnline(); });
+  setInterval(renderOnline,10000);
+});
+
+function canKick(uid){ const r=TW.role(uid); if(uid===ME||r==='admin') return false; if(MYROLE==='mod'&&r==='mod') return false; return true; }
+function kickBtns(uid){ if(!canKick(uid)) return '';
+  return kicked(uid)?`<button class="btn sm" data-unkick="${uid}">↩️ Atcelt izmešanu</button>`:`<button class="btn sm red" data-kick="${uid}">🚫 Izmest 10 min</button>`; }
+function nameOf(uid,fallback){ const st=STATS[uid]||{}; return TW.nameHTML(TW.display(st.name||fallback,st.nick),uid)+(st.nick?` <span class="meta">(${esc(st.name)})</span>`:''); }
+
+function renderOnline(){ const now=TW.now(), rows=Object.entries(ONLINE).filter(([u,v])=>v&&now-(v.t||0)<60000);
+  $('onCount').textContent=rows.length;
+  $('online').innerHTML=rows.length?rows.map(([uid,v])=>`<div class="row${kicked(uid)?' kicked':''}"><div class="nm">${nameOf(uid,v.name)}<div class="meta">🎮 ${esc(v.game||'')}${v.where?' · '+esc(v.where):''}</div></div><div class="acts">${kickBtns(uid)}</div></div>`).join(''):'<div class="empty">Neviens šobrīd nespēlē.</div>';
+  bind($('online')); }
+
+function renderAll(){ const q=$('search').value.trim().toLowerCase();
+  const rows=Object.entries(STATS).filter(([u,v])=>!q||(v.name||'').toLowerCase().includes(q)||(v.nick||'').toLowerCase().includes(q))
+    .sort((a,b)=>(b[1].level-a[1].level)||((b[1].xp||0)-(a[1].xp||0)));
+  $('allCount').textContent=Object.keys(STATS).length;
+  $('all').innerHTML=rows.length?rows.map(([uid,v])=>{ const r=TW.role(uid);
+    let roleBtn=''; if(MYROLE==='admin'&&r!=='admin') roleBtn=r==='mod'?`<button class="btn sm" data-unmod="${uid}">Noņemt moderatoru</button>`:`<button class="btn sm blue" data-mod="${uid}">🛡️ Iecelt par moderatoru</button>`;
+    return `<div class="row${kicked(uid)?' kicked':''}"><div class="nm">${nameOf(uid,v.name)}<div class="meta">Līm. ${v.level} · ${v.xp||0} XP · City ${v.city||1} · 🎨 ${v.painted||0}${kicked(uid)?' · 🚫 izmests līdz '+fmt(KICKS[uid].until):''}</div></div><div class="acts">${roleBtn}${kickBtns(uid)}</div></div>`; }).join(''):'<div class="empty">Nav atrasts.</div>';
+  bind($('all')); }
+$('search').oninput=renderAll;
+
+function renderIdeas(){ const rows=Object.entries(IDEAS).sort((a,b)=>(b[1].t||0)-(a[1].t||0));
+  $('ideaCount').textContent=rows.length;
+  $('ideas').innerHTML=rows.length?rows.map(([id,v])=>`<div class="row"><div class="nm"><div class="idea">${esc(v.text)}</div><div class="meta">— ${esc(v.name)} · ${fmt(v.t)}</div></div><div class="acts"><button class="btn sm" data-delidea="${id}">🗑️</button></div></div>`).join(''):'<div class="empty">Ideju vēl nav.</div>';
+  bind($('ideas')); }
+
+function bind(root){
+  root.querySelectorAll('[data-kick]').forEach(b=>b.onclick=async()=>{ const uid=b.dataset.kick; b.disabled=true;
+    await db.ref('kicks/'+uid).set({by:(STATS[ME]&&STATS[ME].name)||'admins',until:TW.now()+10*60*1000,t:TS}).catch(e=>alertMsg(e)); });
+  root.querySelectorAll('[data-unkick]').forEach(b=>b.onclick=()=>db.ref('kicks/'+b.dataset.unkick).remove().catch(e=>alertMsg(e)));
+  root.querySelectorAll('[data-mod]').forEach(b=>b.onclick=()=>db.ref('roles/'+b.dataset.mod).set('mod').catch(e=>alertMsg(e)));
+  root.querySelectorAll('[data-unmod]').forEach(b=>b.onclick=()=>db.ref('roles/'+b.dataset.unmod).remove().catch(e=>alertMsg(e)));
+  root.querySelectorAll('[data-delidea]').forEach(b=>b.onclick=()=>{ if(confirm('Dzēst šo ideju?')) db.ref('ideas/'+b.dataset.delidea).remove().catch(e=>alertMsg(e)); });
+}
+function alertMsg(e){ console.warn(e); const d=document.createElement('div'); d.className='empty'; d.style.cssText='position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#3a1020;color:#fff;z-index:9'; d.textContent='Nav atļauts vai neizdevās.'; document.body.appendChild(d); setTimeout(()=>d.remove(),2500); }
+</script>
+</body>
+</html>

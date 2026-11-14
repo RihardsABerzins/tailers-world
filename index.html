@@ -18,6 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script src="firebase-config.js?v=3"></script>
 <script>window.twIsAdmin=window.twIsAdmin||(()=>false);</script>
+<script src="tw-common.js?v=1"></script>
 <style>
   :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--pink:#ff5fa2;--yellow:#ffd34d;--blue:#5ac8ff;--green:#7cff8a;--red:#ff6b7a}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -98,6 +99,17 @@
   .supbtn[aria-disabled="true"]{background:#ffffff26;box-shadow:none;color:var(--muted);pointer-events:none}
   .loading{text-align:center;color:var(--muted);padding:30px;font-size:18px}
   footer{margin-top:34px;color:var(--muted);font-size:13px;text-align:center}
+  .neon{color:#7fdcff;text-shadow:0 0 6px #2ec5ff,0 0 14px #2ec5ff,0 0 24px #0a84ff;font-weight:900;animation:flick 3s infinite}
+  @keyframes flick{0%,92%,100%{opacity:1}94%{opacity:.6}96%{opacity:1}}
+  .modal{position:fixed;inset:0;background:#000b;backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal.on{display:flex}
+  .modal .panel{width:min(440px,100%);max-height:92vh;overflow:auto;animation:rise .3s both}
+  .seg{display:flex;gap:10px;margin-top:6px}
+  .seg button{flex:1;min-height:54px;border-radius:16px;border:3px solid #ffffff33;background:#ffffff12;color:var(--text);font:inherit;font-weight:900;font-size:18px;cursor:pointer}
+  .seg button.on{border-color:var(--yellow);background:#ffd34d26}
+  #meName{background:#ffffff14;border:2px solid #ffffff2a;border-radius:14px;padding:8px 12px;cursor:pointer;color:var(--text);font:inherit;font-weight:800}
+  textarea{width:100%;font:inherit;font-size:17px;padding:12px 14px;border-radius:14px;border:2px solid #ffffff2a;background:#0f0c20;color:var(--text);outline:none;resize:vertical;min-height:90px}
+  textarea:focus{border-color:var(--yellow)}
   .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px #ffcc3399);animation:shine 2.6s linear infinite;font-weight:900}
   @keyframes shine{to{background-position:-250% 0}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -108,7 +120,7 @@
   <div class="plane" style="--y:20vh;animation-duration:19s">✈️</div><div class="plane" style="--y:70vh;animation-duration:27s;animation-delay:-11s">✈️</div></div>
 <div class="wrap">
   <header><div class="logo">🎮</div><div class="brand">TAILERS WORLD LV</div>
-    <div class="me" id="me"><span id="meName"></span><button id="logout">Iziet</button></div></header>
+    <div class="me" id="me"><a class="btn ghost" id="panelLink" href="admin.html" style="display:none;min-height:40px;padding:8px 12px;font-size:14px">🛠 Panelis</a><button id="meName" title="Mans profils"></button><button id="logout">Iziet</button></div></header>
   <div class="hero">
     <h1 id="hello">Labdien! <span class="wave">👋</span></h1>
     <p class="lead">Čau, mani sauc Tailers, un es taisu spēles, kādas man pašam patīk! Pievienojies, un spēlējam kopā <span class="free">BEZ MAKSAS</span> – kurš tiks tālāk? 😉</p>
@@ -167,12 +179,42 @@
   <div class="games" id="games">
     <h2>🕹️ Spēles</h2>
     <div class="grid" id="grid"></div>
+    <form class="panel" id="ideaForm" style="margin-top:26px">
+      <h3>💡 Tev ir ideja jaunai spēlei?</h3>
+      <p class="hint" style="margin:0 0 8px">Uzraksti, kādu spēli tu gribētu – Tailers izlasīs visas idejas!</p>
+      <textarea id="ideaText" maxlength="500" placeholder="Piemēram: spēle, kur jālido ar papīra lidmašīnu…"></textarea>
+      <div class="err" id="ideaMsg"></div>
+      <button class="btn play" type="submit">Nosūtīt ideju</button>
+    </form>
+
     <div class="support">
       <div class="heart">💛</div>
       <p><b>Atbalsti mani, lai varu taisīt vēl spēles priekš visiem!</b><small>Tikai ar vecāku atļauju 🙂</small></p>
       <a class="btn pinkb supbtn" id="supportBtn" href="#" aria-disabled="true">Drīzumā</a>
     </div>
   </div>
+
+  <!-- Režīma izvēle adminam / moderatoram -->
+  <div class="modal" id="modeModal"><div class="panel">
+    <h3 id="modeTitle">Kā gribi ienākt?</h3>
+    <div class="seg" style="flex-direction:column">
+      <button id="modeStaff" class="on">👑 Admins</button>
+      <button id="modePlayer">🎮 Spēlētājs</button>
+    </div>
+  </div></div>
+
+  <!-- Profils -->
+  <div class="modal" id="profModal"><form class="panel" id="profForm">
+    <h3>👤 Mans profils</h3>
+    <p class="hint" style="margin:0">Lietotājvārds: <b id="profUser"></b></p>
+    <label for="profNick">Iesauka (rādās spēlēs)</label>
+    <input id="profNick" maxlength="16" autocomplete="off" placeholder="piem. Ātrā Zīle">
+    <p class="hint">2–16 burti vai cipari, bez emoji. Ja tukšs – rāda lietotājvārdu.</p>
+    <label>Valoda spēlēs</label>
+    <div class="seg"><button type="button" data-l="lv">🇱🇻 Latviešu</button><button type="button" data-l="en">🇬🇧 English</button></div>
+    <div class="err" id="profErr"></div>
+    <div class="btns" style="margin-top:12px"><button class="btn play" type="submit">Saglabāt</button><button class="btn ghost" type="button" id="profClose">Aizvērt</button></div>
+  </form></div>
 
   <footer>© Tailers World LV · Mūzika: Papīra Lidmašīnas</footer>
 </div>
@@ -221,16 +263,50 @@ $('regForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=e.
   }catch(err){ out.textContent=authErr(err); }
   b.disabled=false; });
 
-$('logout').onclick=()=>auth.signOut();
+$('logout').onclick=async()=>{ if(ME) await db.ref('online/'+ME.uid).remove().catch(()=>{}); clearInterval(HB); HB=null; ME=null; try{ sessionStorage.removeItem('twMode'); }catch(e){} auth.signOut(); };
 
 auth.onAuthStateChanged(async u=>{
   $('loading').style.display='none';
   if(!u){ $('emailBox').style.display='none'; $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
   let name=u.email.split('@')[0], prof={}; try{ const s=await db.ref('users/'+u.uid).get(); if(s.exists()){ prof=s.val()||{}; if(prof.name) name=prof.name; } }catch(e){}
-  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; $('meName').innerHTML=twIsAdmin(name)?`👑 <span class="gold">${name}</span>`:'👤 '+name;
-  $('hello').innerHTML=twIsAdmin(name)?`Sveiks, <span class="gold">${name}</span> 👑! <span class="wave">👋</span>`:`Sveiks, ${name}! <span class="wave">👋</span>`;
-  setupNotify(u.uid); setupEmail(u.uid,prof);
+  await TW.ready; ME={uid:u.uid,name,nick:prof.nick||''};
+  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; paintMe();
+  setupNotify(u.uid); setupEmail(u.uid,prof); setupStaff(); setupIdeas();
+  if(!HB) HB=TW.heartbeat(u.uid,()=>({game:'Sākumlapa',where:'',name:ME.name,nick:ME.nick||''}));
 });
+
+// ---- mans profils, lomas ----
+let ME=null, HB=null;
+function paintMe(){ if(!ME) return; const disp=TW.display(ME.name,ME.nick), r=TW.role(ME.uid);
+  $('meName').innerHTML=r?TW.nameHTML(disp,ME.uid):'👤 '+disp.replace(/[<>&]/g,'');
+  $('hello').innerHTML=`Sveiks, ${r?TW.nameHTML(disp,ME.uid):disp.replace(/[<>&]/g,'')}! <span class="wave">👋</span>`;
+  $('panelLink').style.display=r?'inline-flex':'none'; }
+document.addEventListener('tw-roles',paintMe);
+function curLang(){ try{ return localStorage.getItem('twLang')||'lv'; }catch(e){ return 'lv'; } }
+function paintLang(l){ document.querySelectorAll('#profForm .seg button').forEach(b=>b.classList.toggle('on',b.dataset.l===l)); }
+let pickLang='lv';
+$('meName').onclick=()=>{ if(!ME) return; $('profUser').textContent=ME.name; $('profNick').value=ME.nick; pickLang=curLang(); paintLang(pickLang); $('profErr').textContent=''; $('profModal').classList.add('on'); };
+document.querySelectorAll('#profForm .seg button').forEach(b=>b.onclick=()=>{ pickLang=b.dataset.l; paintLang(pickLang); });
+$('profClose').onclick=()=>$('profModal').classList.remove('on');
+$('profForm').onsubmit=async e=>{ e.preventDefault(); const n=TW.cleanNick($('profNick').value);
+  if(n){ const bad=TW.nickProblem(n,ME.uid); if(bad){ $('profErr').textContent=bad; return; } }
+  try{ await db.ref('users/'+ME.uid).update({nick:n||null,lang:pickLang}); await db.ref('stats/'+ME.uid).update({nick:n||null});
+    try{ localStorage.setItem('twLang',pickLang); }catch(x){} ME.nick=n; paintMe(); $('profModal').classList.remove('on'); }
+  catch(err){ $('profErr').textContent='Neizdevās saglabāt. Mēģini vēlreiz.'; } };
+
+// ---- admins / moderators: režīma izvēle ----
+function setupStaff(){ const r=TW.role(ME.uid); if(!r) return;
+  let chosen=null; try{ chosen=sessionStorage.getItem('twMode'); }catch(e){}
+  if(chosen) return;
+  $('modeStaff').textContent=r==='admin'?'👑 Admins':'🛡️ Moderators'; $('modeModal').classList.add('on');
+  $('modeStaff').onclick=()=>{ try{ sessionStorage.setItem('twMode','staff'); }catch(e){} location.href='admin.html'; };
+  $('modePlayer').onclick=()=>{ try{ sessionStorage.setItem('twMode','player'); }catch(e){} $('modeModal').classList.remove('on'); }; }
+
+// ---- spēļu idejas ----
+function setupIdeas(){ $('ideaForm').onsubmit=async e=>{ e.preventDefault(); const t=$('ideaText').value.trim(), m=$('ideaMsg');
+  if(t.length<3){ m.textContent='Uzraksti mazliet vairāk 🙂'; return; }
+  try{ await db.ref('ideas').push({uid:ME.uid,name:TW.display(ME.name,ME.nick),text:t.slice(0,500),t:TS}); $('ideaText').value=''; m.style.color='var(--green)'; m.textContent='✅ Paldies! Ideja nosūtīta.'; }
+  catch(err){ m.style.color=''; m.textContent='Neizdevās nosūtīt. Mēģini vēlreiz.'; } }; }
 
 // ---- e-pasts (neobligāts, privāts) ----
 function setupEmail(uid,prof){ const box=$('emailBox');

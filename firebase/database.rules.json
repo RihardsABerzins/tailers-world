@@ -23,7 +23,7 @@
       ],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['name','level','xp']) && newData.child('level').isNumber() && newData.child('level').val() >= 1 && newData.child('level').val() <= 99 && newData.child('name').isString() && newData.child('name').val().length <= 16 && root.child('usernames/'+newData.child('name').val().toLowerCase()).val() === auth.uid"
+        ".validate": "newData.hasChildren(['name','level','xp']) && newData.child('level').isNumber() && newData.child('level').val() >= 1 && newData.child('level').val() <= 99 && newData.child('name').isString() && newData.child('name').val().length <= 16 && root.child('usernames/'+newData.child('name').val().toLowerCase()).val() === auth.uid && (!newData.child('nick').exists() || (newData.child('nick').isString() && newData.child('nick').val().length >= 2 && newData.child('nick').val().length <= 16))"
       }
     },
     "presence": {
@@ -31,13 +31,42 @@
         ".read": true,
         "$uid": {
           ".write": "auth != null && auth.uid === $uid",
-          ".validate": "newData.hasChildren(['n','x','t']) && newData.child('n').isString() && root.child('usernames/'+newData.child('n').val().toLowerCase()).val() === $uid"
+          ".validate": "newData.hasChildren(['n','x','t']) && newData.child('n').isString() && root.child('usernames/'+newData.child('n').val().toLowerCase()).val() === $uid && (!newData.child('nk').exists() || (newData.child('nk').isString() && newData.child('nk').val().length >= 2 && newData.child('nk').val().length <= 16))"
         }
       }
     },
     "fcm": {
       "$uid": {
         ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "roles": {
+      ".read": true,
+      "$uid": {
+        ".write": "auth != null && root.child('usernames/tailerboi').val() === auth.uid",
+        ".validate": "newData.val() === 'mod'"
+      }
+    },
+    "kicks": {
+      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && $uid !== root.child('usernames/tailerboi').val() && (root.child('usernames/tailerboi').val() === auth.uid || (root.child('roles/'+auth.uid).val() === 'mod' && root.child('roles/'+$uid).val() !== 'mod'))",
+        ".validate": "!newData.exists() || newData.hasChildren(['by','until','t'])"
+      }
+    },
+    "ideas": {
+      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      "$id": {
+        ".write": "(auth != null && !data.exists() && newData.child('uid').val() === auth.uid) || (auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod') && !newData.exists())",
+        ".validate": "newData.hasChildren(['uid','name','text','t']) && newData.child('text').isString() && newData.child('text').val().length >= 3 && newData.child('text').val().length <= 500"
+      }
+    },
+    "online": {
+      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "!newData.exists() || newData.hasChildren(['game','t'])"
       }
     }
   }
