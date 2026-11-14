@@ -68,6 +68,64 @@
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "!newData.exists() || newData.hasChildren(['game','t'])"
       }
+    },
+    "blocks": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "friendReq": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $to || (auth.uid === $from && !root.child('blocks/'+$to+'/'+$from).exists()))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['n','t']) && newData.child('n').isString() && newData.child('n').val().length <= 16)"
+        }
+      }
+    },
+    "friends": {
+      "$u": {
+        ".read": "auth != null && auth.uid === $u",
+        "$f": {
+          ".write": "auth != null && (auth.uid === $u || (auth.uid === $f && (!newData.exists() || root.child('friendReq/'+auth.uid+'/'+$u).exists())))",
+          ".validate": "!newData.exists() || newData.val() === true"
+        }
+      }
+    },
+    "dm": {
+      "$cid": {
+        ".read": "auth != null && ($cid.beginsWith(auth.uid+'_') || $cid.endsWith('_'+auth.uid))",
+        "$mid": {
+          ".write": "auth != null && ($cid.beginsWith(auth.uid+'_') || $cid.endsWith('_'+auth.uid)) && !data.exists() && newData.child('f').val() === auth.uid && !root.child('blocks/'+$cid.replace(auth.uid,'').replace('_','')+'/'+auth.uid).exists()",
+          ".validate": "newData.hasChildren(['f','x','t']) && newData.child('x').isString() && newData.child('x').val().length >= 1 && newData.child('x').val().length <= 300"
+        }
+      }
+    },
+    "inbox": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$other": {
+          ".write": "auth != null && (auth.uid === $uid || (auth.uid === $other && !root.child('blocks/'+$uid+'/'+$other).exists()))",
+          ".validate": "!newData.exists() || newData.hasChildren(['n','x','t'])"
+        }
+      }
+    },
+    "chat": {
+      "$city": {
+        ".read": "auth != null",
+        "$mid": {
+          ".write": "auth != null && !data.exists() && newData.child('u').val() === auth.uid",
+          ".validate": "newData.hasChildren(['u','n','p','t']) && newData.child('p').isNumber() && newData.child('p').val() >= 0 && newData.child('p').val() < 40 && newData.child('n').isString() && newData.child('n').val().length <= 16"
+        }
+      }
+    },
+    "reports": {
+      ".read": "auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod')",
+      "$id": {
+        ".write": "(auth != null && !data.exists() && newData.child('by').val() === auth.uid) || (auth != null && (root.child('usernames/tailerboi').val() === auth.uid || root.child('roles/'+auth.uid).val() === 'mod') && !newData.exists())",
+        ".validate": "newData.hasChildren(['by','about','t'])"
+      }
     }
   }
 }

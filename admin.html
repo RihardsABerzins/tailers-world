@@ -58,6 +58,9 @@
     <input id="search" placeholder="Meklēt pēc vārda…" autocomplete="off">
     <div class="list" id="all"></div>
 
+    <h2>⚠️ Sūdzības par spēlētājiem <span class="pill" id="repCount">0</span></h2>
+    <div class="list" id="reports"><div class="empty">Ielādē…</div></div>
+
     <h2>💡 Spēļu idejas <span class="pill" id="ideaCount">0</span></h2>
     <div class="list" id="ideas"><div class="empty">Ielādē…</div></div>
   </div>
@@ -65,7 +68,7 @@
 <script>
 const auth=firebase.auth(), db=firebase.database(), TS=firebase.database.ServerValue.TIMESTAMP, $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let ME=null, MYROLE='', STATS={}, ONLINE={}, KICKS={}, IDEAS={};
+let ME=null, MYROLE='', STATS={}, ONLINE={}, KICKS={}, IDEAS={}, REPORTS={};
 const fmt=t=>t?new Date(t).toLocaleString('lv-LV',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
 const kicked=uid=>KICKS[uid]&&KICKS[uid].until>TW.now();
 
@@ -82,6 +85,7 @@ auth.onAuthStateChanged(async u=>{
   db.ref('online').on('value',s=>{ ONLINE=s.val()||{}; renderOnline(); });
   db.ref('kicks').on('value',s=>{ KICKS=s.val()||{}; renderAll(); renderOnline(); });
   db.ref('ideas').on('value',s=>{ IDEAS=s.val()||{}; renderIdeas(); });
+  db.ref('reports').on('value',s=>{ REPORTS=s.val()||{}; renderReports(); },()=>{});
   document.addEventListener('tw-roles',()=>{ renderAll(); renderOnline(); });
   setInterval(renderOnline,10000);
 });
@@ -111,12 +115,18 @@ function renderIdeas(){ const rows=Object.entries(IDEAS).sort((a,b)=>(b[1].t||0)
   $('ideas').innerHTML=rows.length?rows.map(([id,v])=>`<div class="row"><div class="nm"><div class="idea">${esc(v.text)}</div><div class="meta">— ${esc(v.name)} · ${fmt(v.t)}</div></div><div class="acts"><button class="btn sm" data-delidea="${id}">🗑️</button></div></div>`).join(''):'<div class="empty">Ideju vēl nav.</div>';
   bind($('ideas')); }
 
+function renderReports(){ const rows=Object.entries(REPORTS).sort((a,b)=>(b[1].t||0)-(a[1].t||0));
+  $('repCount').textContent=rows.length;
+  $('reports').innerHTML=rows.length?rows.map(([id,v])=>`<div class="row${kicked(v.about)?' kicked':''}"><div class="nm">${nameOf(v.about,'?')}<div class="meta">ziņoja ${nameOf(v.by,'?')} · ${fmt(v.t)}</div></div><div class="acts">${kickBtns(v.about)}<button class="btn sm" data-delrep="${id}">✓ Izskatīts</button></div></div>`).join(''):'<div class="empty">Sūdzību nav. 🙂</div>';
+  bind($('reports')); }
+
 function bind(root){
   root.querySelectorAll('[data-kick]').forEach(b=>b.onclick=async()=>{ const uid=b.dataset.kick; b.disabled=true;
     await db.ref('kicks/'+uid).set({by:(STATS[ME]&&STATS[ME].name)||'admins',until:TW.now()+10*60*1000,t:TS}).catch(e=>alertMsg(e)); });
   root.querySelectorAll('[data-unkick]').forEach(b=>b.onclick=()=>db.ref('kicks/'+b.dataset.unkick).remove().catch(e=>alertMsg(e)));
   root.querySelectorAll('[data-mod]').forEach(b=>b.onclick=()=>db.ref('roles/'+b.dataset.mod).set('mod').catch(e=>alertMsg(e)));
   root.querySelectorAll('[data-unmod]').forEach(b=>b.onclick=()=>db.ref('roles/'+b.dataset.unmod).remove().catch(e=>alertMsg(e)));
+  root.querySelectorAll('[data-delrep]').forEach(b=>b.onclick=()=>db.ref('reports/'+b.dataset.delrep).remove().catch(e=>alertMsg(e)));
   root.querySelectorAll('[data-delidea]').forEach(b=>b.onclick=()=>{ if(confirm('Dzēst šo ideju?')) db.ref('ideas/'+b.dataset.delidea).remove().catch(e=>alertMsg(e)); });
 }
 function alertMsg(e){ console.warn(e); const d=document.createElement('div'); d.className='empty'; d.style.cssText='position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#3a1020;color:#fff;z-index:9'; d.textContent='Nav atļauts vai neizdevās.'; document.body.appendChild(d); setTimeout(()=>d.remove(),2500); }

@@ -117,8 +117,8 @@
 
   // HTML teksts un title atribūti
   const SKIP=new Set(['SCRIPT','STYLE','INPUT','TEXTAREA']);
-  const doNode=n=>{ if(n.nodeType===3){ if(n.parentNode&&SKIP.has(n.parentNode.nodeName)) return; const t=tr(n.nodeValue); if(t!==n.nodeValue) n.nodeValue=t; }
-    else if(n.nodeType===1&&!SKIP.has(n.nodeName)){ if(n.title){ const t=tr(n.title); if(t!==n.title) n.title=t; } for(const c of n.childNodes) doNode(c); } };
+  const doNode=n=>{ if(n.nodeType===3){ if(n.parentNode&&(SKIP.has(n.parentNode.nodeName)||(n.parentNode.closest&&n.parentNode.closest('[data-notr]')))) return; const t=tr(n.nodeValue); if(t!==n.nodeValue) n.nodeValue=t; }
+    else if(n.nodeType===1&&!SKIP.has(n.nodeName)&&!n.hasAttribute('data-notr')){ if(n.title){ const t=tr(n.title); if(t!==n.title) n.title=t; } for(const c of n.childNodes) doNode(c); } };
   const start=()=>{ document.documentElement.lang='lv'; doNode(document.body);
     new MutationObserver(ms=>{ for(const m of ms){ if(m.type==='characterData') doNode(m.target); else if(m.type==='attributes') doNode(m.target); else m.addedNodes.forEach(doNode); } })
       .observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['title']}); };
@@ -132,6 +132,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="../firebase-config.js?v=3"></script>
 <script src="../tw-common.js?v=1"></script>
+<script src="../tw-social.js?v=1"></script>
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -257,7 +258,7 @@
   #hud:not(.open):not(.food-low) #foodTxt{display:none}
   #hud .more{opacity:.55;font-size:10px;margin-left:4px}
   #hud.open .more{display:none}
-  #player:not(.open)>:not(#pToggle):not(#pSet){display:none}
+  #player:not(.open)>:not(#pToggle):not(#pSet):not(#pChat){display:none}
   #player:not(.open){padding:3px;gap:3px}
   #pToggle{font-size:15px}
   #inv .bag{background:#000c;border:1px solid #fff4}
@@ -279,7 +280,7 @@
 <div id="help">A D – run · W – jump<br>E – action · ↓ – hide<br>T – metro · Z X C V – items<br>Esc – pause / settings</div>
 <div id="clock"></div>
 <div id="policeSign"></div>
-<div id="player"><button id="pToggle" title="Music">🎵</button><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pSet" title="Settings (Esc)">⚙</button><button id="pStaff" title="Admina rīki" style="display:none">🛠</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
+<div id="player"><button id="pToggle" title="Music">🎵</button><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pSet" title="Settings (Esc)">⚙</button><button id="pStaff" title="Admina rīki" style="display:none">🛠</button><button id="pChat" title="Čats" style="position:relative">💬<span id="pChatN" style="display:none;position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:#ff3d5a;color:#fff;font:900 11px system-ui;align-items:center;justify-content:center;padding:0 4px"></span></button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
 <div id="prompt"></div>
 <div id="toast"></div>
 <button id="fsBtn" class="sec">⛶ Fullscreen</button><button id="tpBtn" class="sec">🚇 Metro (T)</button><button id="setBtn" class="sec">⚙ Settings (Esc)</button>
@@ -438,7 +439,7 @@ const lampXs=[]; for(let x=300;x<WORLD_W;x+=410) lampXs.push(x);
 
 const player={x:300,h:0,vy:0,vx:0,face:'down',flip:1,step:0,moving:false,idle:0,dust:0,spin:0};
 const keys={};
-let mode='world'; // world | entering | draw | exiting | shop
+let mode='world'; // world | entering | draw | exiting | shop | chat
 let heat=0, hidden=false, hideAt=null, nearHide=null, recent=[];
 const police={active:false,car:null,off:null,offs:[],heli:null,reinf:0};
 let curCity=0, dayCount=0, edgeT=0, foodBand=3, curDist=0, clock=17.5, prevDay=null;
@@ -1140,7 +1141,7 @@ function render(){
   police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
   if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
-  if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid);
+  if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) { drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid); drawBubble(player.x,GROUND-player.h-126,chatBubble(NET.uid)); }
   // satiksme (priekšplānā)
   traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.color,{spin:c.spin}); });
   if(police.car){ const c=police.car, L=175, Hh=L*.3; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir});
@@ -1511,7 +1512,10 @@ function pickTarget(wx,wy){
   }
   return null; }
 cv.addEventListener('pointerdown',e=>{ if(mode!=='world'||lootOpen) return; audioInit();
-  const Zs=cam.zoom, wx=(e.clientX-W/2)/Zs+cam.x, wy=(e.clientY-H/2)/Zs+cam.y, hit=pickTarget(wx,wy);
+  const Zs=cam.zoom, wx=(e.clientX-W/2)/Zs+cam.x, wy=(e.clientY-H/2)/Zs+cam.y;
+  if(NET.on&&!inMetro&&window.TWS){ let po=null,pd=70; Object.values(NET.others).forEach(o=>{ if(o.hid) return; const d=Math.abs(o.dx-wx); if(d<pd&&wy>GROUND-240&&wy<GROUND+30){ pd=d; po=o; } });
+    if(po){ buzz(10); ripples.push({x:e.clientX,y:e.clientY,t:0,c:'#5ac8ff'}); openChat(()=>TWS.openPlayer(po.uid)); return; } }
+  const hit=pickTarget(wx,wy);
   if(!hit) return; // staigāšana tikai ar bultiņām – spiediens strādā tikai uz objektiem
   ripples.push({x:e.clientX,y:e.clientY,t:0,c:hit.act==='hide'?'#69f0ae':'#ffd34d'});
   if(hidden){ if(hit.act==='hide'&&hit.obj===hideAt){ buzz(15); toggleHide(); } return; }
@@ -1546,6 +1550,7 @@ addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT'&&k!=='escape'&&k!=='enter') return;
   if(typeof lootOpen!=='undefined'&&lootOpen){ if(k==='enter'||k===' '){ const b=lootEl.querySelector('button'); b&&b.click(); } return; }
   if(mode==='pause'){ if(k==='escape'||k==='p') closePause(); return; }
+  if(mode==='chat'){ if(k==='escape') TWS.close(); return; }
   if(mode==='ride') return;
   if(k==='-'||k==='_'){ setVol(music.vol-.1); return; }
   if(k==='+'||k==='='){ setVol(music.vol+.1); return; }
@@ -1590,6 +1595,9 @@ if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
       TW.heartbeat(NET.uid,()=>({game:'Graffiti RPG',where:inMetro?'Metro':`City ${curCity+1} · Līm. ${level()}`,name:NET.name,nick:NET.nick||''}));
       NET.db.ref('kicks/'+NET.uid).on('value',s=>{ const k=s.val(); if(k&&k.until>TW.now()) kickedOut(k); },()=>{});
       let st=''; try{ st=sessionStorage.getItem('twMode'); }catch(e){}
+      if(window.TWS) TWS.init({uid:NET.uid,name:NET.name,nick:NET.nick||''},{fab:false,getCity:()=>inMetro?null:curCity,
+        onClose:()=>{ if(mode==='chat') mode='world'; },
+        onBadge:n=>{ const b=document.getElementById('pChatN'); b.textContent=n>9?'9+':n; b.style.display=n?'flex':'none'; }});
       const showStaff=()=>{ document.getElementById('pStaff').style.display=(TW.isStaff(NET.uid)&&st==='staff')?'':'none'; }; showStaff(); document.addEventListener('tw-roles',showStaff);
     });
   }catch(e){}
@@ -1614,6 +1622,15 @@ function drawNameTag(x,y,name,uid){ if(!name) return; const role=window.TW?TW.ro
     ctx.shadowColor='#2ec5ff'; ctx.shadowBlur=16; ctx.globalAlpha=fl; ctx.fillStyle='#bff3ff'; ctx.fillText(lab,x,y); ctx.shadowBlur=6; ctx.fillText(lab,x,y); }
   else { ctx.lineWidth=4; ctx.strokeStyle='#000'; ctx.strokeText(lab,x,y); ctx.fillStyle='#fff'; ctx.fillText(lab,x,y); }
   ctx.restore(); }
+// ---- čats: atver paneli, frāžu burbuļi virs galvām ----
+function openChat(fn){ if(!NET.on||!window.TWS||(mode!=='world'&&mode!=='chat')) return; mode='chat'; for(const k in keys) keys[k]=false; autoT=null; promptEl.style.display='none'; (fn||(()=>TWS.openPanel()))(); }
+document.getElementById('pChat').onclick=e=>{ e.stopPropagation(); audioInit(); if(!NET.on) return toast('Čats strādā, kad esi ielogojies.'); openChat(); };
+function chatBubble(uid){ const a=window.TWS&&TWS.cityMsgs; if(!a||!a.length) return null; const now=Date.now()+NET.off;
+  for(let i=a.length-1;i>=0;i--){ const m=a[i]; if(m.u===uid) return now-(m.t||0)<7000?TWS.PHRASES[m.p]:null; } return null; }
+function drawBubble(x,y,txt){ if(!txt) return; ctx.save(); ctx.font='800 16px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const w=ctx.measureText(txt).width+22, h=30; ctx.fillStyle='#fff'; ctx.strokeStyle='#000'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.roundRect(x-w/2,y-h,w,h,12); ctx.moveTo(x-7,y); ctx.lineTo(x,y+9); ctx.lineTo(x+7,y); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#111'; ctx.fillText(txt,x,y-h/2); ctx.restore(); }
 // ---- izmešana no spēles ----
 let kickShown=false;
 function kickedOut(k){ if(kickShown) return; kickShown=true; mode='pause'; spraySound&&spraySound(false);
@@ -1637,7 +1654,7 @@ async function openStaff(){ if(!NET.on||!TW.isStaff(NET.uid)||mode!=='world') re
   document.getElementById('tpClose').onclick=closeShop; }
 function drawOther(o,mv){ ctx.save(); ctx.globalAlpha=.93;
   drawPerson(ctx,o.dx,GROUND-2,PS,{face:mv?'side':'down',flip:o.f||1,step:o.step,hood:o.h||'#888',skin:'#f2c9a0',cap:'#1b1b1f',pants:'#2b3a67',mask:'#b71c1c',still:!mv}); ctx.restore();
-  drawNameTag(o.dx,GROUND-104,o.nk||o.n,o.uid); }
+  drawNameTag(o.dx,GROUND-104,o.nk||o.n,o.uid); drawBubble(o.dx,GROUND-126,chatBubble(o.uid)); }
 setInterval(netTick,500);
 
 updateHud();

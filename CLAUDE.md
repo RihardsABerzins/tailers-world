@@ -7,7 +7,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Viss jāpārbauda **telefonā vertikāli UN horizontāli** (piem., 390×780 un 780×390), arī planšetē.
 - Pogas lielas un ērti spiežamas ar pirkstu; teksts īss un saprotams.
 - Spēles ir **bez maksas**. Nekādu īstu naudu spēlēs (lootboxi tikai par spēles naudu/precizitāti).
-- Bērnu drošība: nevākt personas datus (lietotājvārds + parole, bez e-pasta), nekādu brīvu čatu; citu spēlētāju vārdi tikai kā etiķetes.
+- Bērnu drošība: nevākt personas datus (lietotājvārds + parole, e-pasts tikai pēc izvēles). Publiskajā čatā **tikai gatavas frāzes**; brīvs teksts tikai privātos čukstos, ar rupju vārdu filtru (zvaigznītes) un garu ciparu (telefona numuru) slēpšanu. Var bloķēt un ziņot.
 
 ## Mūzika
 - Spēlē skan latviešu radio (Radio TEV, SWH, Latvijas Radio 5) un **ik pēc ~8 minūtēm Papīra Lidmašīnu dziesma**.
@@ -36,6 +36,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Profils (uzspiežot uz sava vārda): iesauka (`nick`, bez emoji, rādās spēlēs) un valoda (`twLang`).
 - Jaunā spēlē: izsauc `TW.heartbeat(uid, ...)`, lai admins redzētu spēlētājus tiešsaistē, un klausies `kicks/{uid}`.
 - Pēc ielogošanās var pievienot e-pastu (privāts, `users/{uid}/email`, `news` = piekrīt jaunumiem). E-pastu sūtīšanai un paroles atjaunošanai vajag servera funkciju (Firebase Blaze plāns) – vēl nav.
+- Čats: `tw-social.js` (`TWS`) – čuksti (`dm/`, `inbox/`), draugi (`friendReq/`, `friends/`), bloķēšana (`blocks/`), sūdzības (`reports/`, redz admin.html), pilsētas frāzes (`chat/{pilsēta}`, `TWS.PHRASES`). Spēlē: pieskaries citam spēlētājam → kartīte; 💬 poga radio joslā; frāzes parādās burbulī virs galvas. Filtrs: `TWS.clean()` (EXACT/START saraksti).
 - Mainot `firebase-config.js`, palielini `?v=` numuru visās lapās (kešatmiņa).
 
 ## Plānots
