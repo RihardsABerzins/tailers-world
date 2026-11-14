@@ -88,7 +88,7 @@
     ['Riverside','Upmala'],['Uptown','Augšpilsēta'],['Crown Hill','Kroņkalns'],
     ['PAINT DEPOT','KRĀSU DEPO'],['CAFÉ','KAFEJNĪCA'],['PIZZERIA','PICĒRIJA'],['BIKES','VELO'],['SHOES','APAVI'],['ARCADE','SPĒĻU ZĀLE'],['FLOWERS','ZIEDI'],['BARBER','FRIZIERIS'],
     ['On foot','Kājām'],['Skateboard','Skrituļdēlis'],['Scooter','Skūteris'],['Hatchback','Hečbeks'],['Sports car','Sporta auto'],['Supercar','Superauto'],
-    ['Hiding spot','Slēptuve'],['hiding spot','slēptuve'],['Wall (lvl','Siena (līm.'],['Wall –','Siena –'],
+    ['New medal!','Jauna medaļa!'],['Hiding spot','Slēptuve'],['hiding spot','slēptuve'],['Wall (lvl','Siena (līm.'],['Wall –','Siena –'],
   ];
   // Atsevišķi vārdi (tikai veseli vārdi)
   const WORDS=[
@@ -133,6 +133,7 @@
 <script src="../firebase-config.js?v=4"></script>
 <script src="../tw-common.js?v=2"></script>
 <script src="../tw-social.js?v=2"></script>
+<script src="../tw-ach.js?v=1"></script>
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -416,17 +417,20 @@ const SHOP_INFO={
   barber:{name:'BARBER',  neon:'#5ab4e0', wall:'#523030', awn:['#e53935','#1e88e5']},
 };
 const OTHER_SHOPS=['pizza','bike','shoes','arcade','flower','barber']; const LOT_DEFS=[]; let _sc=0;
-for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',ds:k/10}); LOT_DEFS.push({k:'wall',t:k});
-  if(k===0) LOT_DEFS.push({k:'paint'},{k:'metro',ds:0}); else if(m===0) LOT_DEFS.push({k:'paint'}); else if(m===3) LOT_DEFS.push({k:'cafe'}); else if(m===6||m===9) LOT_DEFS.push({k:OTHER_SHOPS[_sc++%OTHER_SHOPS.length]}); }
+// katrā līmenī 3 sienas: galvenā (līmeņa forma) + 2 papildu ar formām no līmeņa kopas
+for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',ds:k/10}); LOT_DEFS.push({k:'wall',t:k,v:0});
+  if(k===0) LOT_DEFS.push({k:'paint'},{k:'metro',ds:0}); else if(m===0) LOT_DEFS.push({k:'paint'}); else if(m===3) LOT_DEFS.push({k:'cafe'}); else if(m===6||m===9) LOT_DEFS.push({k:OTHER_SHOPS[_sc++%OTHER_SHOPS.length]});
+  LOT_DEFS.push({k:'wall',t:k,v:1},{k:'wall',t:k,v:2}); }
+const extraShape=(k,v)=>{ const main=NAMED_SHAPES[k], c=[...new Set([...TIERS[k].shapes,...NAMED_SHAPES.slice(0,Math.min(18,k+3))])].filter(n=>n!==main); return c[(k*2+v)%c.length]; };
 const lots=[], walls=[];
 let cursorX=520, lastK=0;
 LOT_DEFS.forEach((d,i)=>{
   const w=(d.k==='wall'||d.k==='metro')?560:620, l={i,kind:d.k,x:cursorX,w,cx:cursorX+w/2,seed:i*7919+13,img:null,off:Math.random()*40};
-  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,shape:'L'+d.t,art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
+  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,shape:d.v?extraShape(d.t,d.v):'L'+d.t,art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
   else if(d.k==='metro'){ l.ds=d.ds; l.info=SHOP_INFO.metro; l.door=l.cx-34; l.bonusAt=0; }
   else { l.door=l.x+w-126; l.info=SHOP_INFO[d.k]; }
   l.dist=(d.k==='wall'?d.t:d.k==='metro'?d.ds*10:lastK); if(d.k==='wall') lastK=d.t;
-  l.city=Math.floor(l.dist/10); l.hide=d.k==='wall'?d.t%3===1:(d.k!=='metro'&&d.k!=='paint'&&i%3===0);
+  l.city=Math.floor(l.dist/10); l.hide=d.k==='wall'?d.t%3===1&&!d.v:(d.k!=='metro'&&d.k!=='paint'&&i%3===0);
   lots.push(l); cursorX+=w;
 });
 const WORLD_W=cursorX+520;
@@ -1389,7 +1393,7 @@ function travel(cb,label){ closeShop(); mode='ride'; ride.t=0; ride.cb=cb; ride.
 function enterMetro(st){ if(police.active){ toast('🚓 The police are looking for you – metro unavailable!'); return; }
   metroFrom=st; travel(()=>{ inMetro=true; metroObjs.forEach(w=>{ if(w.kind==='mwall'&&w.cool<=0){ const k=Math.max(0,level()-1-Math.floor(Math.random()*4)); w.tier=k; w.shape='L'+k; w.art=null; } }); player.x=M0+300; player.flip=1; },'Metro'); }
 function exitMetro(){ travel(()=>{ inMetro=false; curCity=metroFrom?metroFrom.city:0; shownMoney=-1; player.x=metroFrom?metroFrom.cx:300; },'To the street'); }
-function goDistrict(k){ travel(()=>{ inMetro=false; curCity=walls[k].city; shownMoney=-1; player.x=walls[k].cx; },`Level ${k+1}: ${distName(k)} (City ${walls[k].city+1})`); }
+function goDistrict(k){ const w=walls.find(w=>w.tier===k); travel(()=>{ inMetro=false; curCity=w.city; shownMoney=-1; player.x=w.cx; },`Level ${k+1}: ${distName(k)} (City ${w.city+1})`); }
 function goCity(c){ travel(()=>{ inMetro=false; curCity=c; shownMoney=-1; player.x=stations[c].cx; },`City ${c+1}: ${CITY_NAMES[c]}`); }
 function openMetro(){ if(mode!=='world'||!inMetro) return; mode='shop'; promptEl.style.display='none'; tpOv.classList.add('on'); renderMetro(); }
 function renderMetro(){ if(!inMetro||!tpOv.classList.contains('on')) return; const lv=Math.min(NLEV,level()); let rows='';
@@ -1609,8 +1613,9 @@ function netTick(){ if(!NET.on) return; const c=inMetro?-1:curCity;
         s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({uid:p.key,dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
   const now=Date.now();
   if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,hid:hidden?1:0,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
-function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000) return; NET.lastStats=now;
-  NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); }
+function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000){ if(!NET.trail) NET.trail=setTimeout(()=>{ NET.trail=null; netStats(true); },5000-(now-NET.lastStats)); return; } NET.lastStats=now;
+  NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+  if(window.TWA) TWA.sync(NET.uid,{level:level(),painted:save.painted||0,city:curCity+1}).then(n=>{ n.forEach((m,i)=>setTimeout(()=>{ toast(`🏅 <b>New medal!</b><br><span style="font-size:30px">${m.i}</span> ${TWA.title(m)}`); ding([784,988,1175,1568]); buzz(30); },4200*i)); }).catch(()=>{}); }
 function drawNameTag(x,y,name,uid){ if(!name) return; const role=window.TW?TW.role(uid):'', adm=role==='admin', mod=role==='mod', lab=(adm?'👑 ':mod?'🛡️ ':'')+name;
   ctx.save(); ctx.font='900 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
   if(adm){ const w=ctx.measureText(lab).width, sh=((time*120)%(w+160))-80;

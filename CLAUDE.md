@@ -39,6 +39,9 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Čats: `tw-social.js` (`TWS`) – čuksti (`dm/`, `inbox/`), draugi (`friendReq/`, `friends/`), bloķēšana (`blocks/`), sūdzības (`reports/`, redz admin.html), pilsētas frāzes (`chat/{pilsēta}`, `TWS.PHRASES`). Spēlē: pieskaries citam spēlētājam → kartīte; 💬 poga radio joslā; frāzes parādās burbulī virs galvas. Filtrs: `TWS.clean()` (EXACT/START saraksti).
 - Mainot `firebase-config.js`, palielini `?v=` numuru visās lapās (kešatmiņa).
 
+- Medaļas: `tw-ach.js` (`TWA`) – saraksts `TWA.LIST`, grupas `TWA.GROUPS` (profils + katra spēle). Glabājas `ach/{uid}` (publiski), apskatāmas sākumlapā, citu medaļas redz "Citi spēlētāji". Spēle piešķir ar `TWA.sync(uid,{level,painted,city})`. Jaunai spēlei pievieno grupu un medaļas.
+- Uzaicini draugu: saite `/?draugs=lietotājvārds`; jaunais spēlētājs pēc profila izveides ieraksta `invites/{uzaicinātājs}/{uid}` un nosūta draudzības pieprasījumu – abi saņem medaļu.
+- Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
+
 ## Plānots
-- Sasniegumi (achievements).
 - "Atbalsti mani" saite sākumlapā.

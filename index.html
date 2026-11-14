@@ -20,6 +20,7 @@
 <script>window.twIsAdmin=window.twIsAdmin||(()=>false);</script>
 <script src="tw-common.js?v=2"></script>
 <script src="tw-social.js?v=2"></script>
+<script src="tw-ach.js?v=1"></script>
 <style>
   :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--pink:#ff5fa2;--yellow:#ffd34d;--blue:#5ac8ff;--green:#7cff8a;--red:#ff6b7a}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -113,6 +114,31 @@
   textarea:focus{border-color:var(--yellow)}
   .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px #ffcc3399);animation:shine 2.6s linear infinite;font-weight:900}
   @keyframes shine{to{background-position:-250% 0}}
+  /* uzaicini draugu + medaļas */
+  .invite{margin:0 0 22px;background:linear-gradient(135deg,#ff5fa233,#5ac8ff22);border:2px solid #ff5fa266;border-radius:22px;padding:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:rise .6s both}
+  .invite .ico{font-size:44px;animation:bob 2.4s ease-in-out infinite}
+  .invite p{margin:0;flex:1 1 230px;font-size:17px}
+  .invite small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+  .invite .btns{flex:1 1 220px}
+  .invbanner{display:none;margin:0 0 16px;background:linear-gradient(135deg,#ffd34d33,#ff5fa233);border:2px solid #ffd34d77;border-radius:20px;padding:14px 16px;font-size:17px;animation:rise .6s both}
+  .medals{margin-top:26px}
+  .medals h2 span{color:var(--muted);font-size:16px;font-weight:700}
+  .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+  .mgroup{font-size:17px;margin:16px 0 10px}
+  .mgroup span{color:var(--muted);font-size:14px;font-weight:700}
+  .medal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 8px;text-align:center;animation:rise .5s both}
+  .medal .mi{font-size:38px;line-height:1.1;display:block}
+  .medal b{display:block;font-size:14px;margin-top:6px;line-height:1.2}
+  .medal small{display:block;color:var(--muted);font-size:11.5px;margin-top:3px;line-height:1.25}
+  .medal.got{border-color:#ffd34d88;background:linear-gradient(160deg,#ffd34d22,var(--card) 60%);box-shadow:0 0 18px #ffd34d22}
+  .medal.got .mi{animation:bob 3s ease-in-out infinite}
+  .medal.lock .mi{filter:grayscale(1);opacity:.35}
+  .medal.lock b{color:var(--muted)}
+  .newmedal{text-align:center}
+  .newmedal .big{font-size:96px;line-height:1;display:block;margin:6px 0 4px;animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes pop{from{transform:scale(0) rotate(-30deg)}to{transform:none}}
+  .confetti{position:fixed;top:-20px;font-size:22px;z-index:60;pointer-events:none;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -134,6 +160,7 @@
   </div>
 
   <div class="loading" id="loading">Ielādē…</div>
+  <div class="invbanner" id="invBanner"></div>
 
   <!-- Ielogoties / izveidot profilu -->
   <div class="auth" id="auth">
@@ -178,8 +205,18 @@
   </form>
 
   <div class="games" id="games">
+    <div class="invite" id="inviteBox">
+      <div class="ico">💌</div>
+      <p><b>Uzaicini draugu un saņem medaļu!</b><small id="invInfo">Kad draugs izveidos profilu ar tavu saiti, jūs abi saņemsiet medaļu.</small></p>
+      <div class="btns"><button class="btn pinkb" id="invShare">📤 Sūtīt saiti</button><button class="btn ghost" id="invCopy">📋 Kopēt</button></div>
+    </div>
     <h2>🕹️ Spēles</h2>
     <div class="grid" id="grid"></div>
+    <div class="medals">
+      <h2>🏅 Manas medaļas <span id="mCount"></span></h2>
+      <p class="hint" style="margin:-6px 0 4px">Medaļas krājas tavā profilā no visām spēlēm.</p>
+      <div id="mGrid"></div>
+    </div>
     <form class="panel" id="ideaForm" style="margin-top:26px">
       <h3>💡 Tev ir ideja jaunai spēlei?</h3>
       <p class="hint" style="margin:0 0 8px">Uzraksti, kādu spēli tu gribētu – Tailers izlasīs visas idejas!</p>
@@ -202,6 +239,16 @@
       <button id="modeStaff" class="on">👑 Admins</button>
       <button id="modePlayer">🎮 Spēlētājs</button>
     </div>
+  </div></div>
+
+  <!-- Jauna medaļa -->
+  <div class="modal" id="medalModal"><div class="panel newmedal">
+    <h3>🎉 Jauna medaļa!</h3>
+    <span class="big" id="nmIcon"></span>
+    <p style="font-size:22px;font-weight:900;margin:6px 0 2px" id="nmTitle"></p>
+    <p class="hint" style="margin:0 0 6px;font-size:15px" id="nmDesc"></p>
+    <p class="hint" id="nmMore"></p>
+    <button class="btn play full" id="nmOk">Super! 🙌</button>
   </div></div>
 
   <!-- Profils -->
@@ -240,6 +287,12 @@ soon.innerHTML=`<div class="thumb"><span>🔒</span></div><div class="body"><p c
 grid.appendChild(soon);
 if(SUPPORT_URL){ const b=$('supportBtn'); b.href=SUPPORT_URL; b.target='_blank'; b.rel='noopener'; b.textContent='💛 Atbalstīt'; b.removeAttribute('aria-disabled'); }
 
+// ---- drauga uzaicinājums (?draugs=lietotājvārds) ----
+let INV_BY='';
+{ const q=new URLSearchParams(location.search).get('draugs');
+  try{ if(q&&/^[a-z0-9_]{3,16}$/i.test(q)) localStorage.setItem('twInvBy',q.toLowerCase()); INV_BY=localStorage.getItem('twInvBy')||''; }catch(e){ INV_BY=q&&/^[a-z0-9_]{3,16}$/i.test(q)?q.toLowerCase():''; }
+  if(q) history.replaceState(null,'',location.pathname); }
+
 // ---- konti ----
 const auth=firebase.auth(), db=firebase.database(), TS=firebase.database.ServerValue.TIMESTAMP;
 const BAD=['fuck','shit','bitch','dick','sex','porn','nazi','hitler','pimp','pis','dirs','sūd','sud','kak','huj','hui','bljad','blyat','suka','pidar','pedik','idiot','muļķ','mulk'];
@@ -261,18 +314,30 @@ $('regForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=e.
     try{ await db.ref('usernames/'+n).set(uid); }catch(x){ await cred.user.delete(); throw {code:'auth/email-already-in-use'}; }
     await db.ref('users/'+uid).set({name:disp,created:TS,notify:false});
     await db.ref('stats/'+uid).set({name:disp,level:1,xp:0,painted:0,city:1,updated:TS});
+    await linkInviter(uid,disp,n);
   }catch(err){ out.textContent=authErr(err); }
   b.disabled=false; });
+
+// Jaunais spēlētājs atnāca ar drauga saiti: draugs saņem medaļu un draudzības pieprasījumu
+async function linkInviter(uid,disp,n){ if(!INV_BY||INV_BY===n) return;
+  try{ const inv=(await db.ref('usernames/'+INV_BY).get()).val(); if(!inv||inv===uid) return;
+    await db.ref('users/'+uid+'/invitedBy').set(INV_BY);
+    await db.ref('invites/'+inv+'/'+uid).set({n:disp,t:TS});
+    await db.ref('friendReq/'+inv+'/'+uid).set({n:disp,t:TS}).catch(()=>{});
+    try{ localStorage.removeItem('twInvBy'); }catch(e){} INV_BY='';
+    if(ME&&ME.uid===uid){ MED.invited=true; checkMedals(); }
+  }catch(e){} }
 
 $('logout').onclick=async()=>{ if(ME) await db.ref('online/'+ME.uid).remove().catch(()=>{}); clearInterval(HB); HB=null; ME=null; try{ sessionStorage.removeItem('twMode'); }catch(e){} await auth.signOut(); location.reload(); };
 
 auth.onAuthStateChanged(async u=>{
   $('loading').style.display='none';
-  if(!u){ $('emailBox').style.display='none'; $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
+  if(!u){ if(INV_BY){ const b=$('invBanner'); b.innerHTML=`🎁 Tevi uzaicināja <b>${INV_BY.replace(/[<>&]/g,'')}</b>! Izveido profilu – un jūs abi saņemsiet medaļu.`; b.style.display='block'; }
+    $('emailBox').style.display='none'; $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
   let name=u.email.split('@')[0], prof={}; try{ const s=await db.ref('users/'+u.uid).get(); if(s.exists()){ prof=s.val()||{}; if(prof.name) name=prof.name; } }catch(e){}
   await TW.ready; ME={uid:u.uid,name,nick:prof.nick||''};
-  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; paintMe();
-  setupNotify(u.uid); setupEmail(u.uid,prof); setupStaff(); setupIdeas();
+  $('invBanner').style.display='none'; $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; paintMe();
+  setupNotify(u.uid); setupEmail(u.uid,prof); setupStaff(); setupIdeas(); setupMedals(u.uid,prof);
   if(!window.TWS.me) TWS.init(ME,{});
   if(!HB) HB=TW.heartbeat(u.uid,()=>({game:'Sākumlapa',where:'',name:ME.name,nick:ME.nick||''}));
 });
@@ -303,6 +368,37 @@ function setupStaff(){ const r=TW.role(ME.uid); if(!r) return;
   $('modeStaff').textContent=r==='admin'?'👑 Admins':'🛡️ Moderators'; $('modeModal').classList.add('on');
   $('modeStaff').onclick=()=>{ try{ sessionStorage.setItem('twMode','staff'); }catch(e){} location.href='admin.html'; };
   $('modePlayer').onclick=()=>{ try{ sessionStorage.setItem('twMode','player'); }catch(e){} $('modeModal').classList.remove('on'); }; }
+
+// ---- medaļas + uzaicini draugu ----
+const MED={uid:null,stats:{},invites:0,friends:0,invited:false,queue:[]};
+function setupMedals(uid,prof){ if(MED.uid===uid) return; MED.uid=uid; MED.invited=!!prof.invitedBy;
+  const url=TWA.inviteUrl(ME.name);
+  $('invShare').onclick=async()=>{ const data={title:'Tailers World',text:'Nāc spēlēt ar mani Tailers World – bez maksas! 🎮',url};
+    if(navigator.share){ try{ await navigator.share(data); return; }catch(e){ if(e&&e.name==='AbortError') return; } } copyInvite(url); };
+  $('invCopy').onclick=()=>copyInvite(url);
+  renderMedals();
+  db.ref('stats/'+uid).on('value',s=>{ MED.stats=s.val()||{}; checkMedals(); },()=>{});
+  db.ref('invites/'+uid).on('value',s=>{ MED.invites=s.numChildren(); paintInvites(); checkMedals(); },()=>{});
+  db.ref('friends/'+uid).on('value',s=>{ MED.friends=s.numChildren(); checkMedals(); },()=>{});
+}
+async function copyInvite(url){ let ok=false; try{ await navigator.clipboard.writeText(url); ok=true; }catch(e){}
+  $('invInfo').innerHTML=ok?'✅ Saite nokopēta! Iesūti to draugam.':`Iesūti draugam šo saiti:<br><b style="user-select:all;word-break:break-all">${url}</b>`; }
+function paintInvites(){ const n=MED.invites; $('invInfo').textContent=n?`Ar tavu saiti pievienojušies: ${n} ${n===1?'draugs':'draugi'} 🎉 Nākamā medaļa pie ${n<3?3:n<10?10:'…'}!`:'Kad draugs izveidos profilu ar tavu saiti, jūs abi saņemsiet medaļu.'; }
+async function checkMedals(){ if(!MED.uid) return; const st=MED.stats;
+  const fresh=await TWA.sync(MED.uid,{level:st.level||1,painted:st.painted||0,city:st.city||1,invites:MED.invites,friends:MED.friends,invited:MED.invited});
+  renderMedals(); if(fresh.length){ MED.queue.push(...fresh); if(!$('medalModal').classList.contains('on')) showNextMedal(); } }
+function renderMedals(){ const own=TWA.owned||{}, got=TWA.LIST.filter(m=>own[m.id]).length;
+  $('mCount').textContent=`${got}/${TWA.LIST.length}`;
+  $('mGrid').innerHTML=TWA.GROUPS.map(G=>{ const ms=TWA.LIST.filter(m=>m.g===G.g), n=ms.filter(m=>own[m.id]).length;
+    return `<h3 class="mgroup">${G.t} <span>${n}/${ms.length}</span></h3><div class="mgrid">`+ms.map((m,i)=>`<div class="medal ${own[m.id]?'got':'lock'}" style="animation-delay:${i*.03}s"><span class="mi">${m.i}</span><b>${m.t}</b><small>${m.d}</small></div>`).join('')+'</div>'; }).join(''); }
+function showNextMedal(){ const m=MED.queue.shift(); if(!m){ $('medalModal').classList.remove('on'); return; }
+  $('nmIcon').textContent=m.i; $('nmTitle').textContent=m.t; $('nmDesc').textContent=m.d;
+  $('nmMore').textContent=MED.queue.length?`+ vēl ${MED.queue.length} ${MED.queue.length===1?'medaļa':'medaļas'}`:'';
+  const ic=$('nmIcon'); ic.style.animation='none'; ic.offsetWidth; ic.style.animation='';
+  $('medalModal').classList.add('on'); try{ navigator.vibrate&&navigator.vibrate([30,40,60]); }catch(e){}
+  if(!matchMedia('(prefers-reduced-motion:reduce)').matches) for(let i=0;i<26;i++){ const c=document.createElement('div'); c.className='confetti'; c.textContent=['🎉','✨','⭐','🎊',m.i][i%5];
+    c.style.left=Math.random()*100+'vw'; c.style.animationDuration=(1.6+Math.random()*1.6)+'s'; c.style.animationDelay=Math.random()*.4+'s'; document.body.appendChild(c); setTimeout(()=>c.remove(),3800); } }
+$('nmOk').onclick=showNextMedal;
 
 // ---- spēļu idejas ----
 function setupIdeas(){ $('ideaForm').onsubmit=async e=>{ e.preventDefault(); const t=$('ideaText').value.trim(), m=$('ideaMsg');
