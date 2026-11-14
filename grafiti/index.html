@@ -88,7 +88,7 @@
     ['Riverside','Upmala'],['Uptown','Augšpilsēta'],['Crown Hill','Kroņkalns'],
     ['PAINT DEPOT','KRĀSU DEPO'],['CAFÉ','KAFEJNĪCA'],['PIZZERIA','PICĒRIJA'],['BIKES','VELO'],['SHOES','APAVI'],['ARCADE','SPĒĻU ZĀLE'],['FLOWERS','ZIEDI'],['BARBER','FRIZIERIS'],
     ['On foot','Kājām'],['Skateboard','Skrituļdēlis'],['Scooter','Skūteris'],['Hatchback','Hečbeks'],['Sports car','Sporta auto'],['Supercar','Superauto'],
-    ['New medal!','Jauna medaļa!'],['Hiding spot','Slēptuve'],['hiding spot','slēptuve'],['Wall (lvl','Siena (līm.'],['Wall –','Siena –'],
+    ['New medal!','Jauna medaļa!'],['Good work – police not interested.','Labs darbs – policijai neinteresē.'],['sloppy drawing','paviršs zīmējums'],['patrol saw you','patrulis tevi redzēja'],['Hiding spot','Slēptuve'],['hiding spot','slēptuve'],['Wall (lvl','Siena (līm.'],['Wall –','Siena –'],
   ];
   // Atsevišķi vārdi (tikai veseli vārdi)
   const WORDS=[
@@ -421,12 +421,17 @@ const OTHER_SHOPS=['pizza','bike','shoes','arcade','flower','barber']; const LOT
 for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',ds:k/10}); LOT_DEFS.push({k:'wall',t:k,v:0});
   if(k===0) LOT_DEFS.push({k:'paint'},{k:'metro',ds:0}); else if(m===0) LOT_DEFS.push({k:'paint'}); else if(m===3) LOT_DEFS.push({k:'cafe'}); else if(m===6||m===9) LOT_DEFS.push({k:OTHER_SHOPS[_sc++%OTHER_SHOPS.length]});
   LOT_DEFS.push({k:'wall',t:k,v:1},{k:'wall',t:k,v:2}); }
-const extraShape=(k,v)=>{ const main=NAMED_SHAPES[k], c=[...new Set([...TIERS[k].shapes,...NAMED_SHAPES.slice(0,Math.min(18,k+3))])].filter(n=>n!==main); return c[(k*2+v)%c.length]; };
+// Formas: nejauša no līmenim atļautajām (vieglākās + līmeņa forma), neatkārto pēdējās uzzīmētās
+const recentShapes=[];
+function pickShape(k,avoid=[]){ const pool=k<18?NAMED_SHAPES.slice(Math.max(0,k-6),k+4):[...new Set(['L'+k,'L'+Math.max(18,k-1),'L'+Math.max(18,k-2),'L'+Math.max(18,k-3)])].concat(NAMED_SHAPES.slice(14));
+  let c=pool.filter(n=>!recentShapes.includes(n)&&!avoid.includes(n)); if(!c.length) c=pool.filter(n=>!recentShapes.includes(n)); if(!c.length) c=pool;
+  return c[(Math.random()*c.length)|0]; }
+const usedIn={};
 const lots=[], walls=[];
 let cursorX=520, lastK=0;
 LOT_DEFS.forEach((d,i)=>{
   const w=(d.k==='wall'||d.k==='metro')?560:620, l={i,kind:d.k,x:cursorX,w,cx:cursorX+w/2,seed:i*7919+13,img:null,off:Math.random()*40};
-  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,shape:d.v?extraShape(d.t,d.v):'L'+d.t,art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
+  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,shape:(usedIn[d.t]=usedIn[d.t]||[]).push(pickShape(d.t,usedIn[d.t]))&&usedIn[d.t][usedIn[d.t].length-1],art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
   else if(d.k==='metro'){ l.ds=d.ds; l.info=SHOP_INFO.metro; l.door=l.cx-34; l.bonusAt=0; }
   else { l.door=l.x+w-126; l.info=SHOP_INFO[d.k]; }
   l.dist=(d.k==='wall'?d.t:d.k==='metro'?d.ds*10:lastK); if(d.k==='wall') lastK=d.t;
@@ -456,7 +461,7 @@ const npcs=Array.from({length:150},()=>({x:rnd(200,WORLD_W-200),y:rnd(574,604),d
   hood:HOODS[(Math.random()*HOODS.length)|0],skin:SKINS[(Math.random()*SKINS.length)|0],cap:['#222','#444','#6d4c41','#37474f'][(Math.random()*4)|0],
   pants:['#2b3a67','#3e2723','#212121','#455a64'][(Math.random()*4)|0],step:rnd(0,6),face:'side',flip:1,bubble:null,bt:0,snitch:Math.random()<.35,watch:0,called:false,callT:0,seen:false}));
 const traffic=Array.from({length:30},(_,i)=>{ const left=i%2===0; return {x:rnd(0,WORLD_W),dir:left?-1:1,y:left?662:700,speed:rnd(150,260),L:rnd(150,185),spin:0,
-  color:['#ef5350','#42a5f5','#66bb6a','#ffee58','#ab47bc','#eceff1','#ff7043'][(Math.random()*7)|0]}; });
+  color:['#ef5350','#42a5f5','#66bb6a','#ffee58','#ab47bc','#eceff1','#ff7043'][(Math.random()*7)|0],cop:i%6===3}; }); // katra 6. mašīna – policijas patrulis
 
 // ================= Kanvasi =================
 const cv=document.getElementById('game'), ctx=cv.getContext('2d');
@@ -832,9 +837,11 @@ function updateHeatUi(){ const st=starsOf(heat), o=police.off, h=Math.round(heat
   heatFill.style.width=h+'%'; heatFill.style.background=st===0?'#66bb6a':st<3?'#ffca28':'#ef5350'; }
 function addHeatFromPaint(w,acc){ recent=recent.filter(r=>time-r.t<120);
   const tooFast=recent.length&&time-recent[recent.length-1].t<35, nearCnt=recent.filter(r=>Math.abs(r.x-w.cx)<1600).length, again=w.timesPainted>0;
-  if(acc>=.3) return '<br>👍 Acceptable work – police not interested.';
+  const patrol=traffic.some(c=>c.cop&&Math.abs(c.x-w.cx)<700);
+  if(acc>=.5&&!(patrol&&acc<.75)) return '<br>👍 Good work – police not interested.';
   recent.push({t:time,x:w.cx}); w.timesPainted=(w.timesPainted||0)+1;
-  const sev=1-acc/.3, why=['very bad drawing']; let add=38;
+  const sev=acc<.3?1-acc/.3:.3, why=[acc<.3?'very bad drawing':acc<.5?'sloppy drawing':'patrol saw you']; let add=acc<.3?38:acc<.5?22:16;
+  if(patrol&&acc<.5){ add+=26; why.push('patrol saw you'); }
   if(tooFast){ add+=22; why.push('too fast'); }
   if(nearCnt>=1){ add+=12*nearCnt; why.push('too many in one area'); }
   if(again){ add+=15; why.push('same wall again'); }
@@ -1149,10 +1156,10 @@ function render(){
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) { drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid,myMedals()); drawBubble(player.x,GROUND-player.h-126,chatBubble(NET.uid)); }
   // satiksme (priekšplānā)
-  traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.color,{spin:c.spin}); });
-  if(police.car){ const c=police.car, L=175, Hh=L*.3; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir});
-    ctx.save(); ctx.translate(c.x,c.y); ctx.scale(c.dir,1); ctx.fillStyle='#1e5bd8'; ctx.fillRect(-L*.5+4,-Hh*.4,L-8,L*.035);
-    const on=Math.sin(c.siren)>0; rr(ctx,-L*.06,-Hh*1.2,L*.07,L*.035,2,on?'#ff1744':'#3a0d14'); rr(ctx,L*.01,-Hh*1.2,L*.07,L*.035,2,on?'#10204a':'#2979ff'); ctx.restore(); }
+  const copLivery=(c,L,siren)=>{ const Hh=L*.3; ctx.save(); ctx.translate(c.x,c.y); ctx.scale(c.dir,1); ctx.fillStyle='#1e5bd8'; ctx.fillRect(-L*.5+4,-Hh*.4,L-8,L*.035);
+    const on=siren!=null&&Math.sin(siren)>0; rr(ctx,-L*.06,-Hh*1.2,L*.07,L*.035,2,siren==null?'#7a1d2a':on?'#ff1744':'#3a0d14'); rr(ctx,L*.01,-Hh*1.2,L*.07,L*.035,2,siren==null?'#1d3a7a':on?'#10204a':'#2979ff'); ctx.restore(); };
+  traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.cop?'#f4f6fa':c.color,{spin:c.spin}); if(c.cop) copLivery(c,c.L,null); });
+  if(police.car){ const c=police.car, L=175; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir}); copLivery(c,L,c.siren); }
   drawHeli();
   drawParts(ctx,parts.filter(p=>p.type!=='dust'&&p.type!=='smoke'));
   floats.forEach(f=>{ ctx.save(); const a=1-f.t/1.8; ctx.globalAlpha=Math.min(1,a*2); ctx.font='bold 38px system-ui'; ctx.textAlign='center'; ctx.lineWidth=5; ctx.strokeStyle='#000'; ctx.strokeText(f.txt,f.x,f.y-f.t*70); ctx.fillStyle=f.col; ctx.shadowColor=f.col; ctx.shadowBlur=14; ctx.fillText(f.txt,f.x,f.y-f.t*70); ctx.restore(); });
@@ -1309,6 +1316,7 @@ function finishDraw(){ if(curWall&&curWall.isBonus){ finishBonus(); return; }
   const rating=r.acc>=.9?'Masterpiece!':r.acc>=.75?'Super!':r.acc>=.5?'Good':r.acc>=.25?'Poor':'Scribble';
   redraw(false);
   const art=document.createElement('canvas'); art.width=720; art.height=440; art.getContext('2d').drawImage(dc,0,0);
+  recentShapes.unshift(curWall.shape); recentShapes.length=Math.min(recentShapes.length,3); curWall.shape=pickShape(curWall.tier,walls.filter(w=>w.tier===curWall.tier).map(w=>w.shape));
   curWall.art=art; curWall.cool=45; curWall.glow=strokes[0]?colorById(strokes[0].color).hex:'#ff4fd8';
   save.money+=money; save.painted++; stat('earned',money); if(r.acc>=.9) stat('master'); if(r.acc>=.98) stat('perfect'); if(dayK()<.35) stat('night'); persist();
   const hmsg=addHeatFromPaint(curWall,r.acc);
@@ -1389,12 +1397,12 @@ const bounds=()=>inMetro?[M0+60,M1-60]:[cityRange[curCity][0]+60,cityRange[curCi
 const metroPrompt=l=>'E – enter the metro';
 const metroObjPrompt=o=>o.kind==='mtrain'?'E – train: choose a district (travel instantly)':o.kind==='mexit'?'E – to the street':(o.cool>0?`Paint drying… ${Math.ceil(o.cool)} s`:`E – bonus wall (shape ${o.tier+1}) → lootbox!`);
 (function buildMetro(){ const lv=level(), mk=(kind,cx)=>({kind,cx,door:cx-34,i:-1,w:0,cool:0});
-  const mw=cx=>{ const k=Math.max(0,lv-1-Math.floor(Math.random()*4)); return Object.assign(mk('mwall',cx),{tier:k,shape:'L'+k,isBonus:true,px:cx-PANEL.w/2,py:PANEL.y,art:null,glow:'#5aa8e8'}); };
+  const mw=cx=>{ const k=Math.max(0,lv-1-Math.floor(Math.random()*4)); return Object.assign(mk('mwall',cx),{tier:k,shape:pickShape(k),isBonus:true,px:cx-PANEL.w/2,py:PANEL.y,art:null,glow:'#5aa8e8'}); };
   metroObjs=[mk('mexit',M0+110),mw(M0+560),mw(M0+1160),mk('mtrain',MC),mw(M1-1160),mw(M1-560),mk('mexit',M1-110)]; })();
 const ride={t:0,cb:null,moved:false,label:''}, rideOv=document.getElementById('rideOv'), rideText=document.getElementById('rideText');
 function travel(cb,label){ stat('metro'); closeShop(); mode='ride'; ride.t=0; ride.cb=cb; ride.moved=false; ride.label=label; rideText.textContent='🚇 '+label; rideOv.classList.add('on'); sfx('ride'); }
 function enterMetro(st){ if(police.active){ toast('🚓 The police are looking for you – metro unavailable!'); return; }
-  metroFrom=st; travel(()=>{ inMetro=true; metroObjs.forEach(w=>{ if(w.kind==='mwall'&&w.cool<=0){ const k=Math.max(0,level()-1-Math.floor(Math.random()*4)); w.tier=k; w.shape='L'+k; w.art=null; } }); player.x=M0+300; player.flip=1; },'Metro'); }
+  metroFrom=st; travel(()=>{ inMetro=true; metroObjs.forEach(w=>{ if(w.kind==='mwall'&&w.cool<=0){ const k=Math.max(0,level()-1-Math.floor(Math.random()*4)); w.tier=k; w.shape=pickShape(k); w.art=null; } }); player.x=M0+300; player.flip=1; },'Metro'); }
 function exitMetro(){ travel(()=>{ inMetro=false; curCity=metroFrom?metroFrom.city:0; shownMoney=-1; player.x=metroFrom?metroFrom.cx:300; },'To the street'); }
 function goDistrict(k){ const w=walls.find(w=>w.tier===k); travel(()=>{ inMetro=false; curCity=w.city; shownMoney=-1; player.x=w.cx; },`Level ${k+1}: ${distName(k)} (City ${w.city+1})`); }
 function goCity(c){ travel(()=>{ inMetro=false; curCity=c; shownMoney=-1; player.x=stations[c].cx; },`City ${c+1}: ${CITY_NAMES[c]}`); }
@@ -1442,6 +1450,7 @@ function finishBonus(){ const w=curWall, r=evaluate();
   const bt=Math.random()<.15+.25*r.acc?rollBoxTier(r.acc):-1, cash=Math.round(TIERS[w.tier].base*.25*r.acc);
   stat('bonus'); if(cash>0){ save.money+=cash; stat('earned',cash); shownMoney=-1; } persist();
   redraw(false); const art=document.createElement('canvas'); art.width=720; art.height=440; art.getContext('2d').drawImage(dc,0,0);
+  recentShapes.unshift(w.shape); recentShapes.length=Math.min(recentShapes.length,3); w.shape=pickShape(w.tier);
   w.art=art; w.cool=120; w.glow=strokes[0]?colorById(strokes[0].color).hex:'#5aa8e8';
   leaveDraw(false); showLoot(bt,r.acc,cash); }
 let lootOpen=false; const lootOv=document.getElementById('lootOv'), lootEl=document.getElementById('loot');
