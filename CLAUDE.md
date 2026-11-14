@@ -49,6 +49,8 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Uzaicini draugu: saite `/?draugs=lietotājvārds`; jaunais spēlētājs pēc profila izveides ieraksta `invites/{uzaicinātājs}/{uid}` un nosūta draudzības pieprasījumu – abi saņem medaļu.
 - Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
 - Graffiti progress glabājas kontā `saves/{uid}` (+ kešs `grafitiRPG:{uid}` ierīcē); vecais `grafitiRPG` tiek piešķirts tikai kontam, kura `stats` XP sakrīt.
+- Formas: 1. līmenis – 4 vienkāršās, no 2. līmeņa plašs klāsts (smaidiņš, lidmašīna…), no 4. – visas 18 (`pickShape`).
+- Krāsas iztērējas (`save.paint[id]` 0–100 %, ~20 % par apli); uzpilda Krāsu depo (melnā €20, sarkanā €25, citas 40 % no cenas). Katru nakti 02:00 (servera laiks) +€20 dāvana (`save.daily`, `dailyGift`).
 - Zīmēšana aizņem visu ekrānu; pielaide ekrāna pikseļos (min 12 px). Izsalcis tēls (🍔 burbulis) iet un krāso lēni, bet var zīmēt.
 - Policija: aizdomas rada pats zīmēšanas fakts – cik cilvēku redz (👀), patruļa, zvanītāji; ne zīmējuma kvalitāte. Notverts → sods 10%+2%/★, izlaiž pie metro tajā pašā pilsētā.
 - No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (`need`, katrā pilsētā jauna); bez tās jāpērk, ar citu krāsu – puse samaksas. Krāsu bonuss pēc līniju garuma.

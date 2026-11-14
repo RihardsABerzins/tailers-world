@@ -13,6 +13,12 @@
 
   // Garākās frāzes vispirms. [angliski, latviski]
   const PHRASES=[
+    ['is empty – refill it at the Paint Depot','ir tukša – uzpildi to Krāsu depo'],['is empty – pick another color.','ir tukša – izvēlies citu krāsu.'],
+    ['paint ran out! Pick another color or refill at the Paint Depot.','krāsa beigusies! Izvēlies citu vai uzpildi Krāsu depo.'],
+    ['All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.','Visas krāsas ir tukšas! Uzpildi Krāsu depo (melnā € 20). Katru nakti 02:00 saņem € 20.'],
+    ['This wall needs','Šai sienai vajag'],['paint, but your can is empty – refill at the Paint Depot','krāsu, bet tava bundža ir tukša – uzpildi Krāsu depo'],
+    ['Daily gift: € 20!','Ikdienas dāvana: € 20!'],['Enough to refill black paint. A new gift comes every night at 02:00.','Pietiek melnās krāsas uzpildei. Jauna dāvana – katru nakti 02:00.'],
+    ['Refill €','Uzpildīt €'],
     ['Bonus wall – more accurate = better box!','Bonusa siena – jo precīzāk, jo labāka kaste!'],['· paint:','· krāsa:'],['Paint: ','Krāsa: '],['Buy: ','Nopērc: '],
     ['This wall needs this paint:','Šai sienai vajag šo krāsu:'],['– buy it at the Paint Depot','– nopērc to Krāsu depo'],
     ['Wrong color – the wall wanted:','Nepareiza krāsa – sienai vajadzēja:'],['Half pay.','Puse samaksas.'],
@@ -176,6 +182,9 @@
   body.touch .kh{display:none}
   #drawHint{position:fixed;left:0;right:0;text-align:center;font-size:13px;color:#aaa}
   .sw{width:38px;height:38px;border-radius:50%;border:3px solid #fff4;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;transition:transform .15s}
+  .sw.empty{opacity:.45;border-style:dashed}
+  .paintCtl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .paintCtl .can{font-weight:700}
   .sw.sel{border-color:#fff;transform:scale(1.2);box-shadow:0 0 14px currentColor}
   button{background:#ffd34d;border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
   button:disabled{background:#555;color:#999;cursor:default}
@@ -458,7 +467,8 @@ for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',d
 const recentShapes=[];
 // No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (katrā pilsētā klāt nāk jauna). Ja tās nav – jānopērk Krāsu depo.
 const rollNeed=(k,v)=>{ const c=Math.floor(k/10); if(c<1||!v) return null; const pool=COLORS.slice(2,2+Math.min(8,c+1)).map(c_=>c_.id); return pool[(Math.random()*pool.length)|0]; };
-function pickShape(k,avoid=[]){ const pool=k<18?NAMED_SHAPES.slice(Math.max(0,k-6),k+4):[...new Set(['L'+k,'L'+Math.max(18,k-1),'L'+Math.max(18,k-2),'L'+Math.max(18,k-3)])].concat(NAMED_SHAPES.slice(14));
+// 1. līmenis – vienkāršās formas; jau no 2. līmeņa plašs klāsts (smaidiņš, lidmašīna, kronis…), no 4. – visas 18
+function pickShape(k,avoid=[]){ const pool=k===0?NAMED_SHAPES.slice(0,4):k<18?NAMED_SHAPES.slice(Math.max(0,k-6),Math.min(18,8+k*4)):[...new Set(['L'+k,'L'+Math.max(18,k-1),'L'+Math.max(18,k-2),'L'+Math.max(18,k-3)])].concat(NAMED_SHAPES.slice(14));
   let c=pool.filter(n=>!recentShapes.includes(n)&&!avoid.includes(n)); if(!c.length) c=pool.filter(n=>!recentShapes.includes(n)); if(!c.length) c=pool;
   return c[(Math.random()*c.length)|0]; }
 const usedIn={};
@@ -1334,7 +1344,7 @@ function fitShape(){ const raw=SHAPES[curWall.shape](); let x0=1e9,y0=1e9,x1=-1e
 // pielaide ekrāna pikseļos: tā pati grūtība kā agrāk attiecībā pret formas izmēru, bet ne mazāk par 12 px (pirksts)
 const tolPx=()=>Math.max(12,shapeR*TIERS[curWall.tier].tol/150);
 function openDraw(w){
-  audioInit(); sfx('shake'); curWall=w; promptEl.style.display='none'; drawColor=w.need&&save.colors.includes(w.need)?w.need:save.color; mode='entering';
+  audioInit(); sfx('shake'); curWall=w; promptEl.style.display='none'; drawColor=w.need&&save.colors.includes(w.need)?w.need:paintOf(save.color)>0?save.color:save.colors.find(id=>paintOf(id)>0); mode='entering';
   tr={t:0,z0:cam.zoom,zt:2*panelK(),cx0:cam.x,cy0:cam.y,fx:w.cx,fy:PANEL.y+PANEL.h/2,px0:player.x,sx:w.cx-PANEL.w/2-45};
   player.moving=false; player.vx=0;
 }
@@ -1344,11 +1354,13 @@ function showDraw(){
   document.getElementById('drawTitle').textContent=w.isBonus?`🎁 Bonus wall – more accurate = better box!`:w.need?`Level ${w.tier+1} · paint: ${colorById(w.need).name}!`:`Wall – level ${w.tier+1}. Draw the outline!`;
   buildPalette(); redraw(); dOv.classList.add('on'); updateDrawInfo(true);
 }
+// krāsas pogā redzams, cik krāsas palicis (kā bundžā)
+function swFill(d,id){ const c=colorById(id), p=Math.ceil(paintOf(id)); d.style.background=`linear-gradient(to top,${c.hex} ${p}%,#2a2a33 ${p}%)`; d._p=p; }
 function buildPalette(){
   const p=document.getElementById('palette'); p.innerHTML='';
   save.colors.forEach((id,i)=>{ const c=colorById(id), d=document.createElement('div');
-    d.className='sw'+(id===drawColor?' sel':''); d.style.background=c.hex; d.style.color=c.hex; d.title=`${c.name} x${c.mult}`;
-    d.innerHTML=`<span style="color:#fff;mix-blend-mode:difference">${!isTouch&&i<9?i+1:''}</span>`; d.onclick=()=>{ drawColor=id; buildPalette(); }; p.appendChild(d); });
+    d.className='sw'+(id===drawColor?' sel':'')+(paintOf(id)<=0?' empty':''); d.dataset.id=id; swFill(d,id); d.style.color=c.hex; d.title=`${c.name} x${c.mult}`;
+    d.innerHTML=`<span style="color:#fff;mix-blend-mode:difference">${!isTouch&&i<9?i+1:''}</span>`; d.onclick=()=>{ if(paintOf(id)<=0){ toast(`🪣 ${c.name} is empty – refill it at the Paint Depot (€ ${refillPrice(id)}).`); return; } drawColor=id; buildPalette(); }; p.appendChild(d); });
   const hx=colorById(drawColor).hex; dc.style.boxShadow=`0 0 40px ${hx==='#111111'?'#889':hx}99`;
 }
 function brickCover(g,w,h){ const k=Math.max(w/720,h/440); g.drawImage(bgBrick,(w-720*k)/2,(h-440*k)/2,720*k,440*k); }
@@ -1371,15 +1383,20 @@ function artFromDraw(){ const art=document.createElement('canvas'); art.width=72
   return art; }
 const pos=e=>{ const r=dc.getBoundingClientRect(); return {x:(e.clientX-r.left)*DR.w/r.width, y:(e.clientY-r.top)*DR.h/r.height}; };
 const starving=()=>save.food<=0;
-function addPt(p){ const s=strokes[strokes.length-1], l=s.pts[s.pts.length-1]; s.pts.push(p);
+const PAINT_USE=3.2; // % uz formas rādiusu: aplis ≈ 20 % bundžas
+function addPt(p){ const s=strokes[strokes.length-1], l=s.pts[s.pts.length-1];
+  const seg=Math.hypot(p.x-l.x,p.y-l.y); save.paint[s.color]=Math.max(0,paintOf(s.color)-seg/shapeR*PAINT_USE);
+  const sw_=document.querySelector(`#palette .sw[data-id="${s.color}"]`); if(sw_&&sw_._p!==Math.ceil(paintOf(s.color))) swFill(sw_,s.color);
+  if(paintOf(s.color)<=0){ stopPaint(); buildPalette(); toast(`🪣 ${colorById(s.color).name} paint ran out! Pick another color or refill at the Paint Depot.`); sfx('bust'); return; }
+  s.pts.push(p);
   if(Math.hypot(p.x-l.x,p.y-l.y)<4&&Math.random()<.12) drips.push({x:p.x,y:p.y+2,len:0,max:rnd(8,30),color:drawColor}); dirty=true; }
-dc.addEventListener('pointerdown',e=>{ audioInit(); painting=true; dc.setPointerCapture(e.pointerId); const p=pos(e); strokes.push({color:drawColor,pts:[p]}); pen={x:p.x,y:p.y}; penT={x:p.x,y:p.y}; dirty=true; spraySound(true); });
+dc.addEventListener('pointerdown',e=>{ audioInit(); if(paintOf(drawColor)<=0){ toast(`🪣 ${colorById(drawColor).name} is empty – pick another color.`); return; } painting=true; dc.setPointerCapture(e.pointerId); const p=pos(e); strokes.push({color:drawColor,pts:[p]}); pen={x:p.x,y:p.y}; penT={x:p.x,y:p.y}; dirty=true; spraySound(true); });
 dc.addEventListener('pointermove',e=>{ if(!painting) return; const p=pos(e); penT=p; if(!starving()){ pen={x:p.x,y:p.y}; addPt(p); } });
 // izsalcis: krāsa nāk lēni – līnija velkas pakaļ pirkstam
 const HUNGRY_PEN=150;
 function stepPen(dt){ if(!painting||!starving()||!pen||!penT) return; const dx=penT.x-pen.x, dy=penT.y-pen.y, d=Math.hypot(dx,dy); if(d<1) return;
   const st=Math.min(d,HUNGRY_PEN*dt); pen.x+=dx/d*st; pen.y+=dy/d*st; addPt({x:pen.x,y:pen.y}); }
-const stopPaint=()=>{ painting=false; spraySound(false); };
+const stopPaint=()=>{ if(painting) persist(); painting=false; spraySound(false); };
 dc.addEventListener('pointerup',stopPaint); dc.addEventListener('pointercancel',stopPaint);
 // zīmēšanas augšējā josla: badā un cik cilvēku redz
 let drawInfoKey='';
@@ -1465,6 +1482,12 @@ function renderMetroLot(l){
 
 // ================= Metro, lootbox un priekšmeti =================
 save.items=Object.assign({smoke:0,energy:0,xp2:0,mask:0},save.items||{});
+// Krāsas iztērējas: save.paint[id] = 0..100 %. Uzpilda Krāsu depo; melnā ir lētākā (€20 = ikdienas dāvana).
+const REFILL={black:20,red:25}, refillPrice=id=>REFILL[id]||Math.max(30,Math.round(colorById(id).price*.4));
+const refillCost=id=>Math.max(1,Math.ceil(refillPrice(id)*(100-paintOf(id))/100));
+const paintOf=id=>Math.max(0,(save.paint&&save.paint[id])||0);
+function ensurePaint(){ save.paint=save.paint||{}; save.colors.forEach(id=>{ if(save.paint[id]==null) save.paint[id]=100; }); }
+ensurePaint();
 save.st=save.st||{}; const stat=(k,v=1)=>{ save.st[k]=(save.st[k]||0)+v; }; // skaitītāji medaļām
 const ITEMS={ smoke:{n:'Smoke bomb',i:'💨',k:'Z',d:'police lose you, suspicion −35'}, energy:{n:'Energy drink',i:'⚡',k:'X',d:'+40% speed for 40 s'}, xp2:{n:'Double XP',i:'📈',k:'C',d:'XP ×2 for 5 min'}, mask:{n:'Mask',i:'🎭',k:'V',d:'witnesses will not call for 3 min'} };
 const BOXES=[{n:'Bronze box',c:'#cd7f32',i:'📦'},{n:'Silver box',c:'#c0c8d4',i:'🎁'},{n:'Gold box',c:'#ffd34d',i:'🎁'},{n:'Diamond box',c:'#7ee8ff',i:'💎'}];
@@ -1572,7 +1595,7 @@ function openLoot(bt){ stat('box'); if(bt>=3) stat('legend'); const B=BOXES[bt],
     if(g_.t==='money'){ save.money+=g_.v; txt=`💰 € ${g_.v}`; }
     else if(g_.t==='item'){ save.items[g_.id]=(save.items[g_.id]||0)+g_.q; txt=`${ITEMS[g_.id].i} ${ITEMS[g_.id].n} ×${g_.q}`; }
     else if(g_.t==='xp'){ addXp(g_.v); txt=`📈 +${g_.v} XP`; }
-    else { const c=colorById(g_.id); if(!save.colors.includes(c.id)) save.colors.push(c.id); txt=`🎨 New color: <b style="color:${c.hex==='#111111'?'#aaa':c.hex}">${c.name}</b> (bonus x${c.mult})`; }
+    else { const c=colorById(g_.id); if(!save.colors.includes(c.id)) save.colors.push(c.id); save.paint[c.id]=100; txt=`🎨 New color: <b style="color:${c.hex==='#111111'?'#aaa':c.hex}">${c.name}</b> (bonus x${c.mult})`; }
     return `<div class="reward" style="animation-delay:${i*.35}s;border-color:${B.c}">${txt}</div>`; }).join('');
   persist(); shownMoney=-1; dispMoney=save.money; sfx('coin'); setTimeout(()=>sfx('coin'),160); ding([523,659,784,1047]);
   lootEl.innerHTML=`<h2 style="color:${B.c}">${B.n} opened!</h2>${cards}<br><button id="lootOk">Awesome!</button>`; document.getElementById('lootOk').onclick=closeLoot; }
@@ -1591,7 +1614,7 @@ function doTeleport(d){ if(police.active){ closeShop(); toast('🚓 The police a
 function renderShop(){
   const colorRows=COLORS.map(c=>{ const own=save.colors.includes(c.id);
     return `<div class="row"><div class="dot" style="background:${c.hex};color:${c.hex}"></div><div class="n">${c.name} <small>– bonus x${c.mult}</small></div>`+
-      (own?`<span>${save.color===c.id?'✔ selected':`<button data-act="col" data-id="${c.id}" class="sec">Select</button>`}</span>`:`<button data-act="buyc" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
+      (own?`<span class="paintCtl"><small class="can" style="color:${paintOf(c.id)<=0?'#ff5252':paintOf(c.id)<25?'#ffca28':'#9e9'}">🪣 ${Math.ceil(paintOf(c.id))}%</small>${paintOf(c.id)<100?`<button data-act="fill" data-id="${c.id}" ${save.money<refillCost(c.id)?'disabled':''}>Refill € ${refillCost(c.id)}</button>`:''}${save.color===c.id?' ✔':`<button data-act="col" data-id="${c.id}" class="sec">Select</button>`}</span>`:`<button data-act="buyc" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
   const carRows=CARS.map(c=>{ const own=save.cars.includes(c.id);
     return `<div class="row"><div class="dot" style="background:${c.color};color:${c.color}"></div><div class="n">${c.name} <small>– speed ${c.speed}</small></div>`+
       (own?`<span>${save.car===c.id?'✔ in use':`<button data-act="car" data-id="${c.id}" class="sec">Use</button>`}</span>`:`<button data-act="buyk" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
@@ -1600,7 +1623,8 @@ function renderShop(){
     const id=b.dataset.id, a=b.dataset.act;
     if(a==='col') save.color=id;
     if(a==='car') save.car=id;
-    if(a==='buyc'){ const c=colorById(id); if(save.money>=c.price){ save.money-=c.price; save.colors.push(id); save.color=id; sfx('buy'); } }
+    if(a==='buyc'){ const c=colorById(id); if(save.money>=c.price){ save.money-=c.price; save.colors.push(id); save.paint[id]=100; save.color=id; sfx('buy'); } }
+    if(a==='fill'){ const k=refillCost(id); if(save.money>=k&&paintOf(id)<100){ save.money-=k; save.paint[id]=100; stat('refill'); sfx('buy'); } }
     if(a==='buyk'){ const c=carById(id); if(save.money>=c.price){ save.money-=c.price; save.cars.push(id); save.car=id; sfx('buy'); } }
     persist(); renderShop(); dispMoney=save.money; updateHud();
   });
@@ -1645,6 +1669,8 @@ function updateCtx(){ if(!isTouch) return; const c=ctxInfo(), hs=hidden?'out':ne
 function actionE(){
   if(mode!=='world'||!nearLot||hidden) return;
   if(nearLot.kind==='cafe'||nearLot.kind==='pizza'){ eat(); return; }
+  if((nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.cool<=0||nearLot.kind==='mwall'&&nearLot.cool<=0)&&!save.colors.some(id=>paintOf(id)>0)){ toast('🪣 All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.'); return; }
+  if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&save.colors.includes(nearLot.need)&&paintOf(nearLot.need)<=0){ const c=colorById(nearLot.need); toast(`🪣 This wall needs ${c.name} paint, but your can is empty – refill at the Paint Depot (€ ${refillPrice(c.id)}).`); return; }
   if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&!save.colors.includes(nearLot.need)){ const c=colorById(nearLot.need); toast(`🎨 This wall needs this paint: <b style="color:${c.hex}">${c.name}</b> – buy it at the Paint Depot (€ ${c.price}).`); return; }
   if(nearLot.kind==='wall') locked(nearLot)?toast(`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()}). Paint easier walls and earn XP.`):nearLot.cool>0?toast('Paint still drying – come back later or find another wall!'):openDraw(nearLot);
   else if(nearLot.kind==='paint') openShop();
@@ -1728,12 +1754,17 @@ async function loadSave(uid){
   const legacy=rd('grafitiRPG');
   if(legacy&&!cloud){ try{ stats=(await NET.db.ref('stats/'+uid).get()).val(); }catch(e){}
     if(stats&&Math.abs((stats.xp||0)-xpOf(legacy))<=Math.max(50,xpOf(legacy)*.05)&&xpOf(legacy)>=xpOf(best)){ best=legacy; try{ localStorage.removeItem('grafitiRPG'); }catch(e){} } }
-  save=Object.assign(SAVE0(),best||{}); save.items=Object.assign({smoke:0,energy:0,xp2:0,mask:0},save.items||{}); save.st=save.st||{};
+  save=Object.assign(SAVE0(),best||{}); save.items=Object.assign({smoke:0,energy:0,xp2:0,mask:0},save.items||{}); save.st=save.st||{}; ensurePaint();
   if(!save.colors.includes(save.color)) save.color=save.colors[0];
   saveUid=uid; saveOk=true; _lx=-1; dispMoney=save.money; shownMoney=-1; foodBand=3;
   metroObjs.forEach(o=>{ if(o.kind==='mwall'){ o.tier=Math.max(0,level()-1-Math.floor(Math.random()*4)); o.shape=pickShape(o.tier); } });
-  renderInv(); updateHud();
+  renderInv(); updateHud(); setTimeout(dailyGift,2500);
   if(cloudOk) NET.db.ref('saves/'+uid).set(save).catch(()=>{}); }
+// Ikdienas dāvana: katru nakti 02:00 +€20 (tieši melnās krāsas uzpilde). Laiks pēc servera pulksteņa.
+function dailyGift(){ if(!saveOk) return; const d=new Date(Date.now()+(NET.off||0)-2*3600e3), key=`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  if(save.daily===key) return; save.daily=key; save.money+=20; dispMoney=save.money-20; shownMoney=-1; persist(); ding([523,659,784,1047]);
+  toast('🌙 <b>Daily gift: € 20!</b><br>Enough to refill black paint. A new gift comes every night at 02:00.'); }
+setInterval(dailyGift,60000);
 function cloudSave(){ if(NET.on&&saveOk&&saveUid) NET.db.ref('saves/'+saveUid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') cloudSave(); });
 function netTick(){ if(!NET.on) return;
@@ -1810,7 +1841,7 @@ const TUT_LV=[
   ['🎨','Zīmēšana',isTouch?'Pie sienas spied 🎨 Zīmēt un ar pirkstu apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.':'Pie sienas spied E un ar peli apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.'],
   ['🧱','Līmeņi','Katrā līmenī ir 3 sienas. Sakrāj XP, un atveras nākamā līmeņa sienas – grūtākas, bet maksā vairāk.'],
   ['🚓','Policija','Grafiti ir aizliegts! Jo vairāk cilvēku redz, kā tu zīmē (👀), jo ātrāk ierodas policija. Zīmē, kad neviens neskatās, bēdz vai paslēpies miskastē 🫣.'],
-  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Dārgāka krāsa dod lielāku bonusu. No 2. pilsētas dažas sienas prasa noteiktu krāsu – nopērc to!'],
+  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Krāsa zīmējot iztērējas 🪣 – uzpildi to depo (melnā lētākā, €20). Katru nakti 02:00 saņem €20 dāvanā!'],
   ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet un krāso daudz lēnāk – ieej kafejnīcā.'],
   ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
   ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
@@ -1822,7 +1853,7 @@ const TUT_EN=[
   ['🎨','Painting',isTouch?'At a wall tap 🎨 Paint and trace the shape with your finger. The more accurate, the more money and XP.':'Press E at a wall and trace the shape with the mouse. The more accurate, the more money and XP.'],
   ['🧱','Levels','Every level has 3 walls. Earn XP to unlock the next level\'s walls – harder, but they pay more.'],
   ['🚓','Police','Graffiti is illegal! The more people see you paint (👀), the faster the police come. Paint when nobody is looking, run or hide in a dumpster 🫣.'],
-  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Pricier colors give a bigger bonus. From city 2 some walls need a certain color – buy it!'],
+  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Paint runs out as you draw 🪣 – refill it there (black is cheapest, €20). Every night at 02:00 you get €20 as a gift!'],
   ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks and paints much slower – visit a café.'],
   ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
   ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
