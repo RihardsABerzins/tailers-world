@@ -17,8 +17,14 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - `index.html` – sākumlapa ("Labdien!", spēļu kartītes). Jaunu spēli pievieno `GAMES` sarakstā.
 - `grafiti/` – Graffiti RPG (UI angliski; plānota valodas izvēle LV/EN iestatījumos).
 
+## Firebase (projekts `tailers-world`, bezmaksas Spark plāns)
+- Konti: lietotājvārds + parole (iekšēji `vards@players.tailersworld.lv`, īstus e-pastus nevācam). Bez ielogošanās spēles aizved uz sākumlapu.
+- Realtime Database (europe-west1): `usernames/`, `users/`, `stats/` (līderu saraksts), `presence/{pilsēta}/` (citi spēlētāji spēlē), `fcm/` (paziņojumu atslēgas).
+- Drošības noteikumi: `firebase/database.rules.json` – pēc izmaiņām jāielīmē Firebase konsolē (Realtime Database → Rules → Publish).
+- Paziņojumi: Firebase konsole → Messaging → jauna kampaņa → web lietotne. iPhone paziņojumi strādā tikai, ja vietne pievienota sākuma ekrānam.
+- Konfigurācija: `firebase-config.js`, serviss `firebase-messaging-sw.js`, manifests `manifest.webmanifest`.
+
 ## Plānots
-- Konti (lietotājvārds + parole), paziņojumi par jaunām spēlēm, citi spēlētāji un līderu saraksts – caur Firebase.
 - Sasniegumi (achievements).
 - "Atbalsti mani" saite sākumlapā.
 - Valodas izvēle (latviešu / angļu) iestatījumos.
