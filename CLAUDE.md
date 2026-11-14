@@ -17,6 +17,13 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - `index.html` – sākumlapa ("Labdien!", spēļu kartītes). Jaunu spēli pievieno `GAMES` sarakstā.
 - `grafiti/` – Graffiti RPG. Kods raksta tekstus angliski; valodas slānis (skripts `<head>` sākumā, `PHRASES`/`WORDS`) pārtulko visu redzamo latviski. Noklusējums – latviešu; iestatījumos LV/EN slēdzis (localStorage `twLang`). Jaunam tekstam pievieno tulkojumu `PHRASES` sarakstā.
 
+## Mobilā vadība (principi)
+- **Spied uz objekta pasaulē**: durvis, siena, miskaste, metro, vilciens → tēls pats aiziet un izdara darbību. Spiediens uz zemes = aiziet turp.
+- **Viena kontekstuālā poga** labajā apakšā (īkšķa zonā) rāda, ko tieši var izdarīt (🎨 Zīmēt, 🛒 Veikals, 🍔 Ēst, 🚇 Metro…); paslēpta, ja nav ko darīt. 🫣 poga parādās tikai pie slēptuves.
+- **Tīrs ekrāns**: HUD sakļauts (nauda + līmenis; aizdomas un ēdiens parādās tikai, kad svarīgi; spied, lai izvērstu), radio sakļauts līdz 🎵, priekšmeti sakļauti līdz 🎒.
+- Ikonas virs objektiem ar ko var darboties; tuvumā tās pulsē.
+- Pogas ≥ 50 px, svarīgākās lielākas; vibrācija (Android) pie darbībām.
+
 ## Firebase (projekts `tailers-world`, bezmaksas Spark plāns)
 - Konti: lietotājvārds + parole (iekšēji `vards@players.tailersworld.lv`, īstus e-pastus nevācam). Bez ielogošanās spēles aizved uz sākumlapu.
 - Realtime Database (europe-west1): `usernames/`, `users/`, `stats/` (līderu saraksts), `presence/{pilsēta}/` (citi spēlētāji spēlē), `fcm/` (paziņojumu atslēgas).
