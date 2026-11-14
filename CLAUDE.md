@@ -18,6 +18,9 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - `grafiti/` – Graffiti RPG. Kods raksta tekstus angliski; valodas slānis (skripts `<head>` sākumā, `PHRASES`/`WORDS`) pārtulko visu redzamo latviski. Noklusējums – latviešu; iestatījumos LV/EN slēdzis (localStorage `twLang`). Jaunam tekstam pievieno tulkojumu `PHRASES` sarakstā.
 
 ## Instrukcija spēlē
+- Pirmajā reizē – mācības darot (`GUIDE`: bultiņa uz sienu → Zīmēt → apvelc → padomi), dzeltens baneris. 10 lapu instrukcija (`TUT_LV`/`TUT_EN`) – pauzē „❓ Kā spēlēt”.
+- Pēc sienas – rezultāta kartīte `showResult` (1–3 zvaigznes, zīmējums virs kontūras, ikonas) garā teksta vietā.
+- Telefonā nerāda tastatūras taustiņus (`.kh`, `.kbOnly`, `isTouch` teksti).
 - Pirmajā reizē rāda soļu instrukciju (1–2 teikumi par katru funkciju + mērķis): `TUT_LV`/`TUT_EN` grafiti/index.html, atzīme `grafitiTut` localStorage; vēlreiz – pauzē „❓ Kā spēlēt”. Jaunai funkcijai pievieno soli.
 - Spēlētāju vārdus kanvā zīmē ar `fillTextRaw` (netulko, piem. „Gold”).
 
@@ -49,9 +52,11 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Uzaicini draugu: saite `/?draugs=lietotājvārds`; jaunais spēlētājs pēc profila izveides ieraksta `invites/{uzaicinātājs}/{uid}` un nosūta draudzības pieprasījumu – abi saņem medaļu.
 - Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
 - Graffiti progress glabājas kontā `saves/{uid}` (+ kešs `grafitiRPG:{uid}` ierīcē); vecais `grafitiRPG` tiek piešķirts tikai kontam, kura `stats` XP sakrīt.
+- Apavu veikals (`SHOES`, `save.shoes/shoe`): ātrums kājām līdz ×1,5. Kafejnīca arī pie paša sākuma; norāde „🍔 Kafejnīca”, kad ēdiens < 50 %.
+- Vertikālā telefonā iela ~63 % augstumā (`camY0`), zem ceļa pretējā ietve. Ceļa svītras piesaistītas pasaulei.
 - Formas: 1. līmenis – 4 vienkāršās, no 2. līmeņa plašs klāsts (smaidiņš, lidmašīna…), no 4. – visas 18 (`pickShape`).
 - Krāsas iztērējas (`save.paint[id]` 0–100 %, ~20 % par apli); uzpilda Krāsu depo (melnā €20, sarkanā €25, citas 40 % no cenas). Katru nakti 02:00 (servera laiks) +€20 dāvana (`save.daily`, `dailyGift`).
-- Zīmēšana aizņem visu ekrānu; pielaide ekrāna pikseļos (min 12 px). Izsalcis tēls (🍔 burbulis) iet un krāso lēni, bet var zīmēt.
+- Zīmēšana aizņem visu ekrānu; pielaide ekrāna pikseļos (min 12 px). Izsalcis tēls (🍔 burbulis) iet lēnāk, un rokas trīc (līnija raustās → mazāk precīzi), bet zīmēt var.
 - Policija: aizdomas rada pats zīmēšanas fakts – cik cilvēku redz (👀), patruļa, zvanītāji; ne zīmējuma kvalitāte. Notverts → sods 10%+2%/★, izlaiž pie metro tajā pašā pilsētā.
 - No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (`need`, katrā pilsētā jauna); bez tās jāpērk, ar citu krāsu – puse samaksas. Krāsu bonuss pēc līniju garuma.
 
