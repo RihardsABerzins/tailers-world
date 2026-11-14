@@ -52,6 +52,8 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Uzaicini draugu: saite `/?draugs=lietotājvārds`; jaunais spēlētājs pēc profila izveides ieraksta `invites/{uzaicinātājs}/{uid}` un nosūta draudzības pieprasījumu – abi saņem medaļu.
 - Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
 - Graffiti progress glabājas kontā `saves/{uid}` (+ kešs `grafitiRPG:{uid}` ierīcē); vecais `grafitiRPG` tiek piešķirts tikai kontam, kura `stats` XP sakrīt.
+- Frizētava (💈, `openBarber`): bez maksas maina izskatu `save.look` (āda, jaka/„auto” = krāsas tonis, cepure/adīta/mati, maska vai smaids, bikses); citi to redz (`presence.l`, `lookFrom`). Arkāde, ziedi, velo – tikai dekorācija.
+- Tulkojumi: PHRASES ir apakšvirknes – tulkojums nedrīkst saturēt pašu avotu (piem. Mask→Maska), citādi bezgalīgs cikls; tādus liek WORDS.
 - Apavu veikals (`SHOES`, `save.shoes/shoe`): ātrums kājām līdz ×1,5. Kafejnīca arī pie paša sākuma; norāde „🍔 Kafejnīca”, kad ēdiens < 50 %.
 - Vertikālā telefonā iela ~63 % augstumā (`camY0`), zem ceļa pretējā ietve. Ceļa svītras piesaistītas pasaulei.
 - Formas: 1. līmenis – 4 vienkāršās, no 2. līmeņa plašs klāsts (smaidiņš, lidmašīna…), no 4. – visas 18 (`pickShape`).
