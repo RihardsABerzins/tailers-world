@@ -13,17 +13,22 @@
 
   // Garākās frāzes vispirms. [angliski, latviski]
   const PHRASES=[
+    ['Bonus wall – more accurate = better box!','Bonusa siena – jo precīzāk, jo labāka kaste!'],['· paint:','· krāsa:'],['Paint: ','Krāsa: '],['Buy: ','Nopērc: '],
+    ['This wall needs this paint:','Šai sienai vajag šo krāsu:'],['– buy it at the Paint Depot','– nopērc to Krāsu depo'],
+    ['Wrong color – the wall wanted:','Nepareiza krāsa – sienai vajadzēja:'],['Half pay.','Puse samaksas.'],
+    ['1 person saw you','tevi redzēja 1 cilvēks'],['people saw you','cilvēki tevi redzēja'],['Nobody saw you – police not interested.','Neviens neredzēja – policijai neinteresē.'],
+    ['watching','skatās'],['Nobody sees you','Neviens neredz'],['calling the police!','zvana policijai!'],['Hungry – painting slowly','Izsalcis – krāso lēni'],
     // sākuma padoms un garie paziņojumi
     ['Run along the street with','Skrien pa ielu ar'],['at a brick wall and paint.','pie ķieģeļu sienas un zīmē.'],['The Paint Depot (pink sign) sells colors and vehicles.','Krāsu depo (rozā izkārtne) – krāsas un transports.'],
     ['People with 📱 can report you to the police – hide with','Cilvēki ar 📱 var paziņot policijai – slēpies ar'],
     ['The sun is up –','Uzlēca saule –'],['police are more active by day','dienā policija aktīvāka'],['(more officers), and people see farther.','(vairāk policistu), un cilvēki redz tālāk.'],
     ['Night falls –','Iestājās nakts –'],['police are less active at night',"naktī policija mazāk aktīva"],[', it is darker and people see less far.',', ir tumšāks, un cilvēki redz tuvāk.'],
     ['Acceptable work – police not interested.','Pieņemams darbs – policija neinteresējas.'],
-    ['You were taken back to the start of the street.','Tevi aizveda līdz ielas sākumam.'],['of your money)','no naudas)'],
+    ['The police dropped you at the metro.','Policija tevi izlaida pie metro.'],['of your money)','no naudas)'],
     ['Nowhere to hide here – look for a dumpster by a wall or crates by a shop (green arrow).','Te nav kur paslēpties – meklē konteineru pie sienas vai kastes pie veikala (zaļā bulta).'],
     ['The officer saw where you hid!','Policists redzēja, kur tu paslēpies!'],['Hidden! Wait for them to leave.','Paslēpies! Gaidi, kamēr aizies.'],
     ['You left the hiding spot.','Iznāci no slēptuves.'],
-    ['You are starving! You move slower and cannot paint – eat at a café.','Tu esi izsalcis! Kusties lēnāk un nevari zīmēt – paēd kafejnīcā.'],
+    ['You are starving! You walk and paint much slower – eat at a café.','Tu esi izsalcis! Ej un krāso daudz lēnāk – paēd kafejnīcā.'],
     ['You are getting hungry – eat at a café (orange dot on the map).','Sāc kļūt izsalcis – paēd kafejnīcā (oranžais punkts kartē).'],
     ['Too hungry to paint – eat at a café first!','Pārāk izsalcis, lai zīmētu – vispirms paēd kafejnīcā!'],
     ['You are not hungry yet.','Tu vēl neesi izsalcis.'],['Yum! You are full for the day.','Mmm! Tu esi paēdis visai dienai.'],
@@ -100,7 +105,7 @@
     ['Street','iela'],['Boulevard','bulvāris'],['Quarter','kvartāls'],['Square','laukums'],['Park','parks'],['Embankment','krastmala'],['Harbor','osta'],['Bridge','tilts'],['Garden','dārzs'],
     ['STREET','IELA'],['BOULEVARD','BULVĀRIS'],['QUARTER','KVARTĀLS'],['SQUARE','LAUKUMS'],['PARK','PARKS'],['EMBANKMENT','KRASTMALA'],['HARBOR','OSTA'],['BRIDGE','TILTS'],['GARDEN','DĀRZS'],
     ['SUN','SAULES'],['MOON','MĒNESS'],['STAR','ZVAIGŽŅU'],['APPLE','ĀBEĻU'],['BIRCH','BĒRZU'],['OAK','OZOLU'],['LINDEN','LIEPU'],['ROSE','ROŽU'],['WIND','VĒJA'],['WATER','ŪDENS'],['SAND','SMILŠU'],
-    ['Press','Spied'],['Paint','Zīmēt'],['Shop','Veikals'],['Eat','Ēst'],['Travel','Braukt'],['Bonus','Bonuss'],['Hide','Slēpties'],['Out','Iznākt'],['Soon','Drīz'],['Hungry','Izsalcis'],['Exit','Izeja'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
+    ['Press','Spied'],['Done','Gatavs'],['Undo','Atcelt'],['Clear','Notīrīt'],['Leave','Aiziet'],['Paint','Zīmēt'],['Shop','Veikals'],['Eat','Ēst'],['Travel','Braukt'],['Bonus','Bonuss'],['Hide','Slēpties'],['Out','Iznākt'],['Soon','Drīz'],['Hungry','Izsalcis'],['Exit','Izeja'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
   ];
   const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const RULES=[...PHRASES.sort((a,b)=>b[0].length-a[0].length).map(([e,l])=>[new RegExp(esc(e),'g'),l]),
@@ -154,14 +159,23 @@
   #fsBtn{position:fixed;left:12px;bottom:12px;z-index:12;background:#000a;color:#eee;border:1px solid #fff3}
   .overlay{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .4s;z-index:20}
   .overlay.on{opacity:1;pointer-events:auto}
-  #drawOv{background:radial-gradient(#0004,#000b)}
+  #drawOv{background:radial-gradient(#1a1626f4,#07070cfa)}
   #shopOv{background:#000c;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center}
-  #draw{position:fixed;left:50%;top:50%;width:720px;height:440px;margin:-220px 0 0 -360px;transform:scale(var(--k,1));border-radius:2px;cursor:crosshair;touch-action:none;transition:box-shadow .2s}
-  #drawTitle{position:fixed;left:0;right:0;text-align:center;top:var(--tt,10px);font-size:18px}
-  #palette{position:fixed;left:50%;transform:translateX(-50%);top:var(--pt,90%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:94vw}
-  #drawBtns{position:fixed;left:0;right:0;text-align:center;top:var(--bt,95%)}
-  #drawHint{position:fixed;left:0;right:0;text-align:center;top:var(--ht,98%);font-size:13px;color:#aaa}
-  .sw{width:34px;height:34px;border-radius:50%;border:3px solid #fff4;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;transition:transform .15s}
+  /* zīmēšana: kanva aizņem visu brīvo ekrānu, vadība apakšā (vertikāli) vai labajā malā (horizontāli) – izmērus liek layoutDraw() */
+  #drawOv{touch-action:none}
+  #draw{position:fixed;border-radius:10px;cursor:crosshair;touch-action:none;transition:box-shadow .2s}
+  #drawTitle{position:fixed;left:0;right:0;top:calc(6px + env(safe-area-inset-top));text-align:center;font-size:16px;font-weight:700;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 6px #000}
+  #drawInfo{position:fixed;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;z-index:2}
+  #drawInfo span{background:#000b;border:1px solid #fff3;border-radius:999px;padding:4px 10px;font-size:14px;font-weight:700}
+  #drawInfo .hot{background:#b71c1ccc}
+  #palette{position:fixed;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-content:center}
+  #drawBtns{position:fixed;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-content:center}
+  #drawBtns button{flex:1 1 0;min-width:0;min-height:48px;font-size:15px;padding:8px 4px;border-radius:12px;white-space:nowrap}
+  #drawBtns.col button{flex:1 1 40%}
+  #drawBtns.col .kh{display:none}
+  body.touch .kh{display:none}
+  #drawHint{position:fixed;left:0;right:0;text-align:center;font-size:13px;color:#aaa}
+  .sw{width:38px;height:38px;border-radius:50%;border:3px solid #fff4;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;transition:transform .15s}
   .sw.sel{border-color:#fff;transform:scale(1.2);box-shadow:0 0 14px currentColor}
   button{background:#ffd34d;border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
   button:disabled{background:#555;color:#999;cursor:default}
@@ -303,12 +317,13 @@
 <div class="overlay" id="drawOv">
   <div id="drawTitle"></div>
   <canvas id="draw" width="720" height="440"></canvas>
+  <div id="drawInfo"></div>
   <div id="palette"></div>
   <div id="drawBtns">
-    <button id="bDone">Done (Enter)</button>
-    <button class="sec" id="bUndo">Undo (Z)</button>
-    <button class="sec" id="bClear">Clear (C)</button>
-    <button class="sec" id="bCancel">Leave (Esc)</button>
+    <button id="bDone">✔ Done<span class="kh"> (Enter)</span></button>
+    <button class="sec" id="bUndo">↶ Undo<span class="kh"> (Z)</span></button>
+    <button class="sec" id="bClear">🧽 Clear<span class="kh"> (C)</span></button>
+    <button class="sec" id="bCancel">✖ Leave<span class="kh"> (Esc)</span></button>
   </div>
   <div id="drawHint">Drag along the faint outline. The more accurate and clean, the more money. Pricier colors give a bonus.</div>
 </div>
@@ -370,9 +385,12 @@ const CARS=[
 ];
 const colorById=id=>COLORS.find(c=>c.id===id);
 const carById=id=>CARS.find(c=>c.id===id);
-let save={money:0,colors:['black','red'],cars:['foot'],color:'black',car:'foot',painted:0,xp:0,food:100};
-try{ const s=JSON.parse(localStorage.getItem('grafitiRPG')); if(s) save=Object.assign(save,s); }catch(e){}
-const persist=()=>{ try{ localStorage.setItem('grafitiRPG',JSON.stringify(save)); }catch(e){} if(typeof netStats==='function') netStats(); };
+// Progress glabājas kontā (saves/{uid}) + kešā šajā ierīcē (grafitiRPG:{uid}). Bez interneta (lokāli) – vecā atslēga 'grafitiRPG'.
+const SAVE0=()=>({money:0,colors:['black','red'],cars:['foot'],color:'black',car:'foot',painted:0,xp:0,food:100});
+const ONLINE=location.protocol==='https:';
+let save=SAVE0(), saveOk=!ONLINE, saveUid=null;
+if(!ONLINE){ try{ const s=JSON.parse(localStorage.getItem('grafitiRPG')); if(s) save=Object.assign(save,s); }catch(e){} }
+const persist=()=>{ if(!saveOk) return; try{ localStorage.setItem(saveUid?'grafitiRPG:'+saveUid:'grafitiRPG',JSON.stringify(save)); }catch(e){} if(typeof netStats==='function') netStats(); };
 
 // ================= Kontūras =================
 const circle=(cx,cy,r,a0=0,a1=Math.PI*2,n=60)=>Array.from({length:n+1},(_,i)=>{const a=a0+(a1-a0)*i/n;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]});
@@ -399,7 +417,7 @@ const SHAPES={
 };
 const SHAPE_POOLS=[['circle','star'],['heart','arrow','bolt'],['crown','smiley'],['spiral','smiley','crown'],['plane','diamond','arrow'],['flower','house','note'],['infinity','cat','plane'],['house','note','flower'],['cat','infinity','spiral'],['cat','flower','spiral','infinity']];
 const NLEV=99;
-const TIERS=Array.from({length:NLEV},(_,k)=>({shapes:SHAPE_POOLS[Math.min(9,Math.floor(k/10))],base:Math.round(30*Math.pow(1.065,k)),tol:Math.max(5.5,17*Math.pow(.975,k)),ghost:Math.max(.05,.55*Math.pow(.965,k))}));
+const TIERS=Array.from({length:NLEV},(_,k)=>({shapes:SHAPE_POOLS[Math.min(9,Math.floor(k/10))],base:Math.round(30*Math.pow(1.065,k)),tol:Math.max(5.5,17*Math.pow(.975,k)),ghost:Math.max(.22,.55*Math.pow(.965,k))}));
 const TIER_COL=Array.from({length:NLEV},(_,k)=>`hsl(${(120-k*3.7+1080)%360},75%,58%)`);
 const DCOL=Array.from({length:10},(_,d)=>TIER_COL[d*10]);
 // 18 ar roku veidotas formas, tālāk – procedurāli, ar katru līmeni sarežģītākas
@@ -438,6 +456,8 @@ for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',d
   LOT_DEFS.push({k:'wall',t:k,v:1},{k:'wall',t:k,v:2}); }
 // Formas: nejauša no līmenim atļautajām (vieglākās + līmeņa forma), neatkārto pēdējās uzzīmētās
 const recentShapes=[];
+// No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (katrā pilsētā klāt nāk jauna). Ja tās nav – jānopērk Krāsu depo.
+const rollNeed=(k,v)=>{ const c=Math.floor(k/10); if(c<1||!v) return null; const pool=COLORS.slice(2,2+Math.min(8,c+1)).map(c_=>c_.id); return pool[(Math.random()*pool.length)|0]; };
 function pickShape(k,avoid=[]){ const pool=k<18?NAMED_SHAPES.slice(Math.max(0,k-6),k+4):[...new Set(['L'+k,'L'+Math.max(18,k-1),'L'+Math.max(18,k-2),'L'+Math.max(18,k-3)])].concat(NAMED_SHAPES.slice(14));
   let c=pool.filter(n=>!recentShapes.includes(n)&&!avoid.includes(n)); if(!c.length) c=pool.filter(n=>!recentShapes.includes(n)); if(!c.length) c=pool;
   return c[(Math.random()*c.length)|0]; }
@@ -446,7 +466,7 @@ const lots=[], walls=[];
 let cursorX=520, lastK=0;
 LOT_DEFS.forEach((d,i)=>{
   const w=(d.k==='wall'||d.k==='metro')?560:620, l={i,kind:d.k,x:cursorX,w,cx:cursorX+w/2,seed:i*7919+13,img:null,off:Math.random()*40};
-  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,shape:(usedIn[d.t]=usedIn[d.t]||[]).push(pickShape(d.t,usedIn[d.t]))&&usedIn[d.t][usedIn[d.t].length-1],art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
+  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,need:rollNeed(d.t,d.v),shape:(usedIn[d.t]=usedIn[d.t]||[]).push(pickShape(d.t,usedIn[d.t]))&&usedIn[d.t][usedIn[d.t].length-1],art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
   else if(d.k==='metro'){ l.ds=d.ds; l.info=SHOP_INFO.metro; l.door=l.cx-34; l.bonusAt=0; }
   else { l.door=l.x+w-126; l.info=SHOP_INFO[d.k]; }
   l.dist=(d.k==='wall'?d.t:d.k==='metro'?d.ds*10:lastK); if(d.k==='wall') lastK=d.t;
@@ -850,20 +870,20 @@ function updateHeatUi(){ const st=starsOf(heat), o=police.off, h=Math.round(heat
   policeSign.style.display=police.active?'block':'none';
   if(police.active) policeSign.innerHTML=`<div class="psBig">👮 POLICE 🚨</div><div class="psSmall">${'★'.repeat(st)}${'☆'.repeat(5-st)} · ${label}</div>`;
   heatFill.style.width=h+'%'; heatFill.style.background=st===0?'#66bb6a':st<3?'#ffca28':'#ef5350'; }
-function addHeatFromPaint(w,acc){ recent=recent.filter(r=>time-r.t<120);
+// Grafiti ir aizliegts – aizdomas rada pats zīmēšanas fakts, nevis zīmējuma kvalitāte. Jo vairāk cilvēku redz, jo vairāk policijas.
+function addHeatFromPaint(w){ recent=recent.filter(r=>time-r.t<120);
   const tooFast=recent.length&&time-recent[recent.length-1].t<35, nearCnt=recent.filter(r=>Math.abs(r.x-w.cx)<1600).length, again=w.timesPainted>0;
-  const patrol=traffic.some(c=>c.cop&&Math.abs(c.x-w.cx)<700);
-  if(acc>=.5&&!(patrol&&acc<.75)) return '<br>👍 Good work – police not interested.';
+  const patrol=traffic.some(c=>c.cop&&Math.abs(c.x-w.cx)<700), seen=npcs.filter(n=>n.seen&&Math.abs(n.x-w.cx)<900).length;
   recent.push({t:time,x:w.cx}); w.timesPainted=(w.timesPainted||0)+1;
-  const sev=acc<.3?1-acc/.3:.3, why=[acc<.3?'very bad drawing':acc<.5?'sloppy drawing':'patrol saw you']; let add=acc<.3?38:acc<.5?22:16;
-  if(patrol&&acc<.5){ add+=26; why.push('patrol saw you'); }
-  if(tooFast){ add+=22; why.push('too fast'); }
-  if(nearCnt>=1){ add+=12*nearCnt; why.push('too many in one area'); }
-  if(again){ add+=15; why.push('same wall again'); }
+  let add=0; const why=[];
+  if(seen){ add+=9*seen; why.push(seen===1?'1 person saw you':`${seen} people saw you`); }
+  if(patrol){ add+=30; why.push('patrol saw you'); }
+  if(add){ if(tooFast){ add+=12; why.push('too fast'); } if(nearCnt>=1){ add+=8*nearCnt; why.push('too many in one area'); } if(again){ add+=10; why.push('same wall again'); } }
+  let called=0; npcs.forEach(n=>{ if(buff.mask<=0&&n.snitch&&n.seen&&n.watch>1.5&&!n.called&&Math.abs(n.x-w.cx)<700){ n.called=true; n.callT=time; n.bubble='📞'; n.bt=3.5; n.pause=5; called++; } });
+  if(called){ sfx('ring'); add+=22*called; why.push('witness calls the police'); }
+  if(!add) return '<br>🙈 Nobody saw you – police not interested.';
   if(w.tier>=10) why.push(`${distName(w.tier)}: stricter`);
-  add=Math.round(add*(1+.2*Math.floor(w.tier/10))*(.6+.4*sev)*(.8+.5*dayK()));
-  let called=0; npcs.forEach(n=>{ if(buff.mask<=0&&n.snitch&&n.watch>1.5&&!n.called&&Math.abs(n.x-w.cx)<700){ n.called=true; n.callT=time; n.bubble='📞'; n.bt=3.5; n.pause=5; called++; } });
-  if(called){ sfx('ring'); add+=25*called; why.push('witness calls the police'); }
+  add=Math.round(add*(1+.2*Math.floor(w.tier/10))*(.8+.4*dayK()));
   heat=Math.min(100,heat+add);
   return `<br>🚨 Suspicion +${add} (${why.join(', ')})`; }
 function newCop(x,dir,state){ return {x,y:GROUND,state,lastX:player.x,t:0,wd:1,wdT:0,speed:COP_SPEED[starsOf(heat)],step:0,face:'side',flip:dir,knows:false,searchT:0,bubble:'❗',bt:1.4,gone:false,grace:3,
@@ -875,10 +895,12 @@ function walkTo(o,tx,sp,dt){ const d=Math.sign(tx-o.x); o.x+=d*sp*dt; if(d) o.fl
 const foodPrice=()=>8+4*curCity;
 function eat(){ const p=foodPrice(); if(save.food>90){ toast("🍔 You are not hungry yet."); return; } if(save.money<p){ toast(`🍔 A meal costs €${p} – paint a wall to earn money.`); return; }
   save.money-=p; save.food=100; foodBand=3; stat('eat'); persist(); dispMoney=save.money; shownMoney=-1; sfx('buy'); floatText(player.x,GROUND-110,`-€${p}`,'#ffb347'); toast('🍔 Yum! You are full for the day.'); }
-function bust(){ const st=starsOf(heat), fine=Math.round(save.money*(.3+.05*st)); save.money-=fine; stat('busted'); chaseMax=0; persist();
+// Notverts: neliels sods (10% + 2% par zvaigzni) un aizved uz tuvāko metro tajā pašā pilsētā (ne uz 1. pilsētu)
+function bust(){ const st=starsOf(heat), pct=.1+.02*st, fine=Math.round(save.money*pct); save.money-=fine; stat('busted'); chaseMax=0; persist();
+  const city=inMetro&&metroFrom?metroFrom.city:curCity; let back=null,bd=1e12; stations.forEach(s_=>{ if(Math.floor(s_.dist/10)!==city) return; const d=Math.abs(s_.cx-player.x); if(d<bd){ bd=d; back=s_; } });
   if(mode!=='world'){ dOv.classList.remove('on'); shopOv.classList.remove('on'); stopPaint(); mode='world'; cam.zoom=baseZoom(); cam.y=camY0(); tr=null; }
-  police.active=false; police.car=null; police.off=null; police.offs=[]; police.heli=null; heat=0; prevStars=0; hidden=false; inMetro=false; curCity=0; shownMoney=-1; player.x=300; player.vx=0; player.h=0; cam.x=300; cam.flash=1; cam.shake=14; sfx('bust'); ding([220,165,110]);
-  toast(`🚓 <b>Busted!</b> Fine: <b style="color:#ffd34d">€ ${fine}</b> (${Math.round((.3+.05*st)*100)}% of your money). You were taken back to the start of the street.`); }
+  police.active=false; police.car=null; police.off=null; police.offs=[]; police.heli=null; heat=0; prevStars=0; hidden=false; inMetro=false; curCity=city; shownMoney=-1; player.x=back?back.cx:cityRange[city][0]+300; player.vx=0; player.h=0; cam.x=player.x; cam.flash=1; cam.shake=14; sfx('bust'); ding([220,165,110]);
+  toast(`🚓 <b>Busted!</b> Fine: <b style="color:#ffd34d">€ ${fine}</b> (${Math.round(pct*100)}% of your money). The police dropped you at the metro.`); }
 function toggleHide(){ if(mode!=='world') return;
   if(hidden){ hidden=false; sfx('hide'); toast('You left the hiding spot.'); return; }
   let best=null,bd=95; hideSpots.forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<bd){bd=d;best=s;} });
@@ -911,7 +933,7 @@ function updateOfficer(o,dt,stars){
 function updateLaw(dt){
   { const pc_=clock; clock=(clock+dt*24/480)%24; if(clock<pc_) dayCount++; } updateClockUi();
   if(save.food==null) save.food=100; save.food=Math.max(0,save.food-dt*100/480);
-  { const band=save.food<=0?0:save.food<25?1:3; if(band<foodBand) toast(band===0?'🍔 You are starving! You move slower and cannot paint – eat at a café.':'🍔 You are getting hungry – eat at a café (orange dot on the map).'); foodBand=band; }
+  { const band=save.food<=0?0:save.food<25?1:3; if(band<foodBand) toast(band===0?'🍔 You are starving! You walk and paint much slower – eat at a café.':'🍔 You are getting hungry – eat at a café (orange dot on the map).'); foodBand=band; }
   for(const k_ in buff) if(buff[k_]>0) buff[k_]=Math.max(0,buff[k_]-dt);
   const stars=starsOf(heat);
   const painting_=(mode==='entering'||mode==='draw'||mode==='exiting')&&!hidden&&!(curWall&&curWall.isBonus);
@@ -992,7 +1014,7 @@ function update(dt){
     let dir=hidden?0:(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
     if(dir) autoT=null;
     else if(autoT&&!hidden){ const bd2=bounds(), tx2=clamp(autoT.x,bd2[0],bd2[1]), dx2=tx2-player.x; if(Math.abs(dx2)>Math.max(14,Math.abs(player.vx)*.08)) dir=Math.sign(dx2); else autoT.arrived=true; }
-    const sp=car.speed*(buff.energy>0?1.4:1)*(save.food<=0?.6:1);
+    const sp=car.speed*(buff.energy>0?1.4:1)*(save.food<=0?.45:1);
     player.vx=lerp(player.vx,dir*sp,Math.min(1,dt*(car.kind==='car'?4:9)));
     { const bd_=bounds(), nx_=player.x+player.vx*dt; player.x=clamp(nx_,bd_[0],bd_[1]); if(!inMetro&&nx_!==player.x&&time>edgeT){ edgeT=time+6; toast('🚧 City limit – take the metro to travel to another city.'); } }
     player.moving=Math.abs(player.vx)>25;
@@ -1038,10 +1060,11 @@ function update(dt){
   } else if(mode==='draw'){
     let grow=false; drips.forEach(d=>{ if(d.len<d.max){ d.len=Math.min(d.max,d.len+22*dt); grow=true; } });
     if(grow||dirty){ redraw(); dirty=grow; }
+    stepPen(dt); updateDrawInfo();
     if(painting){
-      const hx=colorById(drawColor).hex, c=hx==='#111111'?'#9aa':hx;
-      for(let i=0;i<3;i++) sparts.push({type:'spray',x:mouse.x+rnd(-7,7),y:mouse.y+rnd(-7,7),z:0,vx:rnd(-25,25),vy:rnd(-25,25),vz:0,g:0,life:.45,max:.45,size:rnd(1.5,3.2),col:c,drag:.96});
-      if(Math.random()<.35) sparts.push({type:'dust',x:mouse.x+rnd(-12,12),y:mouse.y+rnd(-12,12),z:0,vx:rnd(-10,10),vy:rnd(-10,10),vz:0,g:0,life:.5,max:.5,size:3,col:'#fff',drag:1});
+      const hx=colorById(drawColor).hex, c=hx==='#111111'?'#9aa':hx, sx_=starving()&&pen?DR.x+pen.x:mouse.x, sy_=starving()&&pen?DR.y+pen.y:mouse.y;
+      for(let i=0;i<3;i++) sparts.push({type:'spray',x:sx_+rnd(-7,7),y:sy_+rnd(-7,7),z:0,vx:rnd(-25,25),vy:rnd(-25,25),vz:0,g:0,life:.45,max:.45,size:rnd(1.5,3.2),col:c,drag:.96});
+      if(Math.random()<.35) sparts.push({type:'dust',x:sx_+rnd(-12,12),y:sy_+rnd(-12,12),z:0,vx:rnd(-10,10),vy:rnd(-10,10),vz:0,g:0,life:.5,max:.5,size:3,col:'#fff',drag:1});
     }
   }
   for(const n of npcs){
@@ -1104,7 +1127,10 @@ function render(){
     if(w.art) ctx.drawImage(w.art,w.px,w.py,PANEL.w,PANEL.h);
     else if(mode!=='draw'){ ctx.save(); ctx.strokeStyle='#fff'; ctx.globalAlpha=.3; ctx.lineWidth=2; ctx.setLineDash([6,5]); const R=70, sx=w.px+PANEL.w/2, sy=w.py+PANEL.h/2; SHAPES[w.shape]().forEach(p=>{ ctx.beginPath(); p.forEach(([x,y],i)=>i?ctx.lineTo(sx+x*R*1.2,sy+y*R):ctx.moveTo(sx+x*R*1.2,sy+y*R)); ctx.stroke(); }); ctx.restore(); }
     if(locked(w)&&mode!=='draw'){ ctx.save(); ctx.fillStyle='rgba(8,8,24,.62)'; ctx.fillRect(w.px,w.py,PANEL.w,PANEL.h); ctx.textAlign='center'; ctx.font='64px system-ui'; ctx.fillText('🔒',w.px+PANEL.w/2,w.py+PANEL.h/2+10);
-      ctx.font='bold 20px system-ui'; ctx.fillStyle='#fff'; ctx.fillText(`Needs level ${w.tier+1}`,w.px+PANEL.w/2,w.py+PANEL.h/2+50); ctx.restore(); } });
+      ctx.font='bold 20px system-ui'; ctx.fillStyle='#fff'; ctx.fillText(`Needs level ${w.tier+1}`,w.px+PANEL.w/2,w.py+PANEL.h/2+50); ctx.restore(); }
+    if(w.need&&!locked(w)&&mode!=='draw'){ const c=colorById(w.need), own=save.colors.includes(w.need), x=w.px+PANEL.w/2, y=w.py+PANEL.h+16; ctx.save(); rr(ctx,x-96,y-14,192,28,14,own?'#0d0c14e0':'#5a1010e8');
+      ctx.fillStyle=c.hex; ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x-74,y,8,0,7); ctx.fill(); ctx.stroke();
+      ctx.font='bold 14px system-ui'; ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(own?`Paint: ${c.name}`:`🛒 Buy: ${c.name}`,x+10,y+1); ctx.restore(); } });
   // ietve
   const sw=ctx.createLinearGradient(0,BASE,0,612); sw.addColorStop(0,'#3d3f4c'); sw.addColorStop(1,'#2b2d38'); ctx.fillStyle=sw; ctx.fillRect(vx0-60,BASE,vx1-vx0+120,52);
   ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(vx0-60,BASE,vx1-vx0+120,6);
@@ -1169,6 +1195,7 @@ function render(){
   police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
   if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
+  if(mode!=='draw'&&!hidden&&save.food<25&&!(NET.on&&chatBubble(NET.uid))) drawHunger(player.x,GROUND-player.h-(NET.on&&!inMetro?132:112));
   if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) { drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid,myMedals()); drawBubble(player.x,GROUND-player.h-126,chatBubble(NET.uid)); }
   // satiksme (priekšplānā)
   const copLivery=(c,L,siren)=>{ const Hh=L*.3; ctx.save(); ctx.translate(c.x,c.y); ctx.scale(c.dir,1); ctx.fillStyle='#1e5bd8'; ctx.fillRect(-L*.5+4,-Hh*.4,L-8,L*.035);
@@ -1245,6 +1272,14 @@ function render(){
 }
 const hexN=h=>{ if(h==='#111111') h='#8899aa'; const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
 
+// izsalcis tēls: domu burbulis ar 🍔, kas pulsē (badā – sarkans un biežāk)
+function drawHunger(x,y){ const starving=save.food<=0, ph=(time*(starving?2.2:1.2))%1, a=starving?1:Math.min(1,Math.sin(ph*Math.PI)*1.6); if(a<=0) return;
+  ctx.save(); ctx.globalAlpha=a; const s=1+.08*Math.sin(time*(starving?9:5));
+  ctx.fillStyle=starving?'#ff5252':'#fff'; ctx.beginPath(); ctx.arc(x+14,y+26,4,0,7); ctx.arc(x+20,y+16,6,0,7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+30,y-6,26*s,21*s,0,0,7); ctx.fill();
+  ctx.font='26px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🍔',x+30,y-5);
+  if(starving){ ctx.font='900 14px system-ui'; ctx.fillStyle='#fff'; ctx.strokeStyle='#000'; ctx.lineWidth=3; const t='grrr…'; ctx.strokeText(t,x-26,y-16+Math.sin(time*6)*2); ctx.fillText(t,x-26,y-16+Math.sin(time*6)*2); }
+  ctx.restore(); }
 function drawPlayer(){
   const car=carById(save.car), o=playerOutfit(), busy=mode==='entering'||mode==='exiting';
   const y=GROUND-player.h;
@@ -1270,47 +1305,89 @@ const dOv=document.getElementById('drawOv'), dc=document.getElementById('draw'),
 let curWall=null, strokes=[], drips=[], painting=false, dirty=false, drawColor='black', targetPaths=[], targetSamples=[];
 const mouse={x:W/2,y:H/2};
 addEventListener('pointermove',e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
-const panelK=()=>Math.min(1,(W-24)/720,(H-180)/440);
-function layoutDraw(){ const k=panelK(), ph=440*k, top=H/2-ph/2; const st=dOv.style;
-  st.setProperty('--k',k); st.setProperty('--tt',(top-34)+'px'); st.setProperty('--pt',(top+ph+10)+'px'); st.setProperty('--bt',(top+ph+56)+'px'); st.setProperty('--ht',(top+ph+98)+'px'); dc.style.setProperty('--k',k); }
-function openDraw(w){
-  audioInit(); sfx('shake'); curWall=w; promptEl.style.display='none'; drawColor=save.color; mode='entering';
-  tr={t:0,z0:cam.zoom,zt:2*panelK(),cx0:cam.x,cy0:cam.y,fx:w.cx,fy:PANEL.y+PANEL.h/2,px0:player.x,sx:w.cx-PANEL.w/2-45};
-  player.moving=false; player.vx=0; layoutDraw();
-}
-function showDraw(){
-  const w=curWall; strokes=[]; drips=[]; dirty=true;
-  const raw=SHAPES[w.shape](), R=w.tier>=18?172:150, cx=360, cy=220;
+const panelK=()=>Math.min(1,(W-24)/720,(H-180)/440); // tikai kameras pietuvinājumam, ieejot zīmēšanā
+// Zīmēšanas kanva aizņem visu brīvo ekrānu. Koordinātas kanvā = CSS pikseļi (pielaide un līnijas biezums ekrāna pikseļos).
+const DR={x:0,y:0,w:720,h:440}; let shapeR=150, shapeBox=null, pen=null, penT=null;
+function layoutDraw(){ const land=W>H*1.15, m=8, top=36+m, el=id=>document.getElementById(id), pal=el('palette'), btns=el('drawBtns'), hint=el('drawHint');
+  if(land){ const cw=Math.min(230,Math.max(150,W*.24)); DR.x=m; DR.y=top; DR.w=W-cw-m*3; DR.h=H-top-m;
+    Object.assign(pal.style,{left:(W-cw-m)+'px',width:cw+'px',top:top+'px',height:'auto',transform:'none'});
+    Object.assign(btns.style,{left:(W-cw-m)+'px',width:cw+'px',top:'auto',bottom:m+'px'}); btns.classList.add('col'); hint.style.display='none'; }
+  else { btns.classList.remove('col'); const bh=save.colors.length>7?168:122; DR.x=m; DR.y=top; DR.w=W-m*2; DR.h=H-top-bh-m;
+    Object.assign(pal.style,{left:m+'px',width:(W-m*2)+'px',top:(DR.y+DR.h+8)+'px',height:'auto',transform:'none'});
+    Object.assign(btns.style,{left:m+'px',width:(W-m*2)+'px',top:'auto',bottom:m+'px',flexWrap:'nowrap'}); hint.style.display='none'; }
+  if(land) btns.style.flexWrap='wrap';
+  if(!isTouch&&DR.w>900){ const cw=Math.min(DR.w,1100), ch=Math.min(DR.h,700); DR.x+=(DR.w-cw)/2; DR.w=cw; DR.h=ch; }
+  Object.assign(dc.style,{left:DR.x+'px',top:DR.y+'px',width:DR.w+'px',height:DR.h+'px'});
+  dc.width=Math.round(DR.w*dpr); dc.height=Math.round(DR.h*dpr);
+  const inf=el('drawInfo'); inf.style.left=(DR.x+8)+'px'; inf.style.top=(DR.y+8)+'px';
+  dirty=true; if(mode==='draw'&&curWall) fitShape(); }
+// formu ietilpina kanvā (ar atkāpi), lai tā būtu pēc iespējas lielāka
+function fitShape(){ const raw=SHAPES[curWall.shape](); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  raw.forEach(p=>p.forEach(([x,y])=>{ x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y); }));
+  const pad=Math.max(26,Math.min(DR.w,DR.h)*.08), R=Math.min((DR.w-pad*2)/(x1-x0),(DR.h-pad*2)/(y1-y0),340), cx=DR.w/2-(x0+x1)/2*R, cy=DR.h/2-(y0+y1)/2*R;
+  if(shapeBox&&shapeR&&strokes.length){ const k=R/shapeR, ox=shapeBox.cx, oy=shapeBox.cy; strokes.forEach(s_=>s_.pts.forEach(p_=>{ p_.x=cx+(p_.x-ox)*k; p_.y=cy+(p_.y-oy)*k; })); drips=[]; }
+  shapeR=R; shapeBox={cx,cy,x0:cx+x0*R,y0:cy+y0*R,x1:cx+x1*R,y1:cy+y1*R};
   targetPaths=raw.map(p=>p.map(([x,y])=>[cx+x*R,cy+y*R]));
   targetSamples=[];
   targetPaths.forEach(p=>{ for(let i=1;i<p.length;i++){ const [x0,y0]=p[i-1],[x1,y1]=p[i]; const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/4)); for(let k=0;k<n;k++) targetSamples.push([x0+(x1-x0)*k/n,y0+(y1-y0)*k/n]); } });
-  document.getElementById('drawTitle').textContent=w.isBonus?`🎁 Bonus task (metro) – more accurate = better box! Shape ${w.tier+1}`:`Wall – level ${w.tier+1}. Draw the outline!`;
-  buildPalette(); redraw(); dOv.classList.add('on');
+  dirty=true; }
+// pielaide ekrāna pikseļos: tā pati grūtība kā agrāk attiecībā pret formas izmēru, bet ne mazāk par 12 px (pirksts)
+const tolPx=()=>Math.max(12,shapeR*TIERS[curWall.tier].tol/150);
+function openDraw(w){
+  audioInit(); sfx('shake'); curWall=w; promptEl.style.display='none'; drawColor=w.need&&save.colors.includes(w.need)?w.need:save.color; mode='entering';
+  tr={t:0,z0:cam.zoom,zt:2*panelK(),cx0:cam.x,cy0:cam.y,fx:w.cx,fy:PANEL.y+PANEL.h/2,px0:player.x,sx:w.cx-PANEL.w/2-45};
+  player.moving=false; player.vx=0;
+}
+function showDraw(){
+  const w=curWall; strokes=[]; drips=[]; dirty=true; shapeBox=null; pen=penT=null;
+  layoutDraw(); fitShape();
+  document.getElementById('drawTitle').textContent=w.isBonus?`🎁 Bonus wall – more accurate = better box!`:w.need?`Level ${w.tier+1} · paint: ${colorById(w.need).name}!`:`Wall – level ${w.tier+1}. Draw the outline!`;
+  buildPalette(); redraw(); dOv.classList.add('on'); updateDrawInfo(true);
 }
 function buildPalette(){
   const p=document.getElementById('palette'); p.innerHTML='';
   save.colors.forEach((id,i)=>{ const c=colorById(id), d=document.createElement('div');
     d.className='sw'+(id===drawColor?' sel':''); d.style.background=c.hex; d.style.color=c.hex; d.title=`${c.name} x${c.mult}`;
-    d.innerHTML=`<span style="color:#fff;mix-blend-mode:difference">${i<9?i+1:''}</span>`; d.onclick=()=>{ drawColor=id; buildPalette(); }; p.appendChild(d); });
-  const hx=colorById(drawColor).hex; dc.style.boxShadow=`0 0 50px ${hx==='#111111'?'#889':hx}99`;
+    d.innerHTML=`<span style="color:#fff;mix-blend-mode:difference">${!isTouch&&i<9?i+1:''}</span>`; d.onclick=()=>{ drawColor=id; buildPalette(); }; p.appendChild(d); });
+  const hx=colorById(drawColor).hex; dc.style.boxShadow=`0 0 40px ${hx==='#111111'?'#889':hx}99`;
 }
+function brickCover(g,w,h){ const k=Math.max(w/720,h/440); g.drawImage(bgBrick,(w-720*k)/2,(h-440*k)/2,720*k,440*k); }
 function redraw(showGhost=true){
-  dctx.shadowBlur=0; dctx.globalAlpha=1; dctx.drawImage(bgBrick,0,0);
+  dctx.setTransform(dpr,0,0,dpr,0,0); dctx.shadowBlur=0; dctx.globalAlpha=1; brickCover(dctx,DR.w,DR.h);
   if(showGhost){ dctx.save(); dctx.strokeStyle='#fff'; dctx.globalAlpha=TIERS[curWall.tier].ghost; dctx.lineWidth=3; dctx.setLineDash([10,8]);
     targetPaths.forEach(p=>{ dctx.beginPath(); p.forEach(([x,y],i)=>i?dctx.lineTo(x,y):dctx.moveTo(x,y)); dctx.stroke(); }); dctx.restore(); }
-  dctx.lineCap='round'; dctx.lineJoin='round'; dctx.lineWidth=8;
+  const lw=Math.max(7,shapeR*.05);
+  dctx.lineCap='round'; dctx.lineJoin='round'; dctx.lineWidth=lw;
   strokes.forEach(s=>{ const c=colorById(s.color).hex; dctx.strokeStyle=c; dctx.fillStyle=c; dctx.shadowColor=c; dctx.shadowBlur=6;
-    if(s.pts.length===1){ dctx.beginPath(); dctx.arc(s.pts[0].x,s.pts[0].y,4,0,7); dctx.fill(); }
+    if(s.pts.length===1){ dctx.beginPath(); dctx.arc(s.pts[0].x,s.pts[0].y,lw/2,0,7); dctx.fill(); }
     else { dctx.beginPath(); s.pts.forEach((p,i)=>i?dctx.lineTo(p.x,p.y):dctx.moveTo(p.x,p.y)); dctx.stroke(); } });
   dctx.shadowBlur=0; dctx.lineWidth=3;
   drips.forEach(d=>{ const c=colorById(d.color).hex; dctx.strokeStyle=c; dctx.fillStyle=c; dctx.beginPath(); dctx.moveTo(d.x,d.y); dctx.lineTo(d.x,d.y+d.len); dctx.stroke(); dctx.beginPath(); dctx.arc(d.x,d.y+d.len,2.8,0,7); dctx.fill(); });
 }
-const pos=e=>{ const r=dc.getBoundingClientRect(); return {x:(e.clientX-r.left)*dc.width/r.width, y:(e.clientY-r.top)*dc.height/r.height}; };
-dc.addEventListener('pointerdown',e=>{ audioInit(); painting=true; dc.setPointerCapture(e.pointerId); strokes.push({color:drawColor,pts:[pos(e)]}); dirty=true; spraySound(true); });
-dc.addEventListener('pointermove',e=>{ if(!painting) return; const p=pos(e), s=strokes[strokes.length-1], l=s.pts[s.pts.length-1]; s.pts.push(p);
-  if(Math.hypot(p.x-l.x,p.y-l.y)<4&&Math.random()<.12) drips.push({x:p.x,y:p.y+2,len:0,max:rnd(8,30),color:drawColor}); dirty=true; });
+// sienas attēls (720×440) no zīmējuma: izgriež apgabalu ap formu
+function artFromDraw(){ const art=document.createElement('canvas'); art.width=720; art.height=440; const g=art.getContext('2d'); g.drawImage(bgBrick,0,0);
+  const b=shapeBox, A=720/440, sh=Math.max(b.y1-b.y0,(b.x1-b.x0)/A)/.72, sw=sh*A, cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2;
+  try{ g.drawImage(dc,(cx-sw/2)*dpr,(cy-sh/2)*dpr,sw*dpr,sh*dpr,0,0,720,440); }catch(e){}
+  return art; }
+const pos=e=>{ const r=dc.getBoundingClientRect(); return {x:(e.clientX-r.left)*DR.w/r.width, y:(e.clientY-r.top)*DR.h/r.height}; };
+const starving=()=>save.food<=0;
+function addPt(p){ const s=strokes[strokes.length-1], l=s.pts[s.pts.length-1]; s.pts.push(p);
+  if(Math.hypot(p.x-l.x,p.y-l.y)<4&&Math.random()<.12) drips.push({x:p.x,y:p.y+2,len:0,max:rnd(8,30),color:drawColor}); dirty=true; }
+dc.addEventListener('pointerdown',e=>{ audioInit(); painting=true; dc.setPointerCapture(e.pointerId); const p=pos(e); strokes.push({color:drawColor,pts:[p]}); pen={x:p.x,y:p.y}; penT={x:p.x,y:p.y}; dirty=true; spraySound(true); });
+dc.addEventListener('pointermove',e=>{ if(!painting) return; const p=pos(e); penT=p; if(!starving()){ pen={x:p.x,y:p.y}; addPt(p); } });
+// izsalcis: krāsa nāk lēni – līnija velkas pakaļ pirkstam
+const HUNGRY_PEN=150;
+function stepPen(dt){ if(!painting||!starving()||!pen||!penT) return; const dx=penT.x-pen.x, dy=penT.y-pen.y, d=Math.hypot(dx,dy); if(d<1) return;
+  const st=Math.min(d,HUNGRY_PEN*dt); pen.x+=dx/d*st; pen.y+=dy/d*st; addPt({x:pen.x,y:pen.y}); }
 const stopPaint=()=>{ painting=false; spraySound(false); };
 dc.addEventListener('pointerup',stopPaint); dc.addEventListener('pointercancel',stopPaint);
+// zīmēšanas augšējā josla: badā un cik cilvēku redz
+let drawInfoKey='';
+function updateDrawInfo(force){ if(mode!=='draw'&&!force) return; const w_=npcs.filter(n=>n.seen&&!n.called).length, c_=npcs.filter(n=>n.called&&time-n.callT<40&&Math.abs(n.x-player.x)<900).length;
+  const key=`${w_}|${c_}|${starving()}|${curWall&&curWall.isBonus}`; if(key===drawInfoKey&&!force) return; drawInfoKey=key;
+  let h=''; if(!(curWall&&curWall.isBonus)){ h+=w_?`<span class="${w_>=3?'hot':''}">👀 ${w_} watching</span>`:'<span>🙈 Nobody sees you</span>'; if(c_) h+=`<span class="hot">📞 ${c_} calling the police!</span>`; }
+  if(starving()) h+='<span class="hot">🍔 Hungry – painting slowly</span>';
+  document.getElementById('drawInfo').innerHTML=h; }
 
 function evaluate(){
   const pts=[]; let len=0;
@@ -1318,7 +1395,7 @@ function evaluate(){
     const a=s.pts[i-1],b=s.pts[i], d=Math.hypot(b.x-a.x,b.y-a.y); len+=d; const n=Math.max(1,Math.ceil(d/3));
     for(let k=1;k<=n;k++) pts.push([a.x+(b.x-a.x)*k/n,a.y+(b.y-a.y)*k/n]); } });
   if(len<120) return {acc:0,cover:0,prec:0};
-  const tol=TIERS[curWall.tier].tol;
+  const tol=tolPx();
   const near=(p,arr,r)=>{ const r2=r*r; for(const q of arr){ const a=p[0]-q[0],b=p[1]-q[1]; if(a*a+b*b<=r2) return true; } return false; };
   const cover=targetSamples.filter(t=>near(t,pts,tol)).length/targetSamples.length;
   const prec=pts.filter(p=>near(p,targetSamples,tol*1.6)).length/pts.length;
@@ -1326,15 +1403,18 @@ function evaluate(){
 }
 function leaveDraw(burst){ stopPaint(); dOv.classList.remove('on'); mode='exiting'; tr.t=0; tr.burst=burst; player.face='up'; }
 function finishDraw(){ if(curWall&&curWall.isBonus){ finishBonus(); return; }
-  const r=evaluate(), mult=Math.max(1,...strokes.map(s=>colorById(s.color).mult));
-  const money=Math.round(TIERS[curWall.tier].base*r.acc*r.acc*mult);
+  // krāsas bonuss – pēc tā, cik garu līniju ar katru krāsu uzvilka (nevis viens neona punkts visai sienai)
+  const sl=s_=>{ let L=0; for(let i=1;i<s_.pts.length;i++) L+=Math.hypot(s_.pts[i].x-s_.pts[i-1].x,s_.pts[i].y-s_.pts[i-1].y); return L; };
+  let tot=0, wsum=0, needL=0; strokes.forEach(s_=>{ const L=sl(s_); tot+=L; wsum+=L*colorById(s_.color).mult; if(s_.color===curWall.need) needL+=L; });
+  const r=evaluate(), mult=Math.max(1,Math.round((tot?wsum/tot:1)*100)/100), wrongColor=curWall.need&&tot&&needL/tot<.5;
+  const money=Math.round(TIERS[curWall.tier].base*r.acc*r.acc*mult*(wrongColor?.5:1));
   const rating=r.acc>=.9?'Masterpiece!':r.acc>=.75?'Super!':r.acc>=.5?'Good':r.acc>=.25?'Poor':'Scribble';
   redraw(false);
-  const art=document.createElement('canvas'); art.width=720; art.height=440; art.getContext('2d').drawImage(dc,0,0);
-  recentShapes.unshift(curWall.shape); recentShapes.length=Math.min(recentShapes.length,3); curWall.shape=pickShape(curWall.tier,walls.filter(w=>w.tier===curWall.tier).map(w=>w.shape));
+  const art=artFromDraw();
+  recentShapes.unshift(curWall.shape); recentShapes.length=Math.min(recentShapes.length,3); curWall.shape=pickShape(curWall.tier,walls.filter(w=>w.tier===curWall.tier).map(w=>w.shape)); const needWas=curWall.need; curWall.need=rollNeed(curWall.tier,curWall.v);
   curWall.art=art; curWall.cool=45; curWall.glow=strokes[0]?colorById(strokes[0].color).hex:'#ff4fd8';
   save.money+=money; save.painted++; stat('earned',money); if(r.acc>=.9) stat('master'); if(r.acc>=.98) stat('perfect'); if(dayK()<.35) stat('night'); persist();
-  const hmsg=addHeatFromPaint(curWall,r.acc);
+  const hmsg=addHeatFromPaint(curWall);
   const xpGain=Math.round(xpFor(curWall.tier)*(.2+r.acc*.8)*(buff.xp2>0?2:1)), lv0=level(); save.xp=(save.xp||0)+xpGain; persist();
   let lvmsg=`<br>+${xpGain} XP`; if(level()>lv0){ lvmsg+=`<br>🎉 <b>New level ${level()}!</b> Wall ${level()} unlocked (${distName(level()-1)})`; ding([523,659,784,1047,1319]); }
   shownMoney=-1;
@@ -1343,7 +1423,7 @@ function finishDraw(){ if(curWall&&curWall.isBonus){ finishBonus(); return; }
   if(money>0){ cam.flash=r.acc>=.75?1:.5; cam.shake=r.acc>=.75?14:6; burst(wx,wy,col,r.acc>=.75?60:28); coins(wx,wy+40,Math.min(30,4+Math.round(money/12))); floatText(wx,wy-30,`+€${money}`,'#ffd34d'); sfx('coin'); setTimeout(()=>sfx('coin'),150); setTimeout(()=>sfx('coin'),300); ding(r.acc>=.75?[523,659,784,1047]:[523,659]); }
   else ding([220]);
   npcs.forEach(n=>{ if(Math.abs(n.x-wx)<700){ n.bubble=r.acc>=.5?'👏':'🤔'; n.bt=2.5; n.pause=2.5; } });
-  toast(`<b>${rating}</b> Accuracy ${Math.round(r.acc*100)}% (coverage ${Math.round(r.cover*100)}%, cleanliness ${Math.round(r.prec*100)}%)<br>Earned: <b style="color:#ffd34d">€ ${money}</b> (color bonus x${mult})${hmsg}${lvmsg}`);
+  toast(`<b>${rating}</b> Accuracy ${Math.round(r.acc*100)}% (coverage ${Math.round(r.cover*100)}%, cleanliness ${Math.round(r.prec*100)}%)<br>Earned: <b style="color:#ffd34d">€ ${money}</b> (color bonus x${mult})${wrongColor?`<br>🎨 Wrong color – the wall wanted: ${colorById(needWas).name}. Half pay.`:''}${hmsg}${lvmsg}`);
 }
 document.getElementById('bDone').onclick=finishDraw;
 document.getElementById('bUndo').onclick=()=>{ strokes.pop(); dirty=true; };
@@ -1354,14 +1434,15 @@ document.getElementById('bCancel').onclick=()=>leaveDraw(false);
 function renderFx(){
   fxc.setTransform(dpr,0,0,dpr,0,0); fxc.clearRect(0,0,W,H);
   if(mode!=='draw'){ sparts.length=0; return; }
-  const r=dc.getBoundingClientRect(), k=panelK(), s=3.4*Math.max(.55,k);
-  const px=Math.max(60*s/3.2,r.left-70*s/3.2), py=Math.min(H-24,r.bottom);
-  const o=Object.assign({},playerOutfit(),{face:'side',flip:1,still:true,spray:true,target:{x:mouse.x,y:mouse.y}});
+  // tēls mazs kanvas apakšējā kreisajā stūrī (forma ir centrā, stūris brīvs)
+  const r=dc.getBoundingClientRect(), s=clamp(Math.min(r.width,r.height)/170,1.5,3);
+  const px=r.left+16*s, py=r.bottom-4, tg=starving()&&pen&&painting?{x:DR.x+pen.x,y:DR.y+pen.y}:{x:mouse.x,y:mouse.y};
+  const o=Object.assign({},playerOutfit(),{face:'side',flip:1,still:true,spray:true,target:tg});
   drawPerson(fxc,px,py,s,o);
-  if(painting&&o.hand){ const hx=colorById(drawColor).hex, c=hx==='#111111'?'#9aa':hx; fxc.save(); fxc.globalCompositeOperation='lighter'; fxc.globalAlpha=.22; fxc.fillStyle=c;
-    fxc.beginPath(); fxc.moveTo(o.hand.x,o.hand.y); fxc.lineTo(mouse.x-12,mouse.y-12); fxc.lineTo(mouse.x+12,mouse.y+12); fxc.closePath(); fxc.fill(); fxc.restore(); }
+  if(painting&&o.hand){ const hx=colorById(drawColor).hex, c=hx==='#111111'?'#9aa':hx; fxc.save(); fxc.globalCompositeOperation='lighter'; fxc.globalAlpha=.18; fxc.fillStyle=c;
+    fxc.beginPath(); fxc.moveTo(o.hand.x,o.hand.y); fxc.lineTo(tg.x-12,tg.y-12); fxc.lineTo(tg.x+12,tg.y+12); fxc.closePath(); fxc.fill(); fxc.restore(); }
   drawParts(fxc,sparts);
-  fxc.save(); fxc.strokeStyle='#fff9'; fxc.lineWidth=1.5; fxc.beginPath(); fxc.arc(mouse.x,mouse.y,10,0,7); fxc.stroke(); fxc.restore();
+  if(!isTouch){ fxc.save(); fxc.strokeStyle='#fff9'; fxc.lineWidth=1.5; fxc.beginPath(); fxc.arc(mouse.x,mouse.y,10,0,7); fxc.stroke(); fxc.restore(); }
 }
 
 function renderMetroLot(l){
@@ -1464,7 +1545,7 @@ function rollBoxTier(acc){ const w=[70,22+8*acc,7+4*acc,1+1.5*acc]; let r=Math.r
 function finishBonus(){ const w=curWall, r=evaluate();
   const bt=Math.random()<.15+.25*r.acc?rollBoxTier(r.acc):-1, cash=Math.round(TIERS[w.tier].base*.25*r.acc);
   stat('bonus'); if(cash>0){ save.money+=cash; stat('earned',cash); shownMoney=-1; } persist();
-  redraw(false); const art=document.createElement('canvas'); art.width=720; art.height=440; art.getContext('2d').drawImage(dc,0,0);
+  redraw(false); const art=artFromDraw();
   recentShapes.unshift(w.shape); recentShapes.length=Math.min(recentShapes.length,3); w.shape=pickShape(w.tier);
   w.art=art; w.cool=120; w.glow=strokes[0]?colorById(strokes[0].color).hex:'#5aa8e8';
   leaveDraw(false); showLoot(bt,r.acc,cash); }
@@ -1554,7 +1635,7 @@ cv.addEventListener('pointerdown',e=>{ if(mode!=='world'||lootOpen) return; audi
 function ctxInfo(){ if(mode!=='world') return null;
   if(hidden) return null;
   const l=nearLot; if(!l) return null;
-  if(l.kind==='wall') return locked(l)?{i:'🔒',t:'Lv '+(l.tier+1)}:l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:save.food<=0?{i:'🍔',t:'Hungry'}:{i:'🎨',t:'Paint'};
+  if(l.kind==='wall') return locked(l)?{i:'🔒',t:'Lv '+(l.tier+1)}:l.need&&!save.colors.includes(l.need)?{i:'🛒',t:colorById(l.need).name}:l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎨',t:'Paint'};
   if(l.kind==='mwall') return l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎁',t:'Bonus'};
   return {paint:{i:'🛒',t:'Shop'},cafe:{i:'🍔',t:'Eat'},pizza:{i:'🍕',t:'Eat'},shoes:{i:'👟',t:'Soon'},metro:{i:'🚇',t:'Metro'},mtrain:{i:'🚆',t:'Travel'},mexit:{i:'⬆️',t:'Exit'}}[l.kind]||null; }
 function updateCtx(){ if(!isTouch) return; const c=ctxInfo(), hs=hidden?'out':nearHide?'in':'';
@@ -1563,8 +1644,8 @@ function updateCtx(){ if(!isTouch) return; const c=ctxInfo(), hs=hidden?'out':ne
   const h=document.getElementById('tS'); h.classList.toggle('off',!hs); h.innerHTML=hidden?'↩️<small>Out</small>':'🫣<small>Hide</small>'; }
 function actionE(){
   if(mode!=='world'||!nearLot||hidden) return;
-  if(nearLot.kind==='wall'&&save.food<=0){ toast('🍔 Too hungry to paint – eat at a café first!'); return; }
   if(nearLot.kind==='cafe'||nearLot.kind==='pizza'){ eat(); return; }
+  if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&!save.colors.includes(nearLot.need)){ const c=colorById(nearLot.need); toast(`🎨 This wall needs this paint: <b style="color:${c.hex}">${c.name}</b> – buy it at the Paint Depot (€ ${c.price}).`); return; }
   if(nearLot.kind==='wall') locked(nearLot)?toast(`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()}). Paint easier walls and earn XP.`):nearLot.cool>0?toast('Paint still drying – come back later or find another wall!'):openDraw(nearLot);
   else if(nearLot.kind==='paint') openShop();
   else if(nearLot.kind==='metro') enterMetro(nearLot);
@@ -1623,6 +1704,7 @@ if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
       NET.uid=u.uid; NET.name=u.email.split('@')[0];
       try{ const s=await NET.db.ref('users/'+u.uid).get(); const v=s.val()||{}; if(v.name) NET.name=v.name; NET.nick=v.nick||''; }catch(e){}
       if(window.TW) await TW.ready;
+      await loadSave(u.uid);
       if(window.TWA){ const v=await TWA.visit(u.uid); NET.visits={streak:v.best||0,days:v.days||0}; }
       NET.on=true; netStats(true); toast(`👋 Sveiks, ${TW.display(NET.name,NET.nick)}${TW.badge(TW.role(NET.uid))?' '+TW.badge(TW.role(NET.uid)):''}!`);
       TW.heartbeat(NET.uid,()=>({game:'Graffiti RPG',where:inMetro?'Metro':`City ${curCity+1} · Līm. ${level()}`,name:NET.name,nick:NET.nick||''}));
@@ -1635,6 +1717,25 @@ if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
     });
   }catch(e){}
 }
+// Ielādē progresu no konta. Ņem jaunāko (vairāk XP) no konta un šīs ierīces kešatmiņas.
+// Veco ierīces saglabājumu ('grafitiRPG', pirms kontu saglabāšanas) piešķir tikai tam kontam, kura līderu XP tam atbilst –
+// lai brālis uz tās pašas planšetes nepaņem māsas progresu.
+async function loadSave(uid){
+  const rd=k=>{ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }, xpOf=s=>(s&&s.xp)||0;
+  let cloud=null, cloudOk=false, stats=null;
+  try{ cloud=(await NET.db.ref('saves/'+uid).get()).val(); cloudOk=true; }catch(e){}
+  let best=cloud; const mine=rd('grafitiRPG:'+uid); if(xpOf(mine)>xpOf(best)) best=mine;
+  const legacy=rd('grafitiRPG');
+  if(legacy&&!cloud){ try{ stats=(await NET.db.ref('stats/'+uid).get()).val(); }catch(e){}
+    if(stats&&Math.abs((stats.xp||0)-xpOf(legacy))<=Math.max(50,xpOf(legacy)*.05)&&xpOf(legacy)>=xpOf(best)){ best=legacy; try{ localStorage.removeItem('grafitiRPG'); }catch(e){} } }
+  save=Object.assign(SAVE0(),best||{}); save.items=Object.assign({smoke:0,energy:0,xp2:0,mask:0},save.items||{}); save.st=save.st||{};
+  if(!save.colors.includes(save.color)) save.color=save.colors[0];
+  saveUid=uid; saveOk=true; _lx=-1; dispMoney=save.money; shownMoney=-1; foodBand=3;
+  metroObjs.forEach(o=>{ if(o.kind==='mwall'){ o.tier=Math.max(0,level()-1-Math.floor(Math.random()*4)); o.shape=pickShape(o.tier); } });
+  renderInv(); updateHud();
+  if(cloudOk) NET.db.ref('saves/'+uid).set(save).catch(()=>{}); }
+function cloudSave(){ if(NET.on&&saveOk&&saveUid) NET.db.ref('saves/'+saveUid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') cloudSave(); });
 function netTick(){ if(!NET.on) return;
   if(window.TW&&TW.active&&!TW.active()){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } NET.city=-2; return; } // fonā/neaktīvs – citiem nerādāmies
   const c=inMetro?-1:curCity;
@@ -1644,7 +1745,7 @@ function netTick(){ if(!NET.on) return;
         s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({uid:p.key,dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
   const now=Date.now();
   if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,hid:hidden?1:0,m:myMedals()||null,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
-function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000){ if(!NET.trail) NET.trail=setTimeout(()=>{ NET.trail=null; netStats(true); },5000-(now-NET.lastStats)); return; } NET.lastStats=now;
+function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000){ if(!NET.trail) NET.trail=setTimeout(()=>{ NET.trail=null; netStats(true); },5000-(now-NET.lastStats)); return; } NET.lastStats=now; cloudSave();
   NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
   if(window.TWA) TWA.sync(NET.uid,Object.assign({},save.st,NET.visits,{level:level(),painted:save.painted||0,city:save.st.maxCity=Math.max(save.st.maxCity||1,curCity+1),rich:save.st.rich=Math.max(save.st.rich||0,save.money),colors:save.colors.length,cars:save.cars})).then(n=>{ n.forEach((m,i)=>setTimeout(()=>{ toast(`🏅 <b>New medal!</b><br><span style="font-size:30px">${m.i}</span> ${TWA.title(m)}`); ding([784,988,1175,1568]); buzz(30); },4200*i)); }).catch(()=>{}); }
 const myMedals=()=>window.TWA&&TWA.owned?TWA.LIST.filter(m=>TWA.owned[m.id]).length:0;
@@ -1708,9 +1809,9 @@ const TUT_LV=[
   ['🕹️','Kustība',isTouch?'Staigā ar ◀ ▶ bultiņām un lec ar ⤒. Uzspied uz veikala, sienas vai miskastes – tēls pats aizies un izdarīs.':'Skrien ar A / D, lec ar W. Pie sienas, veikala vai metro spied E.'],
   ['🎨','Zīmēšana',isTouch?'Pie sienas spied 🎨 Zīmēt un ar pirkstu apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.':'Pie sienas spied E un ar peli apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.'],
   ['🧱','Līmeņi','Katrā līmenī ir 3 sienas. Sakrāj XP, un atveras nākamā līmeņa sienas – grūtākas, bet maksā vairāk.'],
-  ['🚓','Policija','Paviršs vai slikts zīmējums piesauc policiju – īpaši, ja redz patrulis vai cilvēki ar 📱. Bēdz vai paslēpies miskastē 🫣.'],
-  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Dārgāka krāsa dod lielāku bonusu, ātrāks transports – ātrāku ceļu.'],
-  ['🍔','Ēdiens','Tēlam vajag ēst. Kad ēdiens ir zems, ieej kafejnīcā.'],
+  ['🚓','Policija','Grafiti ir aizliegts! Jo vairāk cilvēku redz, kā tu zīmē (👀), jo ātrāk ierodas policija. Zīmē, kad neviens neskatās, bēdz vai paslēpies miskastē 🫣.'],
+  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Dārgāka krāsa dod lielāku bonusu. No 2. pilsētas dažas sienas prasa noteiktu krāsu – nopērc to!'],
+  ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet un krāso daudz lēnāk – ieej kafejnīcā.'],
   ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
   ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
   ['⚙️','Iestatījumi','⚙ pogā ir skaņa, gaišums un valoda, 🎵 – radio. Šo instrukciju vari atvērt vēlreiz pauzē: ❓ Kā spēlēt.'],
@@ -1720,9 +1821,9 @@ const TUT_EN=[
   ['🕹️','Moving',isTouch?'Walk with the ◀ ▶ arrows and jump with ⤒. Tap a shop, wall or dumpster – your character walks there and does it.':'Run with A / D, jump with W. Press E at a wall, shop or metro.'],
   ['🎨','Painting',isTouch?'At a wall tap 🎨 Paint and trace the shape with your finger. The more accurate, the more money and XP.':'Press E at a wall and trace the shape with the mouse. The more accurate, the more money and XP.'],
   ['🧱','Levels','Every level has 3 walls. Earn XP to unlock the next level\'s walls – harder, but they pay more.'],
-  ['🚓','Police','Sloppy or bad drawings attract the police – especially if a patrol or people with 📱 see you. Run or hide in a dumpster 🫣.'],
-  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Pricier colors give a bigger bonus, faster vehicles get you around faster.'],
-  ['🍔','Food','Your character needs to eat. When food is low, visit a café.'],
+  ['🚓','Police','Graffiti is illegal! The more people see you paint (👀), the faster the police come. Paint when nobody is looking, run or hide in a dumpster 🫣.'],
+  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Pricier colors give a bigger bonus. From city 2 some walls need a certain color – buy it!'],
+  ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks and paints much slower – visit a café.'],
   ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
   ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
   ['⚙️','Settings','The ⚙ button has sound, brightness and language, 🎵 is the radio. Open this guide again from pause: ❓ How to play.'],

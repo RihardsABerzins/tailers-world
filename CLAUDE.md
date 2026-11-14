@@ -48,6 +48,10 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Medaļas: `tw-ach.js` (`TWA`) – saraksts `TWA.LIST`, grupas `TWA.GROUPS` (profils + katra spēle). Glabājas `ach/{uid}` (publiski), apskatāmas sākumlapā, citu medaļas redz "Citi spēlētāji". Spēle piešķir ar `TWA.sync(uid,ctx)` (Graffiti skaitītāji `save.st`: kastes, bēgšanas, šedevri, ēšana, metro u.c.). Dienas pēc kārtas: `TWA.visit` → `users/{uid}/visits`. Ar 50 medaļām vārds sarkani spīd, ar 100 – zili (`TW.nameHTML(teksts,uid,medaļas)`, spēlē `drawNameTag`). Jaunai spēlei pievieno grupu un medaļas.
 - Uzaicini draugu: saite `/?draugs=lietotājvārds`; jaunais spēlētājs pēc profila izveides ieraksta `invites/{uzaicinātājs}/{uid}` un nosūta draudzības pieprasījumu – abi saņem medaļu.
 - Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
+- Graffiti progress glabājas kontā `saves/{uid}` (+ kešs `grafitiRPG:{uid}` ierīcē); vecais `grafitiRPG` tiek piešķirts tikai kontam, kura `stats` XP sakrīt.
+- Zīmēšana aizņem visu ekrānu; pielaide ekrāna pikseļos (min 12 px). Izsalcis tēls (🍔 burbulis) iet un krāso lēni, bet var zīmēt.
+- Policija: aizdomas rada pats zīmēšanas fakts – cik cilvēku redz (👀), patruļa, zvanītāji; ne zīmējuma kvalitāte. Notverts → sods 10%+2%/★, izlaiž pie metro tajā pašā pilsētā.
+- No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (`need`, katrā pilsētā jauna); bez tās jāpērk, ar citu krāsu – puse samaksas. Krāsu bonuss pēc līniju garuma.
 
 ## Plānots
 - "Atbalsti mani" saite sākumlapā.

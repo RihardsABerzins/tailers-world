@@ -15,6 +15,13 @@
         ".write": "auth != null && auth.uid === $uid"
       }
     },
+    "saves": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['xp','money']) && newData.child('xp').isNumber() && newData.child('money').isNumber()"
+      }
+    },
     "stats": {
       ".read": true,
       ".indexOn": [
