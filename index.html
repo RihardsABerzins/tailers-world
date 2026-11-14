@@ -9,6 +9,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tailers World">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -110,6 +112,12 @@
   <div class="hero">
     <h1 id="hello">Labdien! <span class="wave">👋</span></h1>
     <p class="lead">Čau, mani sauc Tailers, un es taisu spēles, kādas man pašam patīk! Pievienojies, un spēlējam kopā <span class="free">BEZ MAKSAS</span> – kurš tiks tālāk? 😉</p>
+  </div>
+
+  <div class="notify" id="appBox" style="border-color:#7cff8a66;background:linear-gradient(135deg,#7cff8a22,#5ac8ff22)">
+    <div class="bell" style="animation:bob 2.6s ease-in-out infinite">📲</div>
+    <p><b>Uzliec spēles uz telefona kā lietotni!</b><small>Tad nebūs katru reizi jāielogojas.</small></p>
+    <div style="display:flex;flex-direction:column;gap:8px"><button class="btn play" id="appInstall" style="display:none">⬇️ Uzstādīt</button><a class="btn ghost" href="lietotne.html">Kā to izdarīt?</a></div>
   </div>
 
   <div class="loading" id="loading">Ielādē…</div>
@@ -235,6 +243,15 @@ function setupEmail(uid,prof){ const box=$('emailBox');
     try{ await db.ref('users/'+uid).update({email:m,news:$('eNews').checked,emailAdded:TS}); box.innerHTML='<div class="bell" style="animation:none">✅</div><p><b>Paldies!</b> E-pasts saglabāts.</p>'; setTimeout(()=>box.style.display='none',3000); }
     catch(err){ $('eErr').textContent='Neizdevās saglabāt. Mēģini vēlreiz.'; } };
 }
+
+// ---- lietotne (sākuma ekrāns) ----
+{ const mobile=/iPad|iPhone|iPod|Android/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const inApp=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(mobile&&!inApp) $('appBox').style.display='flex';
+  let deferred=null;
+  addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferred=e; $('appInstall').style.display='inline-flex'; $('appBox').style.display='flex'; });
+  $('appInstall').onclick=async()=>{ if(!deferred) return; deferred.prompt(); await deferred.userChoice; deferred=null; $('appInstall').style.display='none'; };
+  addEventListener('appinstalled',()=>{ $('appBox').style.display='none'; }); }
 
 // ---- paziņojumi ----
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);

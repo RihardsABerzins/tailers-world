@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="lv">
+<head>
+<meta charset="utf-8">
+<title>Uzliec Tailers World uz telefona</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#120f24">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root{--bg:#120f24;--card:#1f1a3a;--text:#fff8ff;--muted:#c4bde6;--yellow:#ffd34d;--pink:#ff5fa2;--blue:#5ac8ff;--green:#7cff8a}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;min-height:100vh;background:radial-gradient(900px 600px at 10% -10%,#4a2a8a 0%,transparent 60%),radial-gradient(700px 500px at 110% 30%,#7a2a5a 0%,transparent 60%),var(--bg);color:var(--text);font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 50px}
+  .back{display:inline-flex;align-items:center;min-height:46px;padding:10px 16px;border-radius:14px;background:#ffffff1a;border:2px solid #ffffff33;color:var(--text);font-weight:900;text-decoration:none}
+  h1{font-size:clamp(28px,8vw,42px);margin:16px 0 6px;line-height:1.1}
+  .lead{color:var(--muted);font-size:18px;margin:0 0 16px}
+  .tabs{display:flex;gap:10px;margin:0 0 18px}
+  .tab{flex:1;min-height:60px;border-radius:18px;border:3px solid #ffffff33;background:#ffffff12;color:var(--text);font:inherit;font-weight:900;font-size:19px;cursor:pointer}
+  .tab.on{border-color:var(--yellow);background:#ffd34d26}
+  .steps{display:none;flex-direction:column;gap:14px}
+  .steps.on{display:flex}
+  .step{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid #ffffff1f;border-radius:22px;padding:14px;animation:rise .5s both}
+  .num{flex:0 0 auto;width:54px;height:54px;border-radius:50%;background:var(--yellow);color:#1a1300;display:grid;place-items:center;font-size:28px;font-weight:900;box-shadow:0 5px 0 #c49a1b}
+  .txt{font-size:20px;font-weight:800;line-height:1.3}
+  .txt small{display:block;font-size:15px;color:var(--muted);font-weight:600;margin-top:4px}
+  .pic{flex:0 0 auto;width:76px;height:76px;border-radius:18px;background:#ffffff14;display:grid;place-items:center}
+  .pic svg{width:46px;height:46px}
+  .bounce{animation:bounce 1.2s ease-in-out infinite}
+  @keyframes bounce{50%{transform:translateY(-6px)}}
+  .done{background:linear-gradient(135deg,#7cff8a33,#5ac8ff22);border:2px solid #7cff8a66}
+  .install{width:100%;min-height:64px;border-radius:20px;border:0;background:var(--yellow);color:#1a1300;font:inherit;font-weight:900;font-size:21px;box-shadow:0 6px 0 #c49a1b;margin:0 0 16px;display:none;cursor:pointer}
+  .ok{display:none;background:#7cff8a26;border:2px solid #7cff8a77;border-radius:20px;padding:16px;font-size:19px;font-weight:800;margin-bottom:16px}
+  .parent{margin-top:22px;color:var(--muted);font-size:15px;background:#ffffff0d;border-radius:16px;padding:12px 14px}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Atpakaļ</a>
+  <h1>📲 Uzliec spēles uz telefona!</h1>
+  <p class="lead">Tad Tailers World būs kā īsta lietotne ar savu ikonu, un tev nebūs katru reizi jāielogojas.</p>
+  <div class="ok" id="already">✅ Viss gatavs – tu jau spēlē no lietotnes!</div>
+  <button class="install" id="installBtn">⬇️ Uzstādīt ar vienu pieskārienu</button>
+
+  <div class="tabs"><button class="tab" data-t="ios">🍎 iPhone / iPad</button><button class="tab" data-t="android">🤖 Android</button></div>
+
+  <div class="steps" id="ios">
+    <div class="step"><div class="num">1</div><div class="pic bounce"><svg viewBox="0 0 24 24" fill="none" stroke="#5ac8ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></div>
+      <div class="txt">Spied šo pogu<small>Kvadrātiņš ar bultiņu uz augšu. Tas ir ekrāna apakšā (vai augšā, ja tā ir planšete).</small></div></div>
+    <div class="step" style="animation-delay:.1s"><div class="num">2</div><div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg></div>
+      <div class="txt">Atrodi “Pievienot sākuma ekrānam”<small>Ja neredzi – pavelc sarakstu ar pirkstu uz augšu. Angliski: “Add to Home Screen”.</small></div></div>
+    <div class="step" style="animation-delay:.2s"><div class="num">3</div><div class="pic"><b style="color:#5ac8ff;font-size:19px">Pievienot</b></div>
+      <div class="txt">Spied “Pievienot”<small>Augšējā labajā stūrī. Angliski: “Add”.</small></div></div>
+    <div class="step done" style="animation-delay:.3s"><div class="num">4</div><div class="pic"><img src="icon-192.png" alt="" width="56" height="56" style="border-radius:14px"></div>
+      <div class="txt">Atver spēli no šīs ikonas!<small>Ielogojies vienreiz – pēc tam tā tevi atcerēsies.</small></div></div>
+  </div>
+
+  <div class="steps" id="android">
+    <div class="step"><div class="num">1</div><div class="pic bounce"><b style="font-size:40px;line-height:1">⋮</b></div>
+      <div class="txt">Spied trīs punktiņus<small>Ekrāna augšējā labajā stūrī (Chrome pārlūkā).</small></div></div>
+    <div class="step" style="animation-delay:.1s"><div class="num">2</div><div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M12 7v8M9 12l3 3 3-3"/></svg></div>
+      <div class="txt">Spied “Pievienot sākuma ekrānam”<small>Vai “Instalēt lietotni”. Angliski: “Add to Home screen” / “Install app”.</small></div></div>
+    <div class="step" style="animation-delay:.2s"><div class="num">3</div><div class="pic"><b style="color:#7cff8a;font-size:18px">Instalēt</b></div>
+      <div class="txt">Spied “Instalēt” vai “Pievienot”</div></div>
+    <div class="step done" style="animation-delay:.3s"><div class="num">4</div><div class="pic"><img src="icon-192.png" alt="" width="56" height="56" style="border-radius:14px"></div>
+      <div class="txt">Atver spēli no šīs ikonas!<small>Ielogojies vienreiz – pēc tam tā tevi atcerēsies.</small></div></div>
+  </div>
+
+  <div class="parent">👨‍👩‍👧 <b>Vecākiem:</b> lietotne ir tā pati vietne tailersworld.lv, tikai bez pārlūka joslām. Tā neprasa atļaujas un neko neuzstāda no veikala. Paziņojumi iPhone/iPad darbojas tikai, ja vietne pievienota sākuma ekrānam.</div>
+</div>
+<script>
+const ua=navigator.userAgent, isIOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1), isAndroid=/Android/.test(ua);
+const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+function show(t){ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); document.querySelectorAll('.steps').forEach(s=>s.classList.toggle('on',s.id===t)); }
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.t));
+show(isAndroid?'android':'ios');
+if(standalone) document.getElementById('already').style.display='block';
+let deferred=null; const btn=document.getElementById('installBtn');
+addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferred=e; btn.style.display='block'; });
+btn.onclick=async()=>{ if(!deferred) return; deferred.prompt(); const r=await deferred.userChoice; deferred=null; btn.style.display='none'; if(r.outcome==='accepted') document.getElementById('already').style.display='block'; };
+addEventListener('appinstalled',()=>{ btn.style.display='none'; document.getElementById('already').style.display='block'; });
+</script>
+</body>
+</html>
