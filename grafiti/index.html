@@ -80,6 +80,32 @@
   body.touch #touch{display:flex}
   body.touch #help{display:none}
   body.touch #fsBtn{bottom:96px}
+  /* kompakts izkārtojums telefoniem */
+  @media (max-height:520px),(max-width:760px){
+    #hud{top:6px;left:6px;padding:5px 9px;font-size:11px;line-height:1.35;border-radius:10px}
+    #hud b{font-size:15px}
+    #hud .hx{display:none}
+    .xpbar{width:120px}
+    #heatWrap{min-width:120px;margin-top:3px;font-size:11px}
+    .stars{font-size:12px;letter-spacing:1px}
+    #clock{top:6px;padding:3px 10px;min-width:0}
+    #clock b{font-size:14px}
+    #clock small,#clockBar{display:none}
+    #player{top:6px;right:6px;padding:3px 5px;gap:3px;max-width:none}
+    #player button{padding:3px 7px;font-size:13px}
+    #pInfo{display:none}
+    #help,#fsBtn,#setBtn,#tpBtn{display:none}
+    body.touch #inv,#inv{left:50%;right:auto;transform:translateX(-50%);top:auto;bottom:34px;flex-wrap:nowrap;max-width:none}
+    #inv button{padding:3px 7px;font-size:12px}
+    #prompt{top:auto;bottom:72px;font-size:13px;padding:5px 12px;white-space:nowrap}
+    #toast{bottom:auto;top:78px;font-size:13px;padding:8px 14px}
+    #touch{padding:0 8px 8px}
+    #touch div{gap:8px}
+    #touch button{width:54px;height:54px;font-size:20px;background:#fff2}
+    #policeSign{top:38px;padding:4px 14px}
+    .psBig{font-size:18px}
+    .psSmall{font-size:11px}
+  }
 </style>
 </head>
 <body>
@@ -88,7 +114,7 @@
 <div id="help">A D – run · W – jump<br>E – action · ↓ – hide<br>T – metro · Z X C V – items<br>Esc – pause / settings</div>
 <div id="clock"></div>
 <div id="policeSign"></div>
-<div id="player"><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pRadio" title="Pop radio (R)">📻</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
+<div id="player"><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pRadio" title="Pop radio (R)">📻</button><button id="pSet" title="Settings (Esc)">⚙</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
 <div id="prompt"></div>
 <div id="toast"></div>
 <button id="fsBtn" class="sec">⛶ Fullscreen</button><button id="tpBtn" class="sec">🚇 Metro (T)</button><button id="setBtn" class="sec">⚙ Settings (Esc)</button>
@@ -400,7 +426,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='w
 applyBrightness(); syncSettings();
 pPlay.onclick=()=>{ audioInit(); if(!music.el) return; music.el.paused?music.el.play().catch(()=>{}):music.el.pause(); };
 document.getElementById('pNext').onclick=()=>{ audioInit(); if(music.radio>=0) loadRadio((music.radio+1)%RADIOS.length); else loadTrack(music.i+1); };
-document.getElementById('pRadio').onclick=cycleSource; document.getElementById('pzRadio').onclick=cycleSource;
+document.getElementById('pRadio').onclick=cycleSource; document.getElementById('pSet').onclick=()=>openPause(); document.getElementById('pzRadio').onclick=cycleSource;
 document.getElementById('pPrev').onclick=()=>{ audioInit(); if(music.radio>=0) loadRadio((music.radio+RADIOS.length-1)%RADIOS.length); else loadTrack(music.i-1); };
 pFx.onclick=()=>{ fxOn=!fxOn; saveAudioPrefs(); syncPlayer(); };
 document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('button')) sfx('click'); });
@@ -730,7 +756,7 @@ const hud=document.getElementById('hudMain'), promptEl=document.getElementById('
 let toastT=0, shownMoney=-1, dispMoney=save.money;
 function toast(msg){ toastEl.innerHTML=msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('on'),3800); }
 function updateHud(){ const c=colorById(save.color), car=carById(save.car);
-  hud.innerHTML=`<b>€ ${Math.round(dispMoney)}</b><br>Color: <span style="color:${c.hex==='#111111'?'#999':c.hex}">●</span> ${c.name} (x${c.mult})<br>Vehicle: ${car.name}<br>Walls painted: ${save.painted}<br>Level <b style="font-size:15px;color:#7cff8a;text-shadow:none">${level()}</b> · XP ${xpTxt()}<div class="xpbar"><div style="width:${xpPct()}%"></div></div>`; }
+  hud.innerHTML=`<b>€ ${Math.round(dispMoney)}</b><span class="hx"><br>Color: <span style="color:${c.hex==='#111111'?'#999':c.hex}">●</span> ${c.name} (x${c.mult})<br>Vehicle: ${car.name}<br>Walls painted: ${save.painted}</span><br>Level <b style="font-size:15px;color:#7cff8a;text-shadow:none">${level()}</b> · XP ${xpTxt()}<div class="xpbar"><div style="width:${xpPct()}%"></div></div>`; }
 
 let last=performance.now(), nearLot=null, tr=null;
 function frame(t){ const dt=Math.min(.05,(t-last)/1000); last=t; if(mode!=='pause'){ time+=dt; update(dt); } render(); requestAnimationFrame(frame); }
