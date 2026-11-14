@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <title>Grafiti RPG</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../firebase-config.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
   html,body{margin:0;height:100%;background:#0b0c12;overflow:hidden;font-family:system-ui,sans-serif;color:#eee;-webkit-user-select:none;user-select:none}
@@ -125,7 +129,7 @@
 <div id="help">A D – run · W – jump<br>E – action · ↓ – hide<br>T – metro · Z X C V – items<br>Esc – pause / settings</div>
 <div id="clock"></div>
 <div id="policeSign"></div>
-<div id="player"><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pRadio" title="Papīra Lidmašīnas song now (R)">✈</button><button id="pSet" title="Settings (Esc)">⚙</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
+<div id="player"><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pSet" title="Settings (Esc)">⚙</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
 <div id="prompt"></div>
 <div id="toast"></div>
 <button id="fsBtn" class="sec">⛶ Fullscreen</button><button id="tpBtn" class="sec">🚇 Metro (T)</button><button id="setBtn" class="sec">⚙ Settings (Esc)</button>
@@ -150,7 +154,7 @@
   <div class="row"><div class="n">🎵 Music volume</div><input id="pVol2" type="range" min="0" max="100"></div>
   <div class="row"><div class="n">🔔 Effects volume</div><input id="pFxVol" type="range" min="0" max="100"></div>
   <div class="row"><div class="n">☀ Brightness</div><input id="sBright" type="range" min="60" max="160"></div>
-  <div class="row"><div class="n">Music</div><button id="pzPrev">⏮</button><button id="pzPlay">⏯</button><button id="pzNext">⏭</button><button id="pzMute" class="sec">🔇 Mute</button><button id="pzRadio" class="sec">✈ PL song</button></div>
+  <div class="row"><div class="n">Music</div><button id="pzPrev">⏮</button><button id="pzPlay">⏯</button><button id="pzNext">⏭</button><button id="pzMute" class="sec">🔇 Mute</button></div>
   <div style="margin:12px 0;font-size:13px;color:#aab;line-height:1.7">A D – run · W – jump · E – paint / metro / shop · ↓ S – hide · T – metro · Z X C V – items · M – music · F – fullscreen</div>
   <button id="pzResume">▶ Resume (Esc)</button> <button class="sec" id="pzFs">⛶ Fullscreen</button> <a href="../index.html" class="sec" style="display:inline-block;background:#444;color:#eee;border-radius:8px;padding:8px 16px;font-weight:700;font-size:14px;text-decoration:none">🏠 Tailers World</a>
 </div></div>
@@ -200,7 +204,7 @@ const colorById=id=>COLORS.find(c=>c.id===id);
 const carById=id=>CARS.find(c=>c.id===id);
 let save={money:0,colors:['black','red'],cars:['foot'],color:'black',car:'foot',painted:0,xp:0,food:100};
 try{ const s=JSON.parse(localStorage.getItem('grafitiRPG')); if(s) save=Object.assign(save,s); }catch(e){}
-const persist=()=>{ try{ localStorage.setItem('grafitiRPG',JSON.stringify(save)); }catch(e){} };
+const persist=()=>{ try{ localStorage.setItem('grafitiRPG',JSON.stringify(save)); }catch(e){} if(typeof netStats==='function') netStats(); };
 
 // ================= Kontūras =================
 const circle=(cx,cy,r,a0=0,a1=Math.PI*2,n=60)=>Array.from({length:n+1},(_,i)=>{const a=a0+(a1-a0)*i/n;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]});
@@ -451,7 +455,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='w
 applyBrightness(); syncSettings();
 pPlay.onclick=()=>{ audioInit(); if(!music.el) return; music.el.paused?music.el.play().catch(()=>{}):music.el.pause(); };
 document.getElementById('pNext').onclick=()=>{ audioInit(); if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else playRadio(music.radio+1); };
-document.getElementById('pRadio').onclick=cycleSource; document.getElementById('pSet').onclick=()=>openPause(); document.getElementById('pzRadio').onclick=cycleSource;
+document.getElementById('pSet').onclick=()=>openPause();
 document.getElementById('pPrev').onclick=()=>{ audioInit(); playRadio(music.pl?music.radio:music.radio-1); };
 pFx.onclick=()=>{ fxOn=!fxOn; saveAudioPrefs(); syncPlayer(); };
 document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('button')) sfx('click'); });
@@ -959,6 +963,7 @@ function render(){
     else if(n.snitch&&!n.called){ ctx.save(); ctx.font='18px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=.9; ctx.fillText('📱',n.x+(n.flip>0?14:-14),n.y-76); ctx.restore(); } }}));
   if(mode!=='draw'&&!hidden) list.push({y:GROUND,fn:drawPlayer});
   police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
+  if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   // satiksme (priekšplānā)
   traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.color,{spin:c.spin}); });
@@ -1331,7 +1336,6 @@ addEventListener('keydown',e=>{
   if(mode==='ride') return;
   if(k==='-'||k==='_'){ setVol(music.vol-.1); return; }
   if(k==='+'||k==='='){ setVol(music.vol+.1); return; }
-  if(k==='r'&&mode!=='draw'){ cycleSource(); return; }
   if(k==='m'&&mode!=='draw'){ music.muted=!music.muted; syncPlayer(); return; }
   if(k==='f'&&mode!=='draw'){ toggleFS(); return; }
   if(mode==='draw'){
@@ -1359,6 +1363,33 @@ document.getElementById('tE').addEventListener('pointerdown',e=>{ audioInit(); a
 document.getElementById('tpBtn').onclick=openTeleport;
 document.getElementById('tT').addEventListener('pointerdown',e=>{ audioInit(); openTeleport(); e.preventDefault(); });
 document.getElementById('tS').addEventListener('pointerdown',e=>{ audioInit(); toggleHide(); e.preventDefault(); });
+
+// ================= Tiešsaiste: konts, citi spēlētāji, rezultāti =================
+const NET={on:false,uid:null,name:'',others:{},city:-2,ref:null,sub:null,off:0,lastSent:0,lastStats:0,db:null};
+if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
+  try{ const fa=firebase.auth(); NET.db=firebase.database();
+    NET.db.ref('.info/serverTimeOffset').on('value',s=>{ NET.off=s.val()||0; });
+    fa.onAuthStateChanged(async u=>{
+      if(!u){ location.href='../index.html'; return; }
+      NET.uid=u.uid; NET.name=u.email.split('@')[0];
+      try{ const s=await NET.db.ref('users/'+u.uid+'/name').get(); if(s.exists()) NET.name=s.val(); }catch(e){}
+      NET.on=true; netStats(true); toast(`👋 Sveiks, ${NET.name}!`);
+    });
+  }catch(e){}
+}
+function netTick(){ if(!NET.on) return; const c=inMetro?-1:curCity;
+  if(c!==NET.city){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } if(NET.sub){ NET.sub.off(); NET.sub=null; } NET.others={}; NET.city=c;
+    if(c>=0){ NET.ref=NET.db.ref('presence/'+c+'/'+NET.uid); NET.ref.onDisconnect().remove();
+      NET.sub=NET.db.ref('presence/'+c); NET.sub.on('value',s=>{ const now=Date.now()+NET.off, o={};
+        s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
+  const now=Date.now();
+  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,hid:hidden?1:0,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
+function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000) return; NET.lastStats=now;
+  NET.db.ref('stats/'+NET.uid).set({name:NET.name,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); }
+function drawOther(o,mv){ ctx.save(); ctx.globalAlpha=.93;
+  drawPerson(ctx,o.dx,GROUND-2,PS,{face:mv?'side':'down',flip:o.f||1,step:o.step,hood:o.h||'#888',skin:'#f2c9a0',cap:'#1b1b1f',pants:'#2b3a67',mask:'#b71c1c',still:!mv}); ctx.restore();
+  ctx.save(); ctx.font='bold 15px system-ui'; ctx.textAlign='center'; const w=ctx.measureText(o.n||'').width+16; rr(ctx,o.dx-w/2,GROUND-122,w,22,8,'rgba(0,0,0,.6)'); ctx.fillStyle='#7ec8ff'; ctx.fillText(o.n||'',o.dx,GROUND-106); ctx.restore(); }
+setInterval(netTick,500);
 
 updateHud();
 toast('Run along the street with <b>A / D</b>. Press <b>E</b> at a brick wall and paint. The Paint Depot (pink sign) sells colors and vehicles. People with 📱 can report you to the police – hide with <b>S</b>.');

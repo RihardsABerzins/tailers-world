@@ -5,24 +5,69 @@
 <title>Citi spēlētāji – Tailers World LV</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#120f24">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <style>
-  body{margin:0;min-height:100vh;background:radial-gradient(900px 600px at 20% -10%,#4a2a8a 0%,transparent 60%),#120f24;color:#fff8ff;font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif;display:grid;place-items:center;padding:24px;box-sizing:border-box;text-align:center}
-  .box{max-width:460px;animation:rise .6s both}
-  .big{font-size:72px;animation:bob 2.6s ease-in-out infinite}
-  h1{font-size:30px;margin:8px 0}
-  p{color:#c4bde6;font-size:17px}
-  a{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:12px 22px;border-radius:16px;background:#ffd34d;color:#1a1300;font-weight:900;font-size:17px;text-decoration:none;box-shadow:0 6px 0 #c49a1b;margin-top:12px}
-  @keyframes bob{50%{transform:translateY(-8px)}}
-  @keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--yellow:#ffd34d;--green:#7cff8a}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:radial-gradient(900px 600px at 20% -10%,#4a2a8a 0%,transparent 60%),radial-gradient(700px 500px at 110% 20%,#7a2a5a 0%,transparent 60%),var(--bg);color:var(--text);font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 40px}
+  .top{display:flex;align-items:center;gap:10px}
+  .back{display:inline-flex;align-items:center;min-height:46px;padding:10px 16px;border-radius:14px;background:#ffffff1a;border:2px solid #ffffff33;color:var(--text);font-weight:900;text-decoration:none}
+  h1{font-size:clamp(30px,8vw,44px);margin:18px 0 4px;animation:rise .6s both}
+  .sub{color:var(--muted);margin:0 0 16px}
+  .online{display:inline-flex;align-items:center;gap:8px;background:#7cff8a22;border:2px solid #7cff8a55;border-radius:14px;padding:8px 14px;font-weight:800;margin-bottom:16px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:.35}}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px;animation:rise .5s both}
+  .row.me{border:2px solid var(--yellow);box-shadow:0 0 24px #ffd34d44}
+  .rank{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:900;background:#ffffff14;flex:0 0 auto}
+  .r1{background:#ffd34d;color:#1a1300}.r2{background:#d8dee9;color:#1a1d24}.r3{background:#e09a5b;color:#24140a}
+  .name{flex:1;font-weight:800;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .meta{color:var(--muted);font-size:13px}
+  .lvl{font-weight:900;font-size:18px;color:var(--yellow);text-align:right}
+  .empty{color:var(--muted);text-align:center;padding:30px}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
 <body>
-<div class="box">
-  <div class="big">👥</div>
-  <h1>Citi spēlētāji</h1>
-  <p>Drīzumā te redzēsi citus spēlētājus, viņu līmeņus un rekordus – kurš ticis vistālāk?</p>
-  <a href="index.html">← Atpakaļ</a>
+<div class="wrap">
+  <div class="top"><a class="back" href="index.html">← Atpakaļ</a></div>
+  <h1>👥 Citi spēlētāji</h1>
+  <p class="sub">Graffiti RPG – kurš ticis vistālāk?</p>
+  <div class="online"><span class="dot"></span><span id="online">Skaita…</span></div>
+  <div class="list" id="list"><div class="empty">Ielādē…</div></div>
 </div>
+<script>
+const db=firebase.database(), auth=firebase.auth(), $=id=>document.getElementById(id);
+let myUid=null;
+const CITY=['Old Town','Harbor','Neon Heights','Parkside','Market Quarter','Art Block','Skyline','Riverside','Uptown','Crown Hill'];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function load(){
+  try{
+    const snap=await db.ref('stats').orderByChild('level').limitToLast(50).get();
+    const rows=[]; snap.forEach(c=>{ rows.push(Object.assign({uid:c.key},c.val())); });
+    rows.sort((a,b)=>(b.level-a.level)||((b.xp||0)-(a.xp||0)));
+    $('list').innerHTML=rows.length?rows.map((r,i)=>`<div class="row${r.uid===myUid?' me':''}" style="animation-delay:${i*.04}s"><div class="rank${i<3?' r'+(i+1):''}">${i+1}</div>
+      <div class="name">${esc(r.name)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas</div></div>
+      <div class="lvl">Līm. ${r.level}<div class="meta">${r.xp||0} XP</div></div></div>`).join(''):'<div class="empty">Vēl neviena spēlētāja – esi pirmais!</div>';
+  }catch(e){ $('list').innerHTML='<div class="empty">Neizdevās ielādēt sarakstu.</div>'; }
+  try{
+    let off=0; try{ off=(await db.ref('.info/serverTimeOffset').get()).val()||0; }catch(e){}
+    const now=Date.now()+off; let n=0;
+    const snaps=await Promise.all(CITY.map((_,c)=>db.ref('presence/'+c).get()));
+    snaps.forEach(s=>s.forEach(p=>{ if(now-(p.val().t||0)<30000) n++; }));
+    $('online').textContent=n===1?'Tagad spēlē 1 spēlētājs':`Tagad spēlē ${n} spēlētāji`;
+  }catch(e){ $('online').textContent='Tiešsaistes skaits nav pieejams'; }
+}
+auth.onAuthStateChanged(u=>{ myUid=u?u.uid:null; load(); });
+setInterval(load,30000);
+</script>
 </body>
 </html>

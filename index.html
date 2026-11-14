@@ -4,14 +4,22 @@
 <meta charset="utf-8">
 <title>Tailers World LV</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Tailers World LV – bezmaksas mini spēles bērniem">
+<meta name="description" content="Tailers World LV – bezmaksas mini spēles">
 <meta name="theme-color" content="#120f24">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tailers World">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script src="firebase-config.js"></script>
 <style>
-  :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--pink:#ff5fa2;--yellow:#ffd34d;--blue:#5ac8ff;--green:#7cff8a}
+  :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--pink:#ff5fa2;--yellow:#ffd34d;--blue:#5ac8ff;--green:#7cff8a;--red:#ff6b7a}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;min-height:100%}
   body{background:var(--bg);color:var(--text);font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45;overflow-x:hidden}
-  /* kustīgs fons */
   .bg{position:fixed;inset:0;z-index:-1;overflow:hidden}
   .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;animation:drift 18s ease-in-out infinite alternate}
   .b1{width:60vmax;height:60vmax;background:#7b2ff7;left:-20vmax;top:-25vmax}
@@ -24,10 +32,12 @@
   .wrap{max-width:980px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px 48px}
   header{display:flex;align-items:center;gap:12px}
   .logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--pink),var(--yellow));display:grid;place-items:center;font-size:26px;box-shadow:0 8px 30px #ff5fa255;animation:bob 3s ease-in-out infinite}
-  .brand{font-weight:900;letter-spacing:1px;color:var(--muted);font-size:15px}
+  .brand{font-weight:900;letter-spacing:1px;color:var(--muted);font-size:15px;flex:1}
+  .me{display:none;align-items:center;gap:8px;font-weight:800}
+  .me button{background:#ffffff1a;color:var(--text);border:1px solid #ffffff33;border-radius:12px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
   @keyframes bob{50%{transform:translateY(-5px) rotate(-4deg)}}
 
-  .hero{margin:22px 0 26px;animation:rise .7s both}
+  .hero{margin:22px 0 22px;animation:rise .7s both}
   h1{font-size:clamp(44px,12vw,80px);margin:0;line-height:1;font-weight:900}
   .wave{display:inline-block;transform-origin:70% 70%;animation:wave 2.4s ease-in-out infinite}
   @keyframes wave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(16deg)}20%,40%{transform:rotate(-10deg)}}
@@ -36,6 +46,33 @@
   @keyframes pulse{50%{transform:rotate(-2deg) scale(1.08)}}
   @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 
+  /* ielogošanās */
+  .auth{display:none;grid-template-columns:1fr 1fr;gap:16px;animation:rise .6s .1s both}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 14px 34px #0006}
+  .panel h3{margin:0 0 12px;font-size:21px}
+  .panel.new{border-color:#ff5fa266}
+  label{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px;font-weight:700}
+  input{width:100%;font:inherit;font-size:18px;padding:13px 14px;border-radius:14px;border:2px solid #ffffff2a;background:#0f0c20;color:var(--text);outline:none}
+  input:focus{border-color:var(--yellow)}
+  .hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+  .err{color:var(--red);font-weight:700;font-size:14px;min-height:20px;margin:8px 0 0}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:52px;padding:12px 16px;border-radius:16px;font:inherit;font-weight:900;font-size:17px;text-decoration:none;border:0;cursor:pointer;transition:transform .15s}
+  .btn:active{transform:scale(.95)}
+  .btn[disabled]{opacity:.6}
+  .full{width:100%;margin-top:12px}
+  .play{background:var(--yellow);color:#1a1300;box-shadow:0 6px 0 #c49a1b}
+  .pinkb{background:var(--pink);color:#fff;box-shadow:0 6px 0 #b8336e}
+  .ghost{background:#ffffff1a;color:var(--text);border:2px solid #ffffff33}
+  @media (max-width:640px){.auth{grid-template-columns:1fr}}
+
+  /* paziņojumi */
+  .notify{display:none;margin:0 0 20px;background:linear-gradient(135deg,#5ac8ff33,#7cff8a22);border:2px solid #5ac8ff66;border-radius:22px;padding:16px;gap:14px;align-items:center;flex-wrap:wrap;animation:rise .6s both}
+  .bell{font-size:38px;animation:ring 2.2s ease-in-out infinite;transform-origin:50% 10%}
+  @keyframes ring{0%,70%,100%{transform:rotate(0)}75%{transform:rotate(18deg)}80%{transform:rotate(-14deg)}85%{transform:rotate(10deg)}90%{transform:rotate(-6deg)}}
+  .notify p{margin:0;flex:1 1 220px;font-size:17px}
+  .notify small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+
+  .games{display:none}
   h2{font-size:22px;margin:0 0 14px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;animation:rise .6s both;box-shadow:0 14px 34px #0006;transition:transform .2s}
@@ -45,21 +82,18 @@
   .title{font-weight:900;font-size:22px;margin:0 0 4px}
   .desc{color:var(--muted);font-size:15px;margin:0 0 14px}
   .btns{display:flex;gap:10px;flex-wrap:wrap}
-  .btn{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:52px;padding:12px 16px;border-radius:16px;font-weight:900;font-size:17px;text-decoration:none;border:0;cursor:pointer;transition:transform .15s,box-shadow .15s}
-  .btn:active{transform:scale(.95)}
-  .play{background:var(--yellow);color:#1a1300;box-shadow:0 6px 0 #c49a1b}
-  .players{background:#ffffff1a;color:var(--text);border:2px solid #ffffff33}
+  .btns .btn{flex:1 1 auto}
   .soon{opacity:.6}
   .soon .thumb{display:grid;place-items:center;font-size:54px;background:repeating-linear-gradient(45deg,#2a2350 0 16px,#1f1a3a 16px 32px)}
   .soon .thumb span{animation:bob 2.6s ease-in-out infinite}
 
-  .support{margin-top:30px;background:linear-gradient(135deg,#ff5fa233,#ffd34d22);border:2px solid #ff5fa255;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:rise .8s .3s both}
+  .support{margin-top:30px;background:linear-gradient(135deg,#ff5fa233,#ffd34d22);border:2px solid #ff5fa255;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
   .heart{font-size:40px;animation:beat 1.3s ease-in-out infinite}
   @keyframes beat{15%{transform:scale(1.2)}30%{transform:scale(1)}}
   .support p{margin:0;flex:1 1 220px;font-size:17px}
   .support small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
-  .supbtn{background:var(--pink);color:#fff;box-shadow:0 6px 0 #b8336e;flex:0 0 auto}
   .supbtn[aria-disabled="true"]{background:#ffffff26;box-shadow:none;color:var(--muted);pointer-events:none}
+  .loading{text-align:center;color:var(--muted);padding:30px;font-size:18px}
   footer{margin-top:34px;color:var(--muted);font-size:13px;text-align:center}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -68,19 +102,55 @@
 <div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="plane" style="--y:20vh;animation-duration:19s">✈️</div><div class="plane" style="--y:70vh;animation-duration:27s;animation-delay:-11s">✈️</div></div>
 <div class="wrap">
-  <header><div class="logo">🎮</div><div class="brand">TAILERS WORLD LV</div></header>
+  <header><div class="logo">🎮</div><div class="brand">TAILERS WORLD LV</div>
+    <div class="me" id="me"><span id="meName"></span><button id="logout">Iziet</button></div></header>
   <div class="hero">
-    <h1>Labdien! <span class="wave">👋</span></h1>
+    <h1 id="hello">Labdien! <span class="wave">👋</span></h1>
     <p class="lead">Čau, mani sauc Tailers, un es taisu spēles, kādas man pašam patīk! Pievienojies, un spēlējam kopā <span class="free">BEZ MAKSAS</span> – kurš tiks tālāk? 😉</p>
   </div>
 
-  <h2>🕹️ Spēles</h2>
-  <div class="grid" id="games"></div>
+  <div class="loading" id="loading">Ielādē…</div>
 
-  <div class="support">
-    <div class="heart">💛</div>
-    <p><b>Atbalsti mani, lai varu taisīt vēl spēles priekš visiem!</b><small>Tikai ar vecāku atļauju 🙂</small></p>
-    <a class="btn supbtn" id="supportBtn" href="#" aria-disabled="true">Drīzumā</a>
+  <!-- Ielogoties / izveidot profilu -->
+  <div class="auth" id="auth">
+    <form class="panel" id="loginForm" autocomplete="on">
+      <h3>🔑 Ielogoties</h3>
+      <label for="lName">Lietotājvārds</label>
+      <input id="lName" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      <label for="lPass">Parole</label>
+      <input id="lPass" type="password" autocomplete="current-password" required>
+      <div class="err" id="lErr"></div>
+      <button class="btn play full" type="submit">Ielogoties</button>
+    </form>
+    <form class="panel new" id="regForm" autocomplete="on">
+      <h3>✨ Izveidot profilu</h3>
+      <label for="rName">Izdomā lietotājvārdu</label>
+      <input id="rName" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="16" required>
+      <p class="hint">3–16 burti vai cipari. Neizmanto savu īsto vārdu un uzvārdu!</p>
+      <label for="rPass">Parole (vismaz 6 zīmes)</label>
+      <input id="rPass" type="password" autocomplete="new-password" required>
+      <label for="rPass2">Parole vēlreiz</label>
+      <input id="rPass2" type="password" autocomplete="new-password" required>
+      <div class="err" id="rErr"></div>
+      <button class="btn pinkb full" type="submit">Izveidot profilu</button>
+    </form>
+  </div>
+
+  <!-- Paziņojumi -->
+  <div class="notify" id="notify">
+    <div class="bell">🔔</div>
+    <p><b>Ieslēdz paziņojumus</b> un uzzini pirmais, kad iznāks jauna spēle!<small id="nHint"></small></p>
+    <button class="btn play" id="nBtn">Ieslēgt</button>
+  </div>
+
+  <div class="games" id="games">
+    <h2>🕹️ Spēles</h2>
+    <div class="grid" id="grid"></div>
+    <div class="support">
+      <div class="heart">💛</div>
+      <p><b>Atbalsti mani, lai varu taisīt vēl spēles priekš visiem!</b><small>Tikai ar vecāku atļauju 🙂</small></p>
+      <a class="btn pinkb supbtn" id="supportBtn" href="#" aria-disabled="true">Drīzumā</a>
+    </div>
   </div>
 
   <footer>© Tailers World LV · Mūzika: Papīra Lidmašīnas</footer>
@@ -93,17 +163,78 @@ const GAMES=[
 // Atbalsta saite (piem., Buy Me a Coffee) – kad būs, ieliec šeit
 const SUPPORT_URL='';
 
-const el=document.getElementById('games');
+const $=id=>document.getElementById(id);
+const grid=$('grid');
 GAMES.forEach((g,i)=>{
   const d=document.createElement('div'); d.className='card'; d.style.animationDelay=(.15+i*.1)+'s';
   d.innerHTML=`<a href="${g.url}"><img class="thumb" src="${g.cover}" alt="${g.title}"></a><div class="body"><p class="title">${g.title}</p><p class="desc">${g.desc}</p>
-    <div class="btns"><a class="btn play" href="${g.url}">▶ Spēlēt</a><a class="btn players" href="${g.players}">👥 Citi spēlētāji</a></div></div>`;
-  el.appendChild(d);
+    <div class="btns"><a class="btn play" href="${g.url}">▶ Spēlēt</a><a class="btn ghost" href="${g.players}">👥 Citi spēlētāji</a></div></div>`;
+  grid.appendChild(d);
 });
-const s=document.createElement('div'); s.className='card soon'; s.style.animationDelay=(.25+GAMES.length*.1)+'s';
-s.innerHTML=`<div class="thumb"><span>🔒</span></div><div class="body"><p class="title">Drīzumā</p><p class="desc">Nākamā spēle jau top – sekojiet līdzi!</p></div>`;
-el.appendChild(s);
-if(SUPPORT_URL){ const b=document.getElementById('supportBtn'); b.href=SUPPORT_URL; b.target='_blank'; b.rel='noopener'; b.textContent='💛 Atbalstīt'; b.removeAttribute('aria-disabled'); }
+const soon=document.createElement('div'); soon.className='card soon';
+soon.innerHTML=`<div class="thumb"><span>🔒</span></div><div class="body"><p class="title">Drīzumā</p><p class="desc">Nākamā spēle jau top – ieslēdz paziņojumus!</p></div>`;
+grid.appendChild(soon);
+if(SUPPORT_URL){ const b=$('supportBtn'); b.href=SUPPORT_URL; b.target='_blank'; b.rel='noopener'; b.textContent='💛 Atbalstīt'; b.removeAttribute('aria-disabled'); }
+
+// ---- konti ----
+const auth=firebase.auth(), db=firebase.database(), TS=firebase.database.ServerValue.TIMESTAMP;
+const BAD=['fuck','shit','bitch','dick','sex','porn','nazi','hitler','pimp','pis','dirs','sūd','sud','kak','huj','hui','bljad','blyat','suka','pidar','pedik','idiot','muļķ','mulk'];
+const norm=s=>s.trim().toLowerCase();
+function checkName(n){ if(!/^[a-z0-9_]{3,16}$/.test(n)) return 'Lietotājvārdā drīkst būt tikai latīņu burti (a–z), cipari un _ (3–16 zīmes).'; if(BAD.some(w=>n.includes(w))) return 'Lūdzu, izvēlies citu, pieklājīgu lietotājvārdu.'; return ''; }
+const authErr=e=>({'auth/invalid-credential':'Nepareizs lietotājvārds vai parole.','auth/wrong-password':'Nepareizs lietotājvārds vai parole.','auth/user-not-found':'Nepareizs lietotājvārds vai parole.','auth/invalid-email':'Nepareizs lietotājvārds.','auth/too-many-requests':'Pārāk daudz mēģinājumu – pagaidi mazliet.','auth/network-request-failed':'Nav interneta savienojuma.','auth/email-already-in-use':'Šis lietotājvārds jau ir aizņemts.','auth/weak-password':'Parolei jābūt vismaz 6 zīmēm.'}[e.code]||'Kaut kas nogāja greizi. Mēģini vēlreiz.');
+
+$('loginForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=e.submitter; $('lErr').textContent=''; const n=norm($('lName').value), p=$('lPass').value;
+  if(checkName(n)&&!/^[a-z0-9_]{3,16}$/.test(n)){ $('lErr').textContent='Nepareizs lietotājvārds vai parole.'; return; }
+  b.disabled=true; try{ await auth.signInWithEmailAndPassword(twUserEmail(n),p); }catch(err){ $('lErr').textContent=authErr(err); } b.disabled=false; });
+
+$('regForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=e.submitter; const out=$('rErr'); out.textContent='';
+  const n=norm($('rName').value), p=$('rPass').value, p2=$('rPass2').value; const bad=checkName(n);
+  if(bad){ out.textContent=bad; return; } if(p.length<6){ out.textContent='Parolei jābūt vismaz 6 zīmēm.'; return; } if(p!==p2){ out.textContent='Paroles nesakrīt.'; return; }
+  b.disabled=true;
+  try{
+    if((await db.ref('usernames/'+n).get()).exists()) throw {code:'auth/email-already-in-use'};
+    const cred=await auth.createUserWithEmailAndPassword(twUserEmail(n),p); const uid=cred.user.uid;
+    try{ await db.ref('usernames/'+n).set(uid); }catch(x){ await cred.user.delete(); throw {code:'auth/email-already-in-use'}; }
+    await db.ref('users/'+uid).set({name:n,created:TS,notify:false});
+    await db.ref('stats/'+uid).set({name:n,level:1,xp:0,painted:0,city:1,updated:TS});
+  }catch(err){ out.textContent=authErr(err); }
+  b.disabled=false; });
+
+$('logout').onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(async u=>{
+  $('loading').style.display='none';
+  if(!u){ $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
+  let name=u.email.split('@')[0]; try{ const s=await db.ref('users/'+u.uid+'/name').get(); if(s.exists()) name=s.val(); }catch(e){}
+  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; $('meName').textContent='👤 '+name;
+  $('hello').innerHTML=`Sveiks, ${name}! <span class="wave">👋</span>`;
+  setupNotify(u.uid);
+});
+
+// ---- paziņojumi ----
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+async function setupNotify(uid){
+  const box=$('notify'), hint=$('nHint'), btn=$('nBtn');
+  let supported=false; try{ supported=await firebase.messaging.isSupported(); }catch(e){}
+  if(!supported){
+    if(isIOS&&!standalone){ box.style.display='flex'; hint.textContent='iPhone/iPad: spied “Kopīgot” → “Pievienot sākuma ekrānam”, tad atver Tailers World no turienes un ieslēdz paziņojumus.'; btn.style.display='none'; }
+    return; }
+  if(Notification.permission==='granted'){ saveToken(uid).catch(()=>{}); return; }
+  if(Notification.permission==='denied'){ return; }
+  box.style.display='flex'; hint.textContent='Paziņojumi tikai par jaunām spēlēm – nekādas reklāmas.';
+  btn.onclick=async()=>{ btn.disabled=true;
+    try{ const perm=await Notification.requestPermission();
+      if(perm==='granted'){ await saveToken(uid); hint.textContent='✅ Gatavs! Tu saņemsi ziņu, kad iznāks jauna spēle.'; btn.style.display='none'; }
+      else hint.textContent='Paziņojumi nav atļauti – tos var ieslēgt vēlāk pārlūka iestatījumos.';
+    }catch(e){ hint.textContent='Neizdevās ieslēgt paziņojumus šajā ierīcē.'; }
+    btn.disabled=false; };
+}
+async function saveToken(uid){
+  const reg=await navigator.serviceWorker.register('firebase-messaging-sw.js');
+  const token=await firebase.messaging().getToken({vapidKey:TW_VAPID,serviceWorkerRegistration:reg});
+  if(token){ await db.ref('fcm/'+uid).set({token,t:TS}); await db.ref('users/'+uid+'/notify').set(true); }
+}
 </script>
 </body>
 </html>

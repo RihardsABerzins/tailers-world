@@ -1,0 +1,40 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "usernames": {
+      "$name": {
+        ".read": true,
+        ".write": "auth != null && !data.exists() && newData.val() === auth.uid",
+        ".validate": "$name.matches(/^[a-z0-9_]{3,16}$/)"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "stats": {
+      ".read": true,
+      ".indexOn": ["level", "xp"],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name','level','xp']) && newData.child('level').isNumber() && newData.child('level').val() >= 1 && newData.child('level').val() <= 99 && newData.child('name').isString() && newData.child('name').val().length <= 16"
+      }
+    },
+    "presence": {
+      "$city": {
+        ".read": true,
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "fcm": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}
