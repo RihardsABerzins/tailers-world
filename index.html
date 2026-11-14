@@ -18,9 +18,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script src="firebase-config.js?v=4"></script>
 <script>window.twIsAdmin=window.twIsAdmin||(()=>false);</script>
-<script src="tw-common.js?v=3"></script>
+<script src="tw-common.js?v=4"></script>
 <script src="tw-social.js?v=2"></script>
-<script src="tw-ach.js?v=1"></script>
+<script src="tw-ach.js?v=3"></script>
 <style>
   :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--pink:#ff5fa2;--yellow:#ffd34d;--blue:#5ac8ff;--green:#7cff8a;--red:#ff6b7a}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -344,11 +344,11 @@ auth.onAuthStateChanged(async u=>{
 
 // ---- mans profils, lomas ----
 let ME=null, HB=null;
-function paintMe(){ if(!ME) return; const disp=TW.display(ME.name,ME.nick), r=TW.role(ME.uid);
-  $('meName').innerHTML=r?TW.nameHTML(disp,ME.uid):'👤 '+disp.replace(/[<>&]/g,'');
-  $('hello').innerHTML=`Sveiks, ${r?TW.nameHTML(disp,ME.uid):disp.replace(/[<>&]/g,'')}! <span class="wave">👋</span>`;
+function paintMe(){ if(!ME) return; const disp=TW.display(ME.name,ME.nick), r=TW.role(ME.uid), mc=TWA.count(TWA.owned), fancy=r||mc>=50;
+  $('meName').innerHTML=fancy?(r?'':'👤 ')+TW.nameHTML(disp,ME.uid,mc):'👤 '+disp.replace(/[<>&]/g,'');
+  $('hello').innerHTML=`Sveiks, ${fancy?TW.nameHTML(disp,ME.uid,mc):disp.replace(/[<>&]/g,'')}! <span class="wave">👋</span>`;
   $('panelLink').style.display=r?'inline-flex':'none'; }
-document.addEventListener('tw-roles',paintMe);
+document.addEventListener('tw-roles',paintMe); document.addEventListener('tw-medals',paintMe);
 function curLang(){ try{ return localStorage.getItem('twLang')||'lv'; }catch(e){ return 'lv'; } }
 function paintLang(l){ document.querySelectorAll('#profForm .seg button').forEach(b=>b.classList.toggle('on',b.dataset.l===l)); }
 let pickLang='lv';
@@ -370,8 +370,10 @@ function setupStaff(){ const r=TW.role(ME.uid); if(!r) return;
   $('modePlayer').onclick=()=>{ try{ sessionStorage.setItem('twMode','player'); }catch(e){} $('modeModal').classList.remove('on'); }; }
 
 // ---- medaļas + uzaicini draugu ----
-const MED={uid:null,stats:{},invites:0,friends:0,invited:false,queue:[]};
-function setupMedals(uid,prof){ if(MED.uid===uid) return; MED.uid=uid; MED.invited=!!prof.invitedBy;
+const MED={uid:null,stats:{},invites:0,friends:0,invited:false,visits:{},queue:[],prof:{}};
+function setupMedals(uid,prof){ if(MED.uid===uid) return; MED.uid=uid; MED.invited=!!prof.invitedBy; MED.prof=prof;
+  TWA.visit(uid).then(v=>{ MED.visits=v||{}; checkMedals(); });
+  db.ref('users/'+uid).on('value',s=>{ MED.prof=s.val()||{}; checkMedals(); },()=>{});
   const url=TWA.inviteUrl(ME.name);
   $('invShare').onclick=async()=>{ const data={title:'Tailers World',text:'Nāc spēlēt ar mani Tailers World – bez maksas! 🎮',url};
     if(navigator.share){ try{ await navigator.share(data); return; }catch(e){ if(e&&e.name==='AbortError') return; } } copyInvite(url); };
@@ -385,7 +387,7 @@ async function copyInvite(url){ let ok=false; try{ await navigator.clipboard.wri
   $('invInfo').innerHTML=ok?'✅ Saite nokopēta! Iesūti to draugam.':`Iesūti draugam šo saiti:<br><b style="user-select:all;word-break:break-all">${url}</b>`; }
 function paintInvites(){ const n=MED.invites; $('invInfo').textContent=n?`Ar tavu saiti pievienojušies: ${n} ${n===1?'draugs':'draugi'} 🎉 Nākamā medaļa pie ${n<3?3:n<10?10:'…'}!`:'Kad draugs izveidos profilu ar tavu saiti, jūs abi saņemsiet medaļu.'; }
 async function checkMedals(){ if(!MED.uid) return; const st=MED.stats;
-  const fresh=await TWA.sync(MED.uid,{level:st.level||1,painted:st.painted||0,city:st.city||1,invites:MED.invites,friends:MED.friends,invited:MED.invited});
+  const p=MED.prof||{}, fresh=await TWA.sync(MED.uid,{invites:MED.invites,friends:MED.friends,invited:MED.invited||!!p.invitedBy,nick:p.nick,notify:p.notify,idea:p.idea,streak:(MED.visits||{}).best||0,days:(MED.visits||{}).days||0});
   renderMedals(); if(fresh.length){ MED.queue.push(...fresh); if(!$('medalModal').classList.contains('on')) showNextMedal(); } }
 function renderMedals(){ const own=TWA.owned||{}, got=TWA.LIST.filter(m=>own[m.id]).length;
   $('mCount').textContent=`${got}/${TWA.LIST.length}`;
@@ -403,7 +405,7 @@ $('nmOk').onclick=showNextMedal;
 // ---- spēļu idejas ----
 function setupIdeas(){ $('ideaForm').onsubmit=async e=>{ e.preventDefault(); const t=$('ideaText').value.trim(), m=$('ideaMsg');
   if(t.length<3){ m.textContent='Uzraksti mazliet vairāk 🙂'; return; }
-  try{ await db.ref('ideas').push({uid:ME.uid,name:TW.display(ME.name,ME.nick),text:t.slice(0,500),t:TS}); $('ideaText').value=''; m.style.color='var(--green)'; m.textContent='✅ Paldies! Ideja nosūtīta.'; }
+  try{ await db.ref('ideas').push({uid:ME.uid,name:TW.display(ME.name,ME.nick),text:t.slice(0,500),t:TS}); db.ref('users/'+ME.uid+'/idea').set(true).catch(()=>{}); $('ideaText').value=''; m.style.color='var(--green)'; m.textContent='✅ Paldies! Ideja nosūtīta.'; }
   catch(err){ m.style.color=''; m.textContent='Neizdevās nosūtīt. Mēģini vēlreiz.'; } }; }
 
 // ---- e-pasts (neobligāts, privāts) ----

@@ -12,8 +12,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=4"></script>
 <script>window.twIsAdmin=window.twIsAdmin||(()=>false);</script>
-<script src="tw-common.js?v=3"></script>
-<script src="tw-ach.js?v=1"></script>
+<script src="tw-common.js?v=4"></script>
+<script src="tw-ach.js?v=3"></script>
 <style>
   :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--yellow:#ffd34d;--green:#7cff8a}
   *{box-sizing:border-box}
@@ -64,7 +64,7 @@ async function load(){
     const achs=await Promise.all(rows.map(r=>db.ref('ach/'+r.uid).get().then(s=>s.val()||{}).catch(()=>({}))));
     rows.forEach((r,i)=>{ const own=achs[i]; r.medals=TWA.LIST.filter(m=>own[m.id]); });
     $('list').innerHTML=rows.length?rows.map((r,i)=>`<div class="row${r.uid===myUid?' me':''}" style="animation-delay:${i*.04}s"><div class="rank${i<3?' r'+(i+1):''}">${i+1}</div>
-      <div class="name">${TW.nameHTML(TW.display(r.name,r.nick),r.uid)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas${r.medals.length?`<br><span title="Medaļas">${r.medals.slice(-6).map(m=>m.i).join('')}${r.medals.length>6?' +'+(r.medals.length-6):''}</span> ${r.medals.length} 🏅`:''}</div></div>
+      <div class="name">${TW.nameHTML(TW.display(r.name,r.nick),r.uid,r.medals.length)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas${r.medals.length?`<br><span title="Medaļas">${r.medals.slice(-6).map(m=>m.i).join('')}${r.medals.length>6?' +'+(r.medals.length-6):''}</span> ${r.medals.length} 🏅`:''}</div></div>
       <div class="lvl">Līm. ${r.level}<div class="meta">${r.xp||0} XP</div></div></div>`).join(''):'<div class="empty">Vēl neviena spēlētāja – esi pirmais!</div>';
   }catch(e){ $('list').innerHTML='<div class="empty">Neizdevās ielādēt sarakstu.</div>'; }
   try{

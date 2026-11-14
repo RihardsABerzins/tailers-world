@@ -41,7 +41,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Spēlē blakus vārdam mazs 🏅 medaļu skaits (`presence/.../m`).
 - Mainot `firebase-config.js`, palielini `?v=` numuru visās lapās (kešatmiņa).
 
-- Medaļas: `tw-ach.js` (`TWA`) – saraksts `TWA.LIST`, grupas `TWA.GROUPS` (profils + katra spēle). Glabājas `ach/{uid}` (publiski), apskatāmas sākumlapā, citu medaļas redz "Citi spēlētāji". Spēle piešķir ar `TWA.sync(uid,{level,painted,city})`. Jaunai spēlei pievieno grupu un medaļas.
+- Medaļas: `tw-ach.js` (`TWA`) – saraksts `TWA.LIST`, grupas `TWA.GROUPS` (profils + katra spēle). Glabājas `ach/{uid}` (publiski), apskatāmas sākumlapā, citu medaļas redz "Citi spēlētāji". Spēle piešķir ar `TWA.sync(uid,ctx)` (Graffiti skaitītāji `save.st`: kastes, bēgšanas, šedevri, ēšana, metro u.c.). Dienas pēc kārtas: `TWA.visit` → `users/{uid}/visits`. Ar 50 medaļām vārds sarkani spīd, ar 100 – zili (`TW.nameHTML(teksts,uid,medaļas)`, spēlē `drawNameTag`). Jaunai spēlei pievieno grupu un medaļas.
 - Uzaicini draugu: saite `/?draugs=lietotājvārds`; jaunais spēlētājs pēc profila izveides ieraksta `invites/{uzaicinātājs}/{uid}` un nosūta draudzības pieprasījumu – abi saņem medaļu.
 - Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
 
