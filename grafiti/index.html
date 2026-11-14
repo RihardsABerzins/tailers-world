@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Grafiti RPG</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
   html,body{margin:0;height:100%;background:#0b0c12;overflow:hidden;font-family:system-ui,sans-serif;color:#eee;-webkit-user-select:none;user-select:none}
@@ -106,15 +107,25 @@
     .psBig{font-size:18px}
     .psSmall{font-size:11px}
   }
+  /* telefons vertikāli */
+  @media (orientation:portrait) and (max-width:760px){
+    #clock{left:auto;right:6px;transform:none;top:40px}
+    body.touch #inv,#inv{bottom:72px}
+    #prompt{bottom:108px}
+    #touch button{width:50px;height:50px}
+    #touch div{gap:6px}
+    #toast{top:110px;max-width:92vw}
+    #policeSign{top:76px}
+  }
 </style>
 </head>
 <body>
 <canvas id="game" class="full"></canvas>
-<div id="hud"><div id="hudMain"></div><div id="heatWrap"><div id="heatTxt">Suspicion: Calm</div><div id="heatBar"><div id="heatFill"></div></div></div></div>
+<div id="hud"><div id="hudMain"></div><div id="heatWrap"><div id="heatTxt">Suspicion: Calm</div><div id="heatBar"><div id="heatFill"></div></div><div id="foodTxt" style="margin-top:3px"></div></div></div>
 <div id="help">A D – run · W – jump<br>E – action · ↓ – hide<br>T – metro · Z X C V – items<br>Esc – pause / settings</div>
 <div id="clock"></div>
 <div id="policeSign"></div>
-<div id="player"><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pRadio" title="Pop radio (R)">📻</button><button id="pSet" title="Settings (Esc)">⚙</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
+<div id="player"><button id="pPrev" title="Previous">⏮</button><button id="pPlay" title="Play / pause">▶</button><button id="pNext" title="Next">⏭</button><button id="pRadio" title="Papīra Lidmašīnas song now (R)">✈</button><button id="pSet" title="Settings (Esc)">⚙</button><div id="pInfo"><div id="pTitle">♪ Papīra Lidmašīnas</div><div style="display:flex;align-items:center;gap:4px"><button id="pVolDn" title="Quieter (-)">−</button><input id="pVol" type="range" min="0" max="100" value="60" title="Music volume (M – mute)"><button id="pVolUp" title="Louder (+)">+</button><span id="pVolTxt">60%</span></div></div><button id="pFx" title="Sound effects (on / off)">🔊</button></div>
 <div id="prompt"></div>
 <div id="toast"></div>
 <button id="fsBtn" class="sec">⛶ Fullscreen</button><button id="tpBtn" class="sec">🚇 Metro (T)</button><button id="setBtn" class="sec">⚙ Settings (Esc)</button>
@@ -139,7 +150,7 @@
   <div class="row"><div class="n">🎵 Music volume</div><input id="pVol2" type="range" min="0" max="100"></div>
   <div class="row"><div class="n">🔔 Effects volume</div><input id="pFxVol" type="range" min="0" max="100"></div>
   <div class="row"><div class="n">☀ Brightness</div><input id="sBright" type="range" min="60" max="160"></div>
-  <div class="row"><div class="n">Music</div><button id="pzPrev">⏮</button><button id="pzPlay">⏯</button><button id="pzNext">⏭</button><button id="pzMute" class="sec">🔇 Mute</button><button id="pzRadio" class="sec">📻 Radio</button></div>
+  <div class="row"><div class="n">Music</div><button id="pzPrev">⏮</button><button id="pzPlay">⏯</button><button id="pzNext">⏭</button><button id="pzMute" class="sec">🔇 Mute</button><button id="pzRadio" class="sec">✈ PL song</button></div>
   <div style="margin:12px 0;font-size:13px;color:#aab;line-height:1.7">A D – run · W – jump · E – paint / metro / shop · ↓ S – hide · T – metro · Z X C V – items · M – music · F – fullscreen</div>
   <button id="pzResume">▶ Resume (Esc)</button> <button class="sec" id="pzFs">⛶ Fullscreen</button> <a href="../index.html" class="sec" style="display:inline-block;background:#444;color:#eee;border-radius:8px;padding:8px 16px;font-weight:700;font-size:14px;text-decoration:none">🏠 Tailers World</a>
 </div></div>
@@ -187,7 +198,7 @@ const CARS=[
 ];
 const colorById=id=>COLORS.find(c=>c.id===id);
 const carById=id=>CARS.find(c=>c.id===id);
-let save={money:0,colors:['black','red'],cars:['foot'],color:'black',car:'foot',painted:0,xp:0};
+let save={money:0,colors:['black','red'],cars:['foot'],color:'black',car:'foot',painted:0,xp:0,food:100};
 try{ const s=JSON.parse(localStorage.getItem('grafitiRPG')); if(s) save=Object.assign(save,s); }catch(e){}
 const persist=()=>{ try{ localStorage.setItem('grafitiRPG',JSON.stringify(save)); }catch(e){} };
 
@@ -248,8 +259,9 @@ const SHOP_INFO={
   flower:{name:'FLOWERS',      neon:'#e08aa8', wall:'#4e5f3a', awn:['#f48fb1','#ffffff']},
   barber:{name:'BARBER',  neon:'#5ab4e0', wall:'#523030', awn:['#e53935','#1e88e5']},
 };
-const SHOP_KINDS=['cafe','pizza','bike','shoes','arcade','flower','barber']; const LOT_DEFS=[]; let _sc=0;
-for(let k=0;k<NLEV;k++){ if(k>0&&k%10===0) LOT_DEFS.push({k:'metro',ds:k/10}); LOT_DEFS.push({k:'wall',t:k}); if(k===0) LOT_DEFS.push({k:'paint'},{k:'metro',ds:0}); else if(k%3===0) LOT_DEFS.push({k:SHOP_KINDS[_sc++%SHOP_KINDS.length]}); }
+const OTHER_SHOPS=['pizza','bike','shoes','arcade','flower','barber']; const LOT_DEFS=[]; let _sc=0;
+for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',ds:k/10}); LOT_DEFS.push({k:'wall',t:k});
+  if(k===0) LOT_DEFS.push({k:'paint'},{k:'metro',ds:0}); else if(m===0) LOT_DEFS.push({k:'paint'}); else if(m===3) LOT_DEFS.push({k:'cafe'}); else if(m===6||m===9) LOT_DEFS.push({k:OTHER_SHOPS[_sc++%OTHER_SHOPS.length]}); }
 const lots=[], walls=[];
 let cursorX=520, lastK=0;
 LOT_DEFS.forEach((d,i)=>{
@@ -258,12 +270,15 @@ LOT_DEFS.forEach((d,i)=>{
   else if(d.k==='metro'){ l.ds=d.ds; l.info=SHOP_INFO.metro; l.door=l.cx-34; l.bonusAt=0; }
   else { l.door=l.x+w-126; l.info=SHOP_INFO[d.k]; }
   l.dist=(d.k==='wall'?d.t:d.k==='metro'?d.ds*10:lastK); if(d.k==='wall') lastK=d.t;
+  l.city=Math.floor(l.dist/10); l.hide=d.k==='wall'?d.t%3===1:(d.k!=='metro'&&d.k!=='paint'&&i%3===0);
   lots.push(l); cursorX+=w;
 });
 const WORLD_W=cursorX+520;
 const stations=lots.filter(l=>l.kind==='metro');
 const signLots=lots.filter((l,i)=>i===0||lots[i-1].dist!==l.dist);
-const hideSpots=lots.map(l=>({x:l.kind==='wall'?l.x+64:l.x+50,kind:l.kind==='wall'?'dumpster':'crates',lot:l}));
+const CITY_NAMES=['Old Town','Harbor','Neon Heights','Parkside','Market Quarter','Art Block','Skyline','Riverside','Uptown','Crown Hill'];
+const cityRange=Array.from({length:10},(_,c)=>{ const ls=lots.filter(l=>l.city===c); const last=ls[ls.length-1]; return [c===0?0:ls[0].x-40,last.x+last.w+40]; });
+const hideSpots=lots.filter(l=>l.hide).map(l=>({x:l.kind==='wall'?l.x+64:l.x+50,kind:l.kind==='wall'?'dumpster':'crates',lot:l}));
 const lampXs=[]; for(let x=300;x<WORLD_W;x+=410) lampXs.push(x);
 
 const player={x:300,h:0,vy:0,vx:0,face:'down',flip:1,step:0,moving:false,idle:0,dust:0,spin:0};
@@ -271,7 +286,7 @@ const keys={};
 let mode='world'; // world | entering | draw | exiting | shop
 let heat=0, hidden=false, hideAt=null, nearHide=null, recent=[];
 const police={active:false,car:null,off:null,offs:[],heli:null,reinf:0};
-let curDist=0, clock=17.5, prevDay=null;
+let curCity=0, dayCount=0, edgeT=0, foodBand=3, curDist=0, clock=17.5, prevDay=null;
 const dayK=()=>clamp((Math.sin((clock-6)/24*Math.PI*2)+.2)/.6,0,1);
 
 // gājēji un satiksme
@@ -291,7 +306,8 @@ const bl=document.createElement('canvas'), bctx=bl.getContext('2d');
 let W=innerWidth, H=innerHeight;
 function resize(){ W=innerWidth; H=innerHeight; [cv,fx,lc].forEach(c=>{c.width=W*dpr;c.height=H*dpr;}); bl.width=Math.ceil(W/5); bl.height=Math.ceil(H/5); if(mode==='draw'||mode==='entering') layoutDraw(); }
 addEventListener('resize',resize);
-const baseZoom=()=>H/720;
+const baseZoom=()=>Math.min(H/720,W/520);
+const camY0=()=>{ const vh=H/baseZoom(); return vh>720?750-vh/2:360; };
 const cam={x:300,y:360,zoom:baseZoom(),shake:0,flash:0};
 resize(); cam.zoom=baseZoom();
 let time=0;
@@ -392,20 +408,29 @@ const TRACKS=[{t:'Lido Tu',f:'lido-tu.mp3',rank:1},{t:'Tu Vari',f:'tu-vari.mp3',
   {t:'Mirklis vēsturē',f:'mirklis.mp3'},{t:'Fotomomenti',f:'fotomomenti.mp3'},{t:'Kāpēc nē',f:'kapec-ne.mp3'},{t:'Gravitācija',f:'gravitacija.mp3'},{t:'Dzīve paciņā',f:'dzive-pacina.mp3'},
   {t:'Dīvainis ar dziesmu',f:'divainis-ar-dziesmu.mp3'},{t:'Saku paldies',f:'saku-paldies.mp3'},{t:'Kad zvaigznes krīt uz galvas',f:'kad-zvaigznes-krit.mp3'},{t:'Neaizej',f:'neaizej.mp3'},
   {t:'Meklēju sajūtas',f:'mekleju-sajutas.mp3'},{t:'Gaismu lej',f:'gaismu-lej.mp3'}];
-const RADIOS=[{t:'Capital UK',u:'https://media-ssl.musicradio.com/CapitalUK'},{t:'Heart UK',u:'https://media-ssl.musicradio.com/HeartUK'},{t:'181.fm Power 181 (Top 40)',u:'https://listen.181fm.com/181-power_128k.mp3'}];
-const music={radio:-1,el:null,i:0,vol:.6,muted:false,started:false};
+const RADIOS=[{t:'Radio TEV',u:'https://stream.radiotev.lv:8443/radiov'},{t:'Radio SWH',u:'https://live.radioswh.lv:8443/swh_lv'},{t:'Latvijas Radio 5 (Pieci)',u:'https://muste.latvijasradio.lv/pieci/smil:k2.smil/playlist.m3u8',hls:true}];
+const music={radio:0,pl:false,el:null,hls:null,i:Math.floor(Math.random()*5),vol:.6,muted:false,started:false,nextPL:0};
 try{ const m=JSON.parse(localStorage.getItem('grafitiMusic')); if(m){ music.vol=m.vol??.6; fxOn=m.fx??true; fxVol=m.fv??1; masterVol=m.mv??1; brightness=m.br??1; } }catch(e){}
 const pTitle=document.getElementById('pTitle'), pPlay=document.getElementById('pPlay'), pVol=document.getElementById('pVol'), pFx=document.getElementById('pFx');
 const saveAudioPrefs=()=>{ try{ localStorage.setItem('grafitiMusic',JSON.stringify({vol:music.vol,fx:fxOn,fv:fxVol,mv:masterVol,br:brightness})); }catch(e){} };
-function syncPlayer(){ if(music.radio>=0){ pTitle.textContent=(music.muted?'🔇 ':'📻 ')+RADIOS[music.radio].t+' · pop radio'; pPlay.textContent=music.el&&!music.el.paused?'⏸':'▶'; pFx.textContent=fxOn?'🔊':'🔇'; return; }
-  pTitle.textContent=(music.muted?'🔇 ':'♪ ')+'Papīra Lidmašīnas – '+TRACKS[music.i].t+(TRACKS[music.i].rank?` · Spotify #${TRACKS[music.i].rank}`:''); pPlay.textContent=music.el&&!music.el.paused?'⏸':'▶'; pFx.textContent=fxOn?'🔊':'🔇'; }
-function loadTrack(i,play=true){ music.i=(i+TRACKS.length)%TRACKS.length; const t=TRACKS[music.i];
-  if(!music.el){ music.el=new Audio(); music.el.addEventListener('ended',()=>{ if(music.radio<0) loadTrack(music.i+1); }); music.el.addEventListener('play',syncPlayer); music.el.addEventListener('pause',syncPlayer);
-    music.el.addEventListener('error',()=>{ pTitle.textContent=music.radio>=0?'Radio unavailable right now (internet needed)':'Could not load music (the music/ folder must be next to index.html)'; }); }
-  music.el.src='music/'+t.f; music.el.volume=clamp(music.vol*masterVol*(music.muted?0:1),0,1); syncPlayer(); if(play) music.el.play().catch(()=>{}); }
-function loadRadio(r){ music.radio=r; if(!music.el) loadTrack(music.i,false); music.el.src=RADIOS[r].u; music.el.volume=clamp(music.vol*masterVol*(music.muted?0:1),0,1); syncPlayer(); music.el.play().catch(()=>{}); }
-function cycleSource(){ audioInit(); const n=(music.radio+2)%(RADIOS.length+1)-1; if(n<0){ music.radio=-1; loadTrack(music.i); } else loadRadio(n); }
-function startMusic(){ if(music.started) return; music.started=true; loadTrack(music.i); }
+const nowS=()=>performance.now()/1000;
+function syncPlayer(){ const t=TRACKS[music.i];
+  pTitle.textContent=(music.muted?'🔇 ':'')+(music.pl?'✈ Papīra Lidmašīnas – '+t.t:'📻 '+RADIOS[music.radio].t);
+  pPlay.textContent=music.el&&!music.el.paused?'⏸':'▶'; pFx.textContent=fxOn?'🔊':'🔇'; }
+function ensureEl(){ if(music.el) return; music.el=new Audio();
+  music.el.addEventListener('ended',()=>{ if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } });
+  music.el.addEventListener('play',syncPlayer); music.el.addEventListener('pause',syncPlayer);
+  music.el.addEventListener('error',()=>{ if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else pTitle.textContent='📻 '+RADIOS[music.radio].t+' – unavailable, try ⏭'; }); }
+function setSrc(u,isHls){ if(music.hls){ music.hls.destroy(); music.hls=null; }
+  if(isHls&&!music.el.canPlayType('application/vnd.apple.mpegurl')&&window.Hls&&Hls.isSupported()){ music.hls=new Hls(); music.hls.loadSource(u); music.hls.attachMedia(music.el); }
+  else music.el.src=u; }
+const applyVol=()=>{ if(music.el) music.el.volume=clamp(music.vol*masterVol*(music.muted?0:1),0,1); };
+function playRadio(r){ ensureEl(); music.radio=(r+RADIOS.length)%RADIOS.length; music.pl=false; music.nextPL=nowS()+480; const R=RADIOS[music.radio]; setSrc(R.u,R.hls); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
+function playPL(){ ensureEl(); music.pl=true; setSrc('music/'+TRACKS[music.i].f,false); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
+function loadTrack(i,play=true){ music.i=(i+TRACKS.length)%TRACKS.length; if(play) playPL(); }
+function cycleSource(){ audioInit(); if(music.pl) music.i=(music.i+1)%TRACKS.length; playPL(); }
+function startMusic(){ if(music.started) return; music.started=true; playRadio(music.radio); music.nextPL=nowS()+480; }
+setInterval(()=>{ if(music.started&&!music.pl&&music.el&&!music.el.paused&&nowS()>music.nextPL) playPL(); },2000);
 function audioInit(){ if(!AC){ audioInit0(); buildContinuous(); } if(AC&&AC.state==='suspended') AC.resume(); startMusic(); }
 syncPlayer();
 const pVol2=document.getElementById('pVol2'), pFxVol=document.getElementById('pFxVol'), sMaster=document.getElementById('sMaster'), sBright=document.getElementById('sBright'), pVolTxt=document.getElementById('pVolTxt'), pauseOv=document.getElementById('pauseOv');
@@ -425,9 +450,9 @@ document.getElementById('pzResume').onclick=closePause; document.getElementById(
 document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='world') openPause(); });
 applyBrightness(); syncSettings();
 pPlay.onclick=()=>{ audioInit(); if(!music.el) return; music.el.paused?music.el.play().catch(()=>{}):music.el.pause(); };
-document.getElementById('pNext').onclick=()=>{ audioInit(); if(music.radio>=0) loadRadio((music.radio+1)%RADIOS.length); else loadTrack(music.i+1); };
+document.getElementById('pNext').onclick=()=>{ audioInit(); if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else playRadio(music.radio+1); };
 document.getElementById('pRadio').onclick=cycleSource; document.getElementById('pSet').onclick=()=>openPause(); document.getElementById('pzRadio').onclick=cycleSource;
-document.getElementById('pPrev').onclick=()=>{ audioInit(); if(music.radio>=0) loadRadio((music.radio+RADIOS.length-1)%RADIOS.length); else loadTrack(music.i-1); };
+document.getElementById('pPrev').onclick=()=>{ audioInit(); playRadio(music.pl?music.radio:music.radio-1); };
 pFx.onclick=()=>{ fxOn=!fxOn; saveAudioPrefs(); syncPlayer(); };
 document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('button')) sfx('click'); });
 
@@ -608,7 +633,7 @@ function renderWallLot(l){
   rr(g,w/2-52,py-64,104,22,6,'#0d0c14'); g.fillStyle=TIER_COL[l.tier]; g.font='bold 13px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('LEVEL '+(l.tier+1),w/2,py-53);
   // notekcaurule, mēsli
   g.fillStyle='#6a7078'; g.fillRect(w-30,T,8,B-T); g.fillStyle='#0003'; g.fillRect(w-24,T,2,B-T);
-  rr(g,16,B-52,96,52,4,'#2f5a3f'); rr(g,12,B-58,104,10,3,'#3b6e4d'); g.fillStyle='#0003'; g.fillRect(16,B-26,96,2);
+  if(l.hide){ rr(g,16,B-52,96,52,4,'#2f5a3f'); rr(g,12,B-58,104,10,3,'#3b6e4d'); g.fillStyle='#0003'; g.fillRect(16,B-26,96,2); }
   rr(g,0,B-8,w,8,0,'#1b1a22');
   l.img=c;
 }
@@ -617,7 +642,7 @@ function renderWallLot(l){
 const _P=['Sun','Moon','Star','Apple','Birch','Oak','Linden','Rose','Wind','Water','Sand'], _N=['Street','Boulevard','Quarter','Square','Park','Embankment','Harbor','Bridge','Garden'];
 const DIST_NAMES=Array.from({length:99},(_,k)=>`${_P[k%11]} ${_N[Math.floor(k/11)%9]}`);
 const LV=[0]; for(let n=1;n<NLEV;n++) LV.push(LV[n-1]+Math.round(100*Math.pow(n,1.25)));
-const xpFor=tier=>20+14*(tier+1);
+const xpFor=tier=>Math.round((20+14*(tier+1))*.5);
 const distName=k=>DIST_NAMES[Math.min(98,k)];
 const levelOf=xp=>LV.filter(v=>xp>=v).length;
 const xpPct=()=>{ const lv=level(); if(lv>=LV.length) return 100; const a=LV[lv-1], b=LV[lv]; return Math.round(clamp(((save.xp||0)-a)/(b-a),0,1)*100); };
@@ -643,6 +668,7 @@ function updateHeatUi(){ const st=starsOf(heat), o=police.off, h=Math.round(heat
   heatTxt.innerHTML=`<span class="stars${police.active?' hot':''}">${'★'.repeat(st)}${'☆'.repeat(5-st)}</span> ${label}${hidden?' · hiding':''}`;
   policeSign.style.display=police.active?'block':'none';
   if(police.active) policeSign.innerHTML=`<div class="psBig">👮 POLICE 🚨</div><div class="psSmall">${'★'.repeat(st)}${'☆'.repeat(5-st)} · ${label}</div>`;
+  { const f_=Math.round(save.food); const ft=document.getElementById('foodTxt'); const fs_=`🍔 Food ${f_}%`; if(ft.textContent!==fs_){ ft.textContent=fs_; ft.style.color=f_<=0?'#ff5252':f_<25?'#ffca28':'#cfd'; } }
   heatFill.style.width=h+'%'; heatFill.style.background=st===0?'#66bb6a':st<3?'#ffca28':'#ef5350'; }
 function addHeatFromPaint(w,acc){ recent=recent.filter(r=>time-r.t<120);
   const tooFast=recent.length&&time-recent[recent.length-1].t<35, nearCnt=recent.filter(r=>Math.abs(r.x-w.cx)<1600).length, again=w.timesPainted>0;
@@ -664,15 +690,19 @@ function spawnPolice(){ const side=Math.random()<.5?-1:1, x=clamp(player.x+side*
   police.active=true; police.car={x,dir,y:dir<0?662:700,state:'drive',siren:0}; police.offs=[]; police.reinf=0;
   toast('🚨 <b>Police on the way!</b> Hide (↓ / S) or run!'); }
 function walkTo(o,tx,sp,dt){ const d=Math.sign(tx-o.x); o.x+=d*sp*dt; if(d) o.flip=d; o.step+=sp*dt*.05; o.face='side'; }
+const foodPrice=()=>8+4*curCity;
+function eat(){ const p=foodPrice(); if(save.food>90){ toast("🍔 You are not hungry yet."); return; } if(save.money<p){ toast(`🍔 A meal costs €${p} – paint a wall to earn money.`); return; }
+  save.money-=p; save.food=100; foodBand=3; persist(); dispMoney=save.money; shownMoney=-1; sfx('buy'); floatText(player.x,GROUND-110,`-€${p}`,'#ffb347'); toast('🍔 Yum! You are full for the day.'); }
 function bust(){ const st=starsOf(heat), fine=Math.round(save.money*(.3+.05*st)); save.money-=fine; persist();
-  if(mode!=='world'){ dOv.classList.remove('on'); shopOv.classList.remove('on'); stopPaint(); mode='world'; cam.zoom=baseZoom(); cam.y=360; tr=null; }
-  police.active=false; police.car=null; police.off=null; police.offs=[]; police.heli=null; heat=0; prevStars=0; hidden=false; inMetro=false; player.x=300; player.vx=0; player.h=0; cam.x=300; cam.flash=1; cam.shake=14; sfx('bust'); ding([220,165,110]);
+  if(mode!=='world'){ dOv.classList.remove('on'); shopOv.classList.remove('on'); stopPaint(); mode='world'; cam.zoom=baseZoom(); cam.y=camY0(); tr=null; }
+  police.active=false; police.car=null; police.off=null; police.offs=[]; police.heli=null; heat=0; prevStars=0; hidden=false; inMetro=false; curCity=0; shownMoney=-1; player.x=300; player.vx=0; player.h=0; cam.x=300; cam.flash=1; cam.shake=14; sfx('bust'); ding([220,165,110]);
   toast(`🚓 <b>Busted!</b> Fine: <b style="color:#ffd34d">€ ${fine}</b> (${Math.round((.3+.05*st)*100)}% of your money). You were taken back to the start of the street.`); }
 function toggleHide(){ if(mode!=='world') return;
   if(hidden){ hidden=false; sfx('hide'); toast('You left the hiding spot.'); return; }
   let best=null,bd=95; hideSpots.forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<bd){bd=d;best=s;} });
   if(!best){ toast('Nowhere to hide here – look for a dumpster by a wall or crates by a shop (green arrow).'); return; }
-  hidden=true; sfx('hide'); hideAt=best; player.x=best.x; player.vx=0; for(let i=0;i<6;i++) puff('dust',best.x+rnd(-14,14),GROUND,{vx:rnd(-30,30),vy:rnd(-5,5),vz:14,size:3,life:.5,max:.5});
+  hidden=true; sfx('hide'); hideAt=best;
+  if(best.found!==dayCount&&Math.random()<(police.active?.1:.06)){ best.found=dayCount; setTimeout(()=>{ if(hidden) showLoot(rollBoxTier(.2),null); },700); } else best.found=dayCount; player.x=best.x; player.vx=0; for(let i=0;i<6;i++) puff('dust',best.x+rnd(-14,14),GROUND,{vx:rnd(-30,30),vy:rnd(-5,5),vz:14,size:3,life:.5,max:.5});
   let seen=false; police.offs.forEach(o=>{ if(o.state!=='leave'&&Math.abs(o.x-player.x)<300){ o.knows=true; seen=true; } });
   toast(seen?'The officer saw where you hid!':'Hidden! Wait for them to leave.'); }
 function updateOfficer(o,dt,stars){
@@ -697,7 +727,9 @@ function updateOfficer(o,dt,stars){
   return null;
 }
 function updateLaw(dt){
-  clock=(clock+dt*24/480)%24; updateClockUi();
+  { const pc_=clock; clock=(clock+dt*24/480)%24; if(clock<pc_) dayCount++; } updateClockUi();
+  if(save.food==null) save.food=100; save.food=Math.max(0,save.food-dt*100/480);
+  { const band=save.food<=0?0:save.food<25?1:3; if(band<foodBand) toast(band===0?'🍔 You are starving! You move slower and cannot paint – eat at a café.':'🍔 You are getting hungry – eat at a café (orange dot on the map).'); foodBand=band; }
   for(const k_ in buff) if(buff[k_]>0) buff[k_]=Math.max(0,buff[k_]-dt);
   const stars=starsOf(heat);
   const painting_=(mode==='entering'||mode==='draw'||mode==='exiting')&&!hidden&&!(curWall&&curWall.isBonus);
@@ -756,7 +788,7 @@ const hud=document.getElementById('hudMain'), promptEl=document.getElementById('
 let toastT=0, shownMoney=-1, dispMoney=save.money;
 function toast(msg){ toastEl.innerHTML=msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('on'),3800); }
 function updateHud(){ const c=colorById(save.color), car=carById(save.car);
-  hud.innerHTML=`<b>€ ${Math.round(dispMoney)}</b><span class="hx"><br>Color: <span style="color:${c.hex==='#111111'?'#999':c.hex}">●</span> ${c.name} (x${c.mult})<br>Vehicle: ${car.name}<br>Walls painted: ${save.painted}</span><br>Level <b style="font-size:15px;color:#7cff8a;text-shadow:none">${level()}</b> · XP ${xpTxt()}<div class="xpbar"><div style="width:${xpPct()}%"></div></div>`; }
+  hud.innerHTML=`<b>€ ${Math.round(dispMoney)}</b><span class="hx"><br>Color: <span style="color:${c.hex==='#111111'?'#999':c.hex}">●</span> ${c.name} (x${c.mult})<br>Vehicle: ${car.name}<br>Walls painted: ${save.painted}</span><br>📍 City ${curCity+1} · ${CITY_NAMES[curCity]}<br>Level <b style="font-size:15px;color:#7cff8a;text-shadow:none">${level()}</b> · XP ${xpTxt()}<div class="xpbar"><div style="width:${xpPct()}%"></div></div>`; }
 
 let last=performance.now(), nearLot=null, tr=null;
 function frame(t){ const dt=Math.min(.05,(t-last)/1000); last=t; if(mode!=='pause'){ time+=dt; update(dt); } render(); requestAnimationFrame(frame); }
@@ -765,14 +797,14 @@ function update(dt){
   if(mode==='pause') return;
   const car=carById(save.car);
   if(mode==='ride'){ ride.t+=dt; cam.shake=Math.max(cam.shake,2);
-    if(ride.t>.45&&!ride.moved){ ride.moved=true; hidden=false; player.vx=0; player.h=0; if(ride.cb) ride.cb(); cam.x=player.x; cam.y=360; }
+    if(ride.t>.45&&!ride.moved){ ride.moved=true; hidden=false; player.vx=0; player.h=0; if(ride.cb) ride.cb(); cam.x=player.x; cam.y=camY0(); }
     if(ride.t>1.0){ rideOv.classList.remove('on'); mode='world'; } }
   if(mode==='world'){
     const dd=districtOf(player.x); if(dd!==curDist){ curDist=dd; toast(`📍 <b>${DIST_NAMES[dd]}</b> – district ${dd+1}: ${level()>=dd+1?'you may paint here, but drawings are harder and the police are stricter':'🔒 painting here needs level '+(dd+1)}`); }
     const dir=hidden?0:(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
-    const sp=car.speed*(buff.energy>0?1.4:1);
+    const sp=car.speed*(buff.energy>0?1.4:1)*(save.food<=0?.6:1);
     player.vx=lerp(player.vx,dir*sp,Math.min(1,dt*(car.kind==='car'?4:9)));
-    { const bd_=bounds(); player.x=clamp(player.x+player.vx*dt,bd_[0],bd_[1]); }
+    { const bd_=bounds(), nx_=player.x+player.vx*dt; player.x=clamp(nx_,bd_[0],bd_[1]); if(!inMetro&&nx_!==player.x&&time>edgeT){ edgeT=time+6; toast('🚧 City limit – take the metro to travel to another city.'); } }
     player.moving=Math.abs(player.vx)>25;
     if(dir){ player.flip=dir>0?1:-1; }
     if(player.moving){ player.face='side'; player.idle=0; player.step+=Math.abs(player.vx)*dt*.05; { const si=Math.floor(player.step/Math.PI); if(si!==lastStepIdx){ lastStepIdx=si; if(player.h<=0&&carById(save.car).kind==='foot') sfx('step'); } } player.spin+=player.vx*dt*.05; }
@@ -787,16 +819,16 @@ function update(dt){
       else puff('dust',player.x-player.flip*6,GROUND,{vx:-player.flip*rnd(10,40),vy:rnd(-6,6),vz:12,size:3.2,life:.45,max:.45}); }
     walls.forEach(w=>{ if(w.cool>0) w.cool-=dt; }); metroObjs.forEach(w=>{ if(w.cool>0) w.cool-=dt; });
     nearLot=null; let bestD=170;
-    for(const l of (inMetro?metroObjs:lots)){ const px=l.kind==='wall'?l.cx:l.door+34, d=Math.abs(px-player.x); if((l.kind==='wall'||l.kind==='paint'||l.kind==='shoes'||l.kind==='metro'||l.kind==='mwall'||l.kind==='mtrain'||l.kind==='mexit')&&d<bestD){ bestD=d; nearLot=l; } }
+    for(const l of (inMetro?metroObjs:lots)){ const px=l.kind==='wall'?l.cx:l.door+34, d=Math.abs(px-player.x); if((l.kind==='wall'||l.kind==='paint'||l.kind==='shoes'||l.kind==='metro'||l.kind==='mwall'||l.kind==='mtrain'||l.kind==='mexit'||l.kind==='cafe'||l.kind==='pizza')&&d<bestD){ bestD=d; nearLot=l; } }
     nearHide=null; { let hb=95; hideSpots.forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<hb){ hb=d; nearHide=s; } }); }
     if(hidden){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – leave hiding spot'; }
     else if(nearLot){ promptEl.style.display='block';
-      promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):'E – fast shoes (coming soon!)'); }
+      promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='cafe'||nearLot.kind==='pizza'?`E – eat (€${foodPrice()})`:nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):'E – fast shoes (coming soon!)'); }
     else if(nearHide){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – hide ('+(nearHide.kind==='dumpster'?'dumpster':'crates')+')'; }
     else promptEl.style.display='none';
     const zt=baseZoom()*(player.moving&&car.speed>=560?.9:1); cam.zoom=lerp(cam.zoom,zt,Math.min(1,dt*3));
-    const hw=W/(2*cam.zoom), bw_=inMetro?[M0,M1]:[0,WORLD_W], tx=clamp(player.x+player.vx*.25,bw_[0]+hw,bw_[1]-hw);
-    cam.x+=(tx-cam.x)*Math.min(1,dt*8); cam.y+=(360-cam.y)*Math.min(1,dt*6);
+    const hw=W/(2*cam.zoom), bw_=inMetro?[M0,M1]:cityRange[curCity], tx=clamp(player.x+player.vx*.25,bw_[0]+hw,bw_[1]-hw);
+    cam.x+=(tx-cam.x)*Math.min(1,dt*8); cam.y+=(camY0()-cam.y)*Math.min(1,dt*6);
   }
   if(mode==='entering'){
     tr.t=Math.min(1,tr.t+dt/1.0); const e=easeIO(tr.t);
@@ -807,8 +839,8 @@ function update(dt){
     if(tr.t>=1){ mode='draw'; showDraw(); }
   } else if(mode==='exiting'){
     tr.t=Math.min(1,tr.t+dt/.85); const e=easeIO(tr.t);
-    const hw=W/(2*baseZoom()), bw_=inMetro?[M0,M1]:[0,WORLD_W], tx=clamp(player.x,bw_[0]+hw,bw_[1]-hw);
-    cam.zoom=lerp(tr.zt,baseZoom(),e); cam.x=lerp(tr.fx,tx,e); cam.y=lerp(tr.fy,360,e);
+    const hw=W/(2*baseZoom()), bw_=inMetro?[M0,M1]:cityRange[curCity], tx=clamp(player.x,bw_[0]+hw,bw_[1]-hw);
+    cam.zoom=lerp(tr.zt,baseZoom(),e); cam.x=lerp(tr.fx,tx,e); cam.y=lerp(tr.fy,camY0(),e);
     if(tr.t<.35&&tr.burst) sprayAtWall();
     if(tr.t>=1){ mode='world'; player.vx=0; player.idle=0; }
   } else if(mode==='draw'){
@@ -907,6 +939,10 @@ function render(){
     ctx.fillStyle='#14131a'; ctx.fillRect(x-3,BASE-150,6,170); rr(ctx,x-110,BASE-190,220,52,8,'#0d0c14');
     ctx.strokeStyle=TIER_COL[d]; ctx.lineWidth=3; ctx.shadowColor=DCOL[d]; ctx.shadowBlur=14; ctx.beginPath(); ctx.roundRect(x-107,BASE-187,214,46,6); ctx.stroke(); ctx.shadowBlur=0;
     ctx.textAlign='center'; ctx.fillStyle='#fff'; ctx.font='bold 13px system-ui'; ctx.fillText(`DISTRICT ${d+1}${lk?' 🔒 needs level '+(d+1):''}`,x,BASE-168); ctx.font='bold 15px system-ui'; ctx.fillStyle=DCOL[d]; ctx.fillText(DIST_NAMES[d].toUpperCase(),x,BASE-148); ctx.restore(); });
+  // pilsētas robežas
+  if(!inMetro){ const cr=cityRange[curCity]; [[cr[0]+40,curCity>0],[cr[1]-40,curCity<9]].forEach(([x,show])=>{ if(!show||x<vx0-120||x>vx1+120) return; ctx.save();
+    for(let i=0;i<5;i++){ ctx.fillStyle=i%2?'#f4f1ea':'#e53935'; ctx.fillRect(x-60+i*24,BASE+2,24,14); } ctx.fillStyle='#333'; ctx.fillRect(x-56,BASE+16,6,30); ctx.fillRect(x+50,BASE+16,6,30);
+    rr(ctx,x-90,BASE-46,180,40,8,'#0d0c14'); ctx.fillStyle='#ffd34d'; ctx.font='bold 13px system-ui'; ctx.textAlign='center'; ctx.fillText('CITY LIMIT',x,BASE-30); ctx.fillStyle='#7ec8ff'; ctx.fillText('🚇 take the metro',x,BASE-13); ctx.restore(); }); }
   // slēpņi
   hideSpots.forEach(s=>{ if(s.x<vx0-90||s.x>vx1+90) return;
     if(s.kind==='crates'){ ctx.save(); const bx=s.x, by=BASE+12; const crate=(x,y,w,h)=>{ ctx.fillStyle='#8a6a3b'; ctx.fillRect(x,y,w,h); ctx.strokeStyle='#5e4526'; ctx.lineWidth=3; ctx.strokeRect(x+1.5,y+1.5,w-3,h-3); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+w,y+h); ctx.moveTo(x+w,y); ctx.lineTo(x,y+h); ctx.stroke(); };
@@ -974,24 +1010,26 @@ function render(){
   // norādes uz veikaliem, slēpņiem un policiju
   if(mode==='world'||mode==='shop'){
     const tg=[], wanted=heat>=30||police.active;
-    if(wanted&&!hidden){ let b=null,bd=1e9; hideSpots.forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<bd){bd=d;b=s;} }); if(b) tg.push({x:b.x,t:'Hiding spot',c:'#69f0ae'}); }
+    if(wanted&&!hidden){ let b=null,bd=1e9; hideSpots.filter(s=>s.lot.city===curCity).forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<bd){bd=d;b=s;} }); if(b) tg.push({x:b.x,t:'Hiding spot',c:'#69f0ae'}); }
     if(police.off) tg.push({x:police.off.x,t:'Officer',c:'#ff5252'}); else if(police.car) tg.push({x:police.car.x,t:'Police',c:'#ff5252'});
     const afford=Math.min(Infinity,...COLORS.filter(c=>!save.colors.includes(c.id)).map(c=>c.price),...CARS.filter(c=>!save.cars.includes(c.id)).map(c=>c.price));
-    if(!wanted&&save.money>=afford){ const p=lots.find(l=>l.kind==='paint'); tg.push({x:p.door+34,t:'Paint Depot',c:'#ff4fd8'}); }
-    if(!wanted){ let b=null,bd=1e9; stations.forEach(st=>{ const d=Math.abs(st.cx-player.x); if(d>350&&d<bd){ bd=d; b=st; } }); if(b) tg.push({x:b.cx,t:'Metro',c:'#5aa8e8'}); }
-    if(!wanted){ let b=null,bd=1e9; walls.forEach(w=>{ if(w.cool<=0&&!locked(w)){ const d=Math.abs(w.cx-player.x); if(d>350&&d<bd){bd=d;b=w;} } }); if(b) tg.push({x:b.cx,t:'Wall (lvl '+(b.tier+1)+')',c:TIER_COL[b.tier]}); }
+    if(!wanted&&save.money>=afford){ const p=lots.find(l=>l.kind==='paint'&&l.city===curCity); if(p) tg.push({x:p.door+34,t:'Paint Depot',c:'#ff4fd8'}); }
+    if(!wanted){ let b=null,bd=1e9; stations.filter(st=>st.city===curCity).forEach(st=>{ const d=Math.abs(st.cx-player.x); if(d>350&&d<bd){ bd=d; b=st; } }); if(b) tg.push({x:b.cx,t:'Metro',c:'#5aa8e8'}); }
+    if(!wanted){ let b=null,bd=1e9; walls.forEach(w=>{ if(w.city===curCity&&w.cool<=0&&!locked(w)){ const d=Math.abs(w.cx-player.x); if(d>350&&d<bd){bd=d;b=w;} } }); if(b) tg.push({x:b.cx,t:'Wall (lvl '+(b.tier+1)+')',c:TIER_COL[b.tier]}); }
     if(inMetro){ tg.length=0; const tr_=metroObjs.find(o=>o.kind==='mtrain'); tg.push({x:tr_.cx,t:'Train',c:'#5aa8e8'}); tg.push({x:metroObjs[0].cx,t:'Exit',c:'#7cff8a'}); tg.push({x:metroObjs[6].cx,t:'Exit',c:'#7cff8a'}); }
     tg.forEach((t,i)=>{ const sx=SX(t.x); if(sx>70&&sx<W-70) return; const left=sx<=70, ey=H*.3+i*44, m=Math.round(Math.abs(t.x-player.x)/10);
       ctx.save(); ctx.fillStyle='#000b'; ctx.beginPath(); ctx.roundRect(left?8:W-204,ey-17,196,34,17); ctx.fill(); ctx.strokeStyle=t.c; ctx.lineWidth=2; ctx.stroke();
       ctx.fillStyle=t.c; ctx.beginPath(); if(left){ ctx.moveTo(18,ey); ctx.lineTo(32,ey-9); ctx.lineTo(32,ey+9); } else { ctx.moveTo(W-18,ey); ctx.lineTo(W-32,ey-9); ctx.lineTo(W-32,ey+9); } ctx.closePath(); ctx.fill();
       ctx.font='bold 14px system-ui'; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText(`${t.t} · ${m} m`,left?42:W-196,ey); ctx.restore(); }); }
   // ielas josla
-  if((mode==='world'||mode==='shop')&&!inMetro){ const bw=Math.min(520,W*.55), bx=(W-bw)/2, by=H-26;
+  if((mode==='world'||mode==='shop')&&!inMetro){ const bw=Math.min(520,W*.55,W-40), bx=(W-bw)/2, by=H-(H>W&&isTouch?96:26);
     ctx.fillStyle='#000a'; ctx.beginPath(); ctx.roundRect(bx-8,by-9,bw+16,18,9); ctx.fill();
-    lots.forEach(l=>{ const x=bx+(l.x+l.w/2)/WORLD_W*bw; ctx.fillStyle=l.kind==='wall'?(locked(l)?'#555':l.art&&l.cool>0?'#66bb6a':TIER_COL[l.tier]):(l.kind==='paint'?'#ff4fd8':l.kind==='metro'?'#5aa8e8':'#8892a6'); ctx.beginPath(); ctx.arc(x,by,l.kind==='wall'?3.5:2.5,0,7); ctx.fill(); });
-    ctx.fillStyle='#69f0ae'; hideSpots.forEach(s=>{ ctx.fillRect(bx+s.x/WORLD_W*bw-1.5,by-9,3,3); });
-    if(police.car){ ctx.fillStyle=Math.sin(police.car.siren)>0?'#ff1744':'#2979ff'; ctx.beginPath(); ctx.arc(bx+(police.off?police.off.x:police.car.x)/WORLD_W*bw,by,4.5,0,7); ctx.fill(); }
-    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(bx+player.x/WORLD_W*bw,by,5,0,7); ctx.fill(); }
+    const cr=cityRange[curCity], mx_=x=>bx+clamp((x-cr[0])/(cr[1]-cr[0]),0,1)*bw;
+    lots.forEach(l=>{ if(l.city!==curCity) return; const x=mx_(l.x+l.w/2); ctx.fillStyle=l.kind==='wall'?(locked(l)?'#555':l.art&&l.cool>0?'#66bb6a':TIER_COL[l.tier]):(l.kind==='paint'?'#ff4fd8':l.kind==='metro'?'#5aa8e8':l.kind==='cafe'||l.kind==='pizza'?'#ffb347':'#8892a6'); ctx.beginPath(); ctx.arc(x,by,l.kind==='wall'?4:3,0,7); ctx.fill(); });
+    ctx.fillStyle='#69f0ae'; hideSpots.forEach(s=>{ if(s.lot.city===curCity) ctx.fillRect(mx_(s.x)-1.5,by-10,3,3); });
+    if(police.car){ ctx.fillStyle=Math.sin(police.car.siren)>0?'#ff1744':'#2979ff'; ctx.beginPath(); ctx.arc(mx_(police.off?police.off.x:police.car.x),by,4.5,0,7); ctx.fill(); }
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(mx_(player.x),by,5,0,7); ctx.fill();
+    ctx.fillStyle='#ccd'; ctx.font='bold 11px system-ui'; ctx.textAlign='center'; ctx.fillText(`City ${curCity+1} · ${CITY_NAMES[curCity]}`,bx+bw/2,by-14); }
   renderFx();
 }
 const hexN=h=>{ if(h==='#111111') h='#8899aa'; const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -1152,7 +1190,7 @@ function addXp(v){ const lv0=level(); save.xp=(save.xp||0)+v; persist(); if(leve
 // ---- metro iekšpuse: sava ainava ar sienām un vilcienu ----
 const M0=WORLD_W+2000, M1=M0+3600, MC=(M0+M1)/2;
 let inMetro=false, metroFrom=null, metroObjs=[], metroLot=null, metroKey='';
-const bounds=()=>inMetro?[M0+60,M1-60]:[60,WORLD_W-60];
+const bounds=()=>inMetro?[M0+60,M1-60]:[cityRange[curCity][0]+60,cityRange[curCity][1]-60];
 const metroPrompt=l=>'E – enter the metro';
 const metroObjPrompt=o=>o.kind==='mtrain'?'E – train: choose a district (travel instantly)':o.kind==='mexit'?'E – to the street':(o.cool>0?`Paint drying… ${Math.ceil(o.cool)} s`:`E – bonus wall (shape ${o.tier+1}) → lootbox!`);
 (function buildMetro(){ const lv=level(), mk=(kind,cx)=>({kind,cx,door:cx-34,i:-1,w:0,cool:0});
@@ -1162,14 +1200,15 @@ const ride={t:0,cb:null,moved:false,label:''}, rideOv=document.getElementById('r
 function travel(cb,label){ closeShop(); mode='ride'; ride.t=0; ride.cb=cb; ride.moved=false; ride.label=label; rideText.textContent='🚇 '+label; rideOv.classList.add('on'); sfx('ride'); }
 function enterMetro(st){ if(police.active){ toast('🚓 The police are looking for you – metro unavailable!'); return; }
   metroFrom=st; travel(()=>{ inMetro=true; metroObjs.forEach(w=>{ if(w.kind==='mwall'&&w.cool<=0){ const k=Math.max(0,level()-1-Math.floor(Math.random()*4)); w.tier=k; w.shape='L'+k; w.art=null; } }); player.x=M0+300; player.flip=1; },'Metro'); }
-function exitMetro(){ travel(()=>{ inMetro=false; player.x=metroFrom?metroFrom.cx:300; },'To the street'); }
-function goDistrict(k){ travel(()=>{ inMetro=false; player.x=walls[k].cx; },`District ${k+1}: ${distName(k)}`); }
+function exitMetro(){ travel(()=>{ inMetro=false; curCity=metroFrom?metroFrom.city:0; shownMoney=-1; player.x=metroFrom?metroFrom.cx:300; },'To the street'); }
+function goDistrict(k){ travel(()=>{ inMetro=false; curCity=walls[k].city; shownMoney=-1; player.x=walls[k].cx; },`Level ${k+1}: ${distName(k)} (City ${walls[k].city+1})`); }
+function goCity(c){ travel(()=>{ inMetro=false; curCity=c; shownMoney=-1; player.x=stations[c].cx; },`City ${c+1}: ${CITY_NAMES[c]}`); }
 function openMetro(){ if(mode!=='world'||!inMetro) return; mode='shop'; promptEl.style.display='none'; tpOv.classList.add('on'); renderMetro(); }
 function renderMetro(){ if(!inMetro||!tpOv.classList.contains('on')) return; const lv=Math.min(NLEV,level()); let rows='';
-  for(let k=lv-1;k>=0;k--) rows+=`<div class="row"><div class="dot" style="background:${TIER_COL[k]};color:${TIER_COL[k]}"></div><div class="n">District ${k+1}: ${distName(k)} <small>(level ${k+1})</small></div><button data-k="${k}">Go</button></div>`;
-  tpEl.innerHTML=`<h2>🚇 Train – choose a district</h2><div style="margin-bottom:8px;color:#aab;font-size:13px">One level = one district. Travel instantly, no waiting. Available districts: 1–${lv}.</div>
-    <div class="row"><div class="n">District number (1–${lv})</div><input id="tpNum" type="number" min="1" max="${lv}" value="${lv}" style="width:70px;padding:6px;border-radius:6px;border:0"><button id="tpGo">Go</button></div>${rows}<br><button class="sec" id="tpClose">Close (E / Esc)</button>`;
-  tpEl.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>goDistrict(+b.dataset.k));
+  for(let c=Math.min(9,Math.floor((lv-1)/10));c>=0;c--) rows+=`<div class="row"><div class="dot" style="background:${TIER_COL[c*10]};color:${TIER_COL[c*10]}"></div><div class="n">City ${c+1}: ${CITY_NAMES[c]} <small>(levels ${c*10+1}–${Math.min(NLEV,c*10+10)})</small></div><button data-c="${c}">Go</button></div>`;
+  tpEl.innerHTML=`<h2>🚇 Train – choose a city</h2><div style="margin-bottom:8px;color:#aab;font-size:13px">Each city has 10 levels. New cities open as you level up. Travel instantly, no waiting.</div>${rows}
+    <div class="row"><div class="n">Go straight to level (1–${lv})</div><input id="tpNum" type="number" min="1" max="${lv}" value="${lv}" style="width:70px;padding:6px;border-radius:6px;border:0"><button id="tpGo">Go</button></div><br><button class="sec" id="tpClose">Close (E / Esc)</button>`;
+  tpEl.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>goCity(+b.dataset.c));
   document.getElementById('tpGo').onclick=()=>goDistrict(clamp((parseInt(document.getElementById('tpNum').value)||1)-1,0,lv-1));
   document.getElementById('tpClose').onclick=closeShop; }
 function drawMetroInterior(vx0,vx1){
@@ -1203,17 +1242,20 @@ function drawMetroInterior(vx0,vx1){
     ctx.strokeStyle='#cfc8bd'; ctx.lineWidth=8; ctx.strokeRect(w.px-4,w.py-4,PANEL.w+8,PANEL.h+8);
     rr(ctx,w.cx-100,w.py-52,200,26,6,'#0d0c14'); ctx.fillStyle='#ffd34d'; ctx.font='bold 14px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(w.cool>0?`⏳ drying ${Math.ceil(w.cool)} s`:`🎁 BONUS · shape ${w.tier+1}`,w.cx,w.py-39); ctx.textBaseline='alphabetic'; });
 }
+function rollBoxTier(acc){ const w=[70,22+8*acc,7+4*acc,1+1.5*acc]; let r=Math.random()*w.reduce((a,b)=>a+b,0); for(let i=0;i<4;i++){ if((r-=w[i])<0) return i; } return 0; }
 function finishBonus(){ const w=curWall, r=evaluate();
-  let bt=Math.min(3,Math.floor(r.acc*4.2)); if(r.acc<.15) bt=-1; else { const q=Math.random(); if(q<.2) bt=Math.min(3,bt+1); else if(q>.92) bt=Math.max(0,bt-1); }
+  const bt=Math.random()<.15+.25*r.acc?rollBoxTier(r.acc):-1, cash=Math.round(TIERS[w.tier].base*.25*r.acc);
+  if(cash>0){ save.money+=cash; persist(); shownMoney=-1; }
   redraw(false); const art=document.createElement('canvas'); art.width=720; art.height=440; art.getContext('2d').drawImage(dc,0,0);
   w.art=art; w.cool=120; w.glow=strokes[0]?colorById(strokes[0].color).hex:'#5aa8e8';
-  leaveDraw(false); showLoot(bt,r.acc); }
+  leaveDraw(false); showLoot(bt,r.acc,cash); }
 let lootOpen=false; const lootOv=document.getElementById('lootOv'), lootEl=document.getElementById('loot');
 function closeLoot(){ lootOpen=false; lootOv.classList.remove('on'); renderInv(); }
-function showLoot(bt,acc){ lootOpen=true; lootOv.classList.add('on');
-  if(bt<0){ lootEl.style.setProperty('--lc','#555'); lootEl.innerHTML=`<h2>Accuracy ${Math.round(acc*100)}%</h2><p>No box for this drawing – try to be more accurate!</p><button id="lootOk">OK</button>`; document.getElementById('lootOk').onclick=closeLoot; sfx('bust'); return; }
+const lootHead=acc=>acc==null?'<h2>🎉 Congratulations!</h2><p>You found a hidden lootbox!</p>':`<h2>Accuracy ${Math.round(acc*100)}%</h2>`;
+function showLoot(bt,acc,cash=0){ lootOpen=true; lootOv.classList.add('on');
+  if(bt<0){ lootEl.style.setProperty('--lc','#555'); lootEl.innerHTML=`${lootHead(acc)}<p>No lootbox this time${cash?` – but you earned <b style="color:#ffd34d">€ ${cash}</b>`:''}.</p><p style="color:#aab;font-size:13px">Tip: lootboxes are rare. Some are hidden in dumpsters and crates.</p><button id="lootOk">OK</button>`; document.getElementById('lootOk').onclick=closeLoot; sfx('bust'); return; }
   const B=BOXES[bt]; lootEl.style.setProperty('--lc',B.c);
-  lootEl.innerHTML=`<h2>Accuracy ${Math.round(acc*100)}%</h2><div class="lootbox" style="filter:drop-shadow(0 0 22px ${B.c})">${B.i}</div><p style="color:${B.c};font-weight:700;font-size:20px">${B.n}</p><button id="lootOpen">Open box</button>`;
+  lootEl.innerHTML=`${lootHead(acc)}<div class="lootbox" style="filter:drop-shadow(0 0 22px ${B.c})">${B.i}</div><p style="color:${B.c};font-weight:700;font-size:20px">${B.n}</p><button id="lootOpen">Open box</button>`;
   sfx('box'); document.getElementById('lootOpen').onclick=()=>openLoot(bt); }
 function rollReward(bt){ const Wt=[{m:60,i:25,x:10,c:5},{m:40,i:30,x:15,c:15},{m:30,i:30,x:15,c:25},{m:25,i:25,x:20,c:30}][bt];
   const lvl=Math.min(NLEV,Math.max(1,level())), base=TIERS[lvl-1].base, maxPrice=[120,450,900,1e9][bt];
@@ -1268,6 +1310,8 @@ function renderShop(){
 // ================= Ievade =================
 function actionE(){
   if(mode!=='world'||!nearLot||hidden) return;
+  if(nearLot.kind==='wall'&&save.food<=0){ toast('🍔 Too hungry to paint – eat at a café first!'); return; }
+  if(nearLot.kind==='cafe'||nearLot.kind==='pizza'){ eat(); return; }
   if(nearLot.kind==='wall') locked(nearLot)?toast(`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()}). Paint easier walls and earn XP.`):nearLot.cool>0?toast('Paint still drying – come back later or find another wall!'):openDraw(nearLot);
   else if(nearLot.kind==='paint') openShop();
   else if(nearLot.kind==='metro') enterMetro(nearLot);

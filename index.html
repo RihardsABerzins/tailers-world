@@ -3,64 +3,107 @@
 <head>
 <meta charset="utf-8">
 <title>Tailers World LV</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Tailers World LV – mini spēļu pasaule">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Tailers World LV – bezmaksas mini spēles bērniem">
+<meta name="theme-color" content="#120f24">
 <style>
-  :root{--bg:#0f0d1f;--card:#1b1830;--line:#ffffff1a;--text:#f3f1ff;--muted:#a9a4c7;--accent:#ff5fa2;--accent2:#ffd34d}
-  *{box-sizing:border-box}
+  :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--pink:#ff5fa2;--yellow:#ffd34d;--blue:#5ac8ff;--green:#7cff8a}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;min-height:100%}
-  body{background:radial-gradient(1200px 600px at 20% -10%,#3a2357 0%,transparent 60%),radial-gradient(900px 500px at 110% 10%,#1e3a6b 0%,transparent 55%),var(--bg);
-    color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
-  .wrap{max-width:1100px;margin:0 auto;padding:48px 16px 64px}
-  header{display:flex;align-items:center;gap:16px;margin-bottom:8px}
-  .logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:28px;box-shadow:0 8px 30px #ff5fa255}
-  .brand{font-weight:800;letter-spacing:.5px;color:var(--muted)}
-  h1{font-size:clamp(40px,7vw,72px);margin:24px 0 4px;line-height:1.05}
-  h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .lead{color:var(--muted);font-size:18px;max-width:620px;margin:0 0 36px}
-  h2{font-size:20px;margin:0 0 16px;color:var(--text)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
-  .card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;transition:transform .18s,box-shadow .18s,border-color .18s}
-  .card:hover,.card:focus-visible{transform:translateY(-4px);box-shadow:0 18px 40px #0008;border-color:#ffffff40;outline:none}
-  .thumb{aspect-ratio:16/10;background:#000;display:block;width:100%;object-fit:cover}
+  body{background:var(--bg);color:var(--text);font-family:ui-rounded,"SF Pro Rounded","Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45;overflow-x:hidden}
+  /* kustīgs fons */
+  .bg{position:fixed;inset:0;z-index:-1;overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;animation:drift 18s ease-in-out infinite alternate}
+  .b1{width:60vmax;height:60vmax;background:#7b2ff7;left:-20vmax;top:-25vmax}
+  .b2{width:50vmax;height:50vmax;background:#ff5fa2;right:-20vmax;top:10vmax;animation-delay:-6s}
+  .b3{width:45vmax;height:45vmax;background:#1e88e5;left:10vmax;bottom:-25vmax;animation-delay:-12s}
+  @keyframes drift{to{transform:translate(8vmax,6vmax) scale(1.15)}}
+  .plane{position:absolute;font-size:28px;opacity:.7;animation:fly linear infinite}
+  @keyframes fly{from{transform:translate(-10vw,var(--y)) rotate(8deg)}to{transform:translate(110vw,calc(var(--y) - 30vh)) rotate(-4deg)}}
+
+  .wrap{max-width:980px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px 48px}
+  header{display:flex;align-items:center;gap:12px}
+  .logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--pink),var(--yellow));display:grid;place-items:center;font-size:26px;box-shadow:0 8px 30px #ff5fa255;animation:bob 3s ease-in-out infinite}
+  .brand{font-weight:900;letter-spacing:1px;color:var(--muted);font-size:15px}
+  @keyframes bob{50%{transform:translateY(-5px) rotate(-4deg)}}
+
+  .hero{margin:22px 0 26px;animation:rise .7s both}
+  h1{font-size:clamp(44px,12vw,80px);margin:0;line-height:1;font-weight:900}
+  .wave{display:inline-block;transform-origin:70% 70%;animation:wave 2.4s ease-in-out infinite}
+  @keyframes wave{0%,60%,100%{transform:rotate(0)}10%,30%{transform:rotate(16deg)}20%,40%{transform:rotate(-10deg)}}
+  .lead{font-size:clamp(17px,4.6vw,21px);color:var(--muted);margin:14px 0 0;max-width:640px}
+  .free{display:inline-block;background:linear-gradient(90deg,var(--green),var(--blue));color:#08131f;font-weight:900;padding:1px 9px;border-radius:8px;transform:rotate(-2deg);animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{50%{transform:rotate(-2deg) scale(1.08)}}
+  @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+
+  h2{font-size:22px;margin:0 0 14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;animation:rise .6s both;box-shadow:0 14px 34px #0006;transition:transform .2s}
+  .card:active{transform:scale(.98)}
+  .thumb{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:#000}
   .body{padding:14px 16px 16px}
-  .title{font-weight:800;font-size:19px;margin:0 0 4px}
-  .desc{color:var(--muted);font-size:14px;margin:0 0 12px}
-  .play{display:inline-flex;align-items:center;gap:6px;background:var(--accent2);color:#1a1300;font-weight:800;border-radius:10px;padding:7px 14px;font-size:14px}
-  .soon{opacity:.55;pointer-events:none}
-  .soon .thumb{display:grid;place-items:center;font-size:48px;background:repeating-linear-gradient(45deg,#221e3a 0 14px,#1b1830 14px 28px)}
-  .soon .play{background:#ffffff22;color:var(--muted)}
-  footer{margin-top:48px;color:var(--muted);font-size:13px}
+  .title{font-weight:900;font-size:22px;margin:0 0 4px}
+  .desc{color:var(--muted);font-size:15px;margin:0 0 14px}
+  .btns{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:52px;padding:12px 16px;border-radius:16px;font-weight:900;font-size:17px;text-decoration:none;border:0;cursor:pointer;transition:transform .15s,box-shadow .15s}
+  .btn:active{transform:scale(.95)}
+  .play{background:var(--yellow);color:#1a1300;box-shadow:0 6px 0 #c49a1b}
+  .players{background:#ffffff1a;color:var(--text);border:2px solid #ffffff33}
+  .soon{opacity:.6}
+  .soon .thumb{display:grid;place-items:center;font-size:54px;background:repeating-linear-gradient(45deg,#2a2350 0 16px,#1f1a3a 16px 32px)}
+  .soon .thumb span{animation:bob 2.6s ease-in-out infinite}
+
+  .support{margin-top:30px;background:linear-gradient(135deg,#ff5fa233,#ffd34d22);border:2px solid #ff5fa255;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:rise .8s .3s both}
+  .heart{font-size:40px;animation:beat 1.3s ease-in-out infinite}
+  @keyframes beat{15%{transform:scale(1.2)}30%{transform:scale(1)}}
+  .support p{margin:0;flex:1 1 220px;font-size:17px}
+  .support small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+  .supbtn{background:var(--pink);color:#fff;box-shadow:0 6px 0 #b8336e;flex:0 0 auto}
+  .supbtn[aria-disabled="true"]{background:#ffffff26;box-shadow:none;color:var(--muted);pointer-events:none}
+  footer{margin-top:34px;color:var(--muted);font-size:13px;text-align:center}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+  <div class="plane" style="--y:20vh;animation-duration:19s">✈️</div><div class="plane" style="--y:70vh;animation-duration:27s;animation-delay:-11s">✈️</div></div>
 <div class="wrap">
   <header><div class="logo">🎮</div><div class="brand">TAILERS WORLD LV</div></header>
-  <h1>Labdien! <span>👋</span></h1>
-  <p class="lead">Laipni lūgti Tailers World LV – mūsu mini spēļu pasaulē. Izvēlies spēli un spied, lai sāktu spēlēt.</p>
+  <div class="hero">
+    <h1>Labdien! <span class="wave">👋</span></h1>
+    <p class="lead">Čau, mani sauc Tailers, un es taisu spēles, kādas man pašam patīk! Pievienojies, un spēlējam kopā <span class="free">BEZ MAKSAS</span> – kurš tiks tālāk? 😉</p>
+  </div>
 
-  <h2>Spēles</h2>
+  <h2>🕹️ Spēles</h2>
   <div class="grid" id="games"></div>
+
+  <div class="support">
+    <div class="heart">💛</div>
+    <p><b>Atbalsti mani, lai varu taisīt vēl spēles priekš visiem!</b><small>Tikai ar vecāku atļauju 🙂</small></p>
+    <a class="btn supbtn" id="supportBtn" href="#" aria-disabled="true">Drīzumā</a>
+  </div>
 
   <footer>© Tailers World LV · Mūzika: Papīra Lidmašīnas</footer>
 </div>
 <script>
 // Spēļu saraksts – jaunu spēli pievieno šeit
 const GAMES=[
-  {title:'Graffiti RPG', desc:'Skrien pa ielu, zīmē grafiti, krāj naudu, pērc krāsas un mašīnas – un bēdz no policijas.', cover:'grafiti/cover.svg', url:'grafiti/index.html'},
+  {title:'Graffiti RPG', desc:'Skrien pa pilsētu, zīmē grafiti, krāj naudu, pērc krāsas un mašīnas – un bēdz no policijas!', cover:'grafiti/cover.svg', url:'grafiti/index.html', players:'speletaji.html?spele=grafiti'},
 ];
-const SOON=1; // cik "drīzumā" kartītes rādīt
+// Atbalsta saite (piem., Buy Me a Coffee) – kad būs, ieliec šeit
+const SUPPORT_URL='';
+
 const el=document.getElementById('games');
-GAMES.forEach(g=>{
-  const a=document.createElement('a'); a.className='card'; a.href=g.url;
-  a.innerHTML=`<img class="thumb" src="${g.cover}" alt="${g.title}"><div class="body"><p class="title">${g.title}</p><p class="desc">${g.desc}</p><span class="play">▶ Spēlēt</span></div>`;
-  el.appendChild(a);
-});
-for(let i=0;i<SOON;i++){
-  const d=document.createElement('div'); d.className='card soon';
-  d.innerHTML=`<div class="thumb">🔒</div><div class="body"><p class="title">Drīzumā</p><p class="desc">Nākamā mini spēle jau top.</p><span class="play">Drīzumā</span></div>`;
+GAMES.forEach((g,i)=>{
+  const d=document.createElement('div'); d.className='card'; d.style.animationDelay=(.15+i*.1)+'s';
+  d.innerHTML=`<a href="${g.url}"><img class="thumb" src="${g.cover}" alt="${g.title}"></a><div class="body"><p class="title">${g.title}</p><p class="desc">${g.desc}</p>
+    <div class="btns"><a class="btn play" href="${g.url}">▶ Spēlēt</a><a class="btn players" href="${g.players}">👥 Citi spēlētāji</a></div></div>`;
   el.appendChild(d);
-}
+});
+const s=document.createElement('div'); s.className='card soon'; s.style.animationDelay=(.25+GAMES.length*.1)+'s';
+s.innerHTML=`<div class="thumb"><span>🔒</span></div><div class="body"><p class="title">Drīzumā</p><p class="desc">Nākamā spēle jau top – sekojiet līdzi!</p></div>`;
+el.appendChild(s);
+if(SUPPORT_URL){ const b=document.getElementById('supportBtn'); b.href=SUPPORT_URL; b.target='_blank'; b.rel='noopener'; b.textContent='💛 Atbalstīt'; b.removeAttribute('aria-disabled'); }
 </script>
 </body>
 </html>
