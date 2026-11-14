@@ -131,9 +131,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="../firebase-config.js?v=4"></script>
-<script src="../tw-common.js?v=2"></script>
+<script src="../tw-common.js?v=3"></script>
 <script src="../tw-social.js?v=2"></script>
-<script src="../tw-ach.js?v=1"></script>
+<script src="../tw-ach.js?v=2"></script>
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1145,7 +1145,7 @@ function render(){
   police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
   if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
-  if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) { drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid); drawBubble(player.x,GROUND-player.h-126,chatBubble(NET.uid)); }
+  if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) { drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid,myMedals()); drawBubble(player.x,GROUND-player.h-126,chatBubble(NET.uid)); }
   // satiksme (priekšplānā)
   traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.color,{spin:c.spin}); });
   if(police.car){ const c=police.car, L=175, Hh=L*.3; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir});
@@ -1606,17 +1606,20 @@ if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
     });
   }catch(e){}
 }
-function netTick(){ if(!NET.on) return; const c=inMetro?-1:curCity;
+function netTick(){ if(!NET.on) return;
+  if(window.TW&&TW.active&&!TW.active()){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } NET.city=-2; return; } // fonā/neaktīvs – citiem nerādāmies
+  const c=inMetro?-1:curCity;
   if(c!==NET.city){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } if(NET.sub){ NET.sub.off(); NET.sub=null; } NET.others={}; NET.city=c;
     if(c>=0){ NET.ref=NET.db.ref('presence/'+c+'/'+NET.uid); NET.ref.onDisconnect().remove();
       NET.sub=NET.db.ref('presence/'+c); NET.sub.on('value',s=>{ const now=Date.now()+NET.off, o={};
         s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({uid:p.key,dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
   const now=Date.now();
-  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,hid:hidden?1:0,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
+  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,hid:hidden?1:0,m:myMedals()||null,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
 function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000){ if(!NET.trail) NET.trail=setTimeout(()=>{ NET.trail=null; netStats(true); },5000-(now-NET.lastStats)); return; } NET.lastStats=now;
   NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
   if(window.TWA) TWA.sync(NET.uid,{level:level(),painted:save.painted||0,city:curCity+1}).then(n=>{ n.forEach((m,i)=>setTimeout(()=>{ toast(`🏅 <b>New medal!</b><br><span style="font-size:30px">${m.i}</span> ${TWA.title(m)}`); ding([784,988,1175,1568]); buzz(30); },4200*i)); }).catch(()=>{}); }
-function drawNameTag(x,y,name,uid){ if(!name) return; const role=window.TW?TW.role(uid):'', adm=role==='admin', mod=role==='mod', lab=(adm?'👑 ':mod?'🛡️ ':'')+name;
+const myMedals=()=>window.TWA&&TWA.owned?TWA.LIST.filter(m=>TWA.owned[m.id]).length:0;
+function drawNameTag(x,y,name,uid,medals){ if(!name) return; const role=window.TW?TW.role(uid):'', adm=role==='admin', mod=role==='mod', lab=(adm?'👑 ':mod?'🛡️ ':'')+name;
   ctx.save(); ctx.font='900 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
   if(adm){ const w=ctx.measureText(lab).width, sh=((time*120)%(w+160))-80;
     const g=ctx.createLinearGradient(x-w/2,y-9,x-w/2,y+9); g.addColorStop(0,'#fff8d0'); g.addColorStop(.35,'#ffd34d'); g.addColorStop(.6,'#b07a12'); g.addColorStop(1,'#ffe68a');
@@ -1626,7 +1629,9 @@ function drawNameTag(x,y,name,uid){ if(!name) return; const role=window.TW?TW.ro
   else if(mod){ const fl=.85+.15*Math.sin(time*9)*(Math.sin(time*1.3)>.9?1:0); ctx.lineWidth=5; ctx.strokeStyle='#00243a'; ctx.strokeText(lab,x,y);
     ctx.shadowColor='#2ec5ff'; ctx.shadowBlur=16; ctx.globalAlpha=fl; ctx.fillStyle='#bff3ff'; ctx.fillText(lab,x,y); ctx.shadowBlur=6; ctx.fillText(lab,x,y); }
   else { ctx.lineWidth=4; ctx.strokeStyle='#000'; ctx.strokeText(lab,x,y); ctx.fillStyle='#fff'; ctx.fillText(lab,x,y); }
-  ctx.restore(); }
+  ctx.restore();
+  if(medals>0){ ctx.save(); ctx.font='900 17px system-ui'; const w=ctx.measureText(window.tr?window.tr(lab):lab).width, mx=x+w/2+5, t='🏅'+medals; // medaļu skaits mazs blakus vārdam
+    ctx.font='800 11px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.lineJoin='round'; ctx.lineWidth=3; ctx.strokeStyle='#000'; ctx.strokeText(t,mx,y+1); ctx.fillStyle='#ffd34d'; ctx.fillText(t,mx,y+1); ctx.restore(); } }
 // ---- čats: atver paneli, frāžu burbuļi virs galvām ----
 function openChat(fn){ if(!NET.on||!window.TWS||(mode!=='world'&&mode!=='chat')) return; mode='chat'; for(const k in keys) keys[k]=false; autoT=null; promptEl.style.display='none'; (fn||(()=>TWS.openPanel()))(); }
 document.getElementById('pChat').onclick=e=>{ e.stopPropagation(); audioInit(); if(!NET.on) return toast('Čats strādā, kad esi ielogojies.'); openChat(); };
@@ -1659,7 +1664,7 @@ async function openStaff(){ if(!NET.on||!TW.isStaff(NET.uid)||mode!=='world') re
   document.getElementById('tpClose').onclick=closeShop; }
 function drawOther(o,mv){ ctx.save(); ctx.globalAlpha=.93;
   drawPerson(ctx,o.dx,GROUND-2,PS,{face:mv?'side':'down',flip:o.f||1,step:o.step,hood:o.h||'#888',skin:'#f2c9a0',cap:'#1b1b1f',pants:'#2b3a67',mask:'#b71c1c',still:!mv}); ctx.restore();
-  drawNameTag(o.dx,GROUND-104,o.nk||o.n,o.uid); drawBubble(o.dx,GROUND-126,chatBubble(o.uid)); }
+  drawNameTag(o.dx,GROUND-104,o.nk||o.n,o.uid,o.m||0); drawBubble(o.dx,GROUND-126,chatBubble(o.uid)); }
 setInterval(netTick,500);
 
 updateHud();

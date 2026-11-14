@@ -27,10 +27,23 @@
   // CSS klase vārdam pēc lomas (gold / neon)
   TW.nameHTML = (text, uid) => { const r = TW.role(uid), e = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     return r === 'admin' ? `👑 <span class="gold">${e(text)}</span>` : r === 'mod' ? `🛡️ <span class="neon">${e(text)}</span>` : e(text); };
+  // Aktīvs = lapa redzama un pēdējās 5 min kaut kas spiests. Fonā (lietotne nolaista/aizvērta) atslēdzam
+  // savienojumu – serveris uzreiz izdzēš online/ un presence/ ierakstus (onDisconnect). Neaktīvs → tikai izdzēšam ierakstus.
+  const IDLE = 5 * 60 * 1000; let lastInput = Date.now(), wasActive = true;
+  TW.active = () => !document.hidden && Date.now() - lastInput < IDLE;
+  const recheck = () => { const a = TW.active(); if (a !== wasActive) { wasActive = a; document.dispatchEvent(new Event(a ? 'tw-back' : 'tw-away')); } };
+  ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(ev => addEventListener(ev, () => { lastInput = Date.now(); if (!wasActive) recheck(); }, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) db.goOffline(); else { lastInput = Date.now(); db.goOnline(); } recheck(); });
+  addEventListener('pagehide', () => { db.goOffline(); });
+  addEventListener('pageshow', e => { if (e.persisted) { db.goOnline(); recheck(); } });
+  setInterval(recheck, 10000);
   // Tiešsaiste visās spēlēs (redz admins un moderatori)
   TW.heartbeat = (uid, info) => {
-    const ref = db.ref('online/' + uid); ref.onDisconnect().remove();
-    const beat = () => ref.set(Object.assign({ t: firebase.database.ServerValue.TIMESTAMP }, typeof info === 'function' ? info() : info)).catch(() => {});
-    beat(); return setInterval(beat, 15000);
+    const ref = db.ref('online/' + uid);
+    const beat = () => { if (TW.active()) ref.set(Object.assign({ t: firebase.database.ServerValue.TIMESTAMP }, typeof info === 'function' ? info() : info)).catch(() => {}); };
+    const arm = () => { ref.onDisconnect().remove(); beat(); };
+    document.addEventListener('tw-away', () => { ref.remove().catch(() => {}); });
+    document.addEventListener('tw-back', arm);
+    arm(); return setInterval(beat, 15000);
   };
 })();

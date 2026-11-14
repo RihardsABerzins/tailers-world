@@ -11,7 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=4"></script>
-<script src="tw-common.js?v=2"></script>
+<script src="tw-common.js?v=3"></script>
 <style>
   :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--yellow:#ffd34d;--green:#7cff8a;--red:#ff6b7a;--blue:#5ac8ff}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -95,7 +95,7 @@ function kickBtns(uid){ if(!canKick(uid)) return '';
   return kicked(uid)?`<button class="btn sm" data-unkick="${uid}">↩️ Atcelt izmešanu</button>`:`<button class="btn sm red" data-kick="${uid}">🚫 Izmest 10 min</button>`; }
 function nameOf(uid,fallback){ const st=STATS[uid]||{}; return TW.nameHTML(TW.display(st.name||fallback,st.nick),uid)+(st.nick?` <span class="meta">(${esc(st.name)})</span>`:''); }
 
-function renderOnline(){ const now=TW.now(), rows=Object.entries(ONLINE).filter(([u,v])=>v&&now-(v.t||0)<60000);
+function renderOnline(){ const now=TW.now(), rows=Object.entries(ONLINE).filter(([u,v])=>v&&now-(v.t||0)<40000);
   $('onCount').textContent=rows.length;
   $('online').innerHTML=rows.length?rows.map(([uid,v])=>`<div class="row${kicked(uid)?' kicked':''}"><div class="nm">${nameOf(uid,v.name)}<div class="meta">🎮 ${esc(v.game||'')}${v.where?' · '+esc(v.where):''}</div></div><div class="acts">${kickBtns(uid)}</div></div>`).join(''):'<div class="empty">Neviens šobrīd nespēlē.</div>';
   bind($('online')); }

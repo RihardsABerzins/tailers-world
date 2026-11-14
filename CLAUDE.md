@@ -37,6 +37,8 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Jaunā spēlē: izsauc `TW.heartbeat(uid, ...)`, lai admins redzētu spēlētājus tiešsaistē, un klausies `kicks/{uid}`.
 - Pēc ielogošanās var pievienot e-pastu (privāts, `users/{uid}/email`, `news` = piekrīt jaunumiem). E-pastu sūtīšanai un paroles atjaunošanai vajag servera funkciju (Firebase Blaze plāns) – vēl nav.
 - Čats: `tw-social.js` (`TWS`) – čuksti (`dm/`, `inbox/`), draugi (`friendReq/`, `friends/`), bloķēšana (`blocks/`), sūdzības (`reports/`, redz admin.html), pilsētas frāzes (`chat/{pilsēta}`, `TWS.PHRASES`). Spēlē: pieskaries citam spēlētājam → kartīte; 💬 poga radio joslā; frāzes parādās burbulī virs galvas. Filtrs: `TWS.clean()` (EXACT/START saraksti).
+- Tiešsaiste: `TW.active()` (tw-common.js) – lapa redzama un pēdējās 5 min kaut kas spiests. Fonā savienojums tiek atslēgts (`goOffline`), tāpēc spēlētājs pazūd no saraksta; neaktīvs → ieraksti `online/` un `presence/` tiek izdzēsti.
+- Spēlē blakus vārdam mazs 🏅 medaļu skaits (`presence/.../m`).
 - Mainot `firebase-config.js`, palielini `?v=` numuru visās lapās (kešatmiņa).
 
 - Medaļas: `tw-ach.js` (`TWA`) – saraksts `TWA.LIST`, grupas `TWA.GROUPS` (profils + katra spēle). Glabājas `ach/{uid}` (publiski), apskatāmas sākumlapā, citu medaļas redz "Citi spēlētāji". Spēle piešķir ar `TWA.sync(uid,{level,painted,city})`. Jaunai spēlei pievieno grupu un medaļas.
