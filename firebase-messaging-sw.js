@@ -1,7 +1,7 @@
 // Paziņojumu serviss (darbojas fonā, kad lapa ir aizvērta)
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
-importScripts('firebase-config.js');
+importScripts('firebase-config.js?v=3');
 
 const messaging = firebase.messaging();
 // Ziņas ar "notification" daļu Firebase parāda pats; šeit tikai datu ziņas
