@@ -45,7 +45,7 @@
   .tws-tab{flex:1;min-height:46px;border-radius:14px;border:2px solid #ffffff26;background:#ffffff0f;color:#fff;font:inherit;font-weight:800;font-size:15px;cursor:pointer;position:relative}
   .tws-tab.on{border-color:#ffd34d;background:#ffd34d22}
   .tws-dot{position:absolute;top:6px;right:8px;width:10px;height:10px;border-radius:50%;background:#ff3d5a;display:none}
-  .tws-body{flex:1;overflow:auto;padding:6px 12px 12px;-webkit-overflow-scrolling:touch}
+  .tws-body{flex:1;min-height:70px;overflow:auto;padding:6px 12px 12px;-webkit-overflow-scrolling:touch}
   .tws-row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:#ffffff0c;margin-bottom:8px;cursor:pointer}
   .tws-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#ff5fa2,#ffd34d);display:grid;place-items:center;font-weight:900;color:#1a1300;flex:0 0 auto}
   .tws-nm{flex:1;min-width:0}.tws-nm div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -59,7 +59,7 @@
   .tws-m small{display:block;color:#ffffff99;font-size:11px;margin-top:2px}
   .tws-in{display:flex;gap:8px;padding:10px 12px max(12px,env(safe-area-inset-bottom));border-top:1px solid #ffffff1a}
   .tws-in input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border-radius:14px;border:2px solid #ffffff2a;background:#0f0c20;color:#fff;outline:none}
-  .tws-ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:8px 12px max(12px,env(safe-area-inset-bottom));border-top:1px solid #ffffff1a;max-height:38%;overflow:auto}
+  .tws-ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:8px 12px max(12px,env(safe-area-inset-bottom));border-top:1px solid #ffffff1a;max-height:min(36vh,280px);overflow:auto}
   .tws-ph button{min-height:46px;border-radius:14px;border:2px solid #ffffff26;background:#ffffff12;color:#fff;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
   .tws-empty{color:#c4bde6;text-align:center;padding:24px 10px}
   .tws-toast{position:fixed;left:50%;top:max(12px,env(safe-area-inset-top));transform:translate(-50%,-120%);z-index:80;background:#1b1734;border:2px solid #5ac8ff;color:#fff;border-radius:16px;padding:10px 16px;font:700 15px system-ui;max-width:92vw;box-shadow:0 8px 24px #0009;transition:transform .3s;cursor:pointer}
