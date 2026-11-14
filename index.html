@@ -126,7 +126,7 @@
       <h3>✨ Izveidot profilu</h3>
       <label for="rName">Izdomā lietotājvārdu</label>
       <input id="rName" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="16" required>
-      <p class="hint">3–16 burti vai cipari. Neizmanto savu īsto vārdu un uzvārdu!</p>
+      <p class="hint">3–16 latīņu burti vai cipari (var arī lielos). Neizmanto savu īsto vārdu un uzvārdu!</p>
       <label for="rPass">Parole (vismaz 6 zīmes)</label>
       <input id="rPass" type="password" autocomplete="new-password" required>
       <label for="rPass2">Parole vēlreiz</label>
@@ -180,7 +180,7 @@ if(SUPPORT_URL){ const b=$('supportBtn'); b.href=SUPPORT_URL; b.target='_blank';
 const auth=firebase.auth(), db=firebase.database(), TS=firebase.database.ServerValue.TIMESTAMP;
 const BAD=['fuck','shit','bitch','dick','sex','porn','nazi','hitler','pimp','pis','dirs','sūd','sud','kak','huj','hui','bljad','blyat','suka','pidar','pedik','idiot','muļķ','mulk'];
 const norm=s=>s.trim().toLowerCase();
-function checkName(n){ if(!/^[a-z0-9_]{3,16}$/.test(n)) return 'Lietotājvārdā drīkst būt tikai latīņu burti (a–z), cipari un _ (3–16 zīmes).'; if(BAD.some(w=>n.includes(w))) return 'Lūdzu, izvēlies citu, pieklājīgu lietotājvārdu.'; return ''; }
+function checkName(n){ if(!/^[a-z0-9_]{3,16}$/i.test(n)) return 'Lietotājvārdā drīkst būt tikai latīņu burti (a–z), cipari un _ (3–16 zīmes).'; if(BAD.some(w=>n.toLowerCase().includes(w))) return 'Lūdzu, izvēlies citu, pieklājīgu lietotājvārdu.'; return ''; }
 const authErr=e=>({'auth/invalid-credential':'Nepareizs lietotājvārds vai parole.','auth/wrong-password':'Nepareizs lietotājvārds vai parole.','auth/user-not-found':'Nepareizs lietotājvārds vai parole.','auth/invalid-email':'Nepareizs lietotājvārds.','auth/too-many-requests':'Pārāk daudz mēģinājumu – pagaidi mazliet.','auth/network-request-failed':'Nav interneta savienojuma.','auth/email-already-in-use':'Šis lietotājvārds jau ir aizņemts.','auth/weak-password':'Parolei jābūt vismaz 6 zīmēm.'}[e.code]||'Kaut kas nogāja greizi. Mēģini vēlreiz.');
 
 $('loginForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=e.submitter; $('lErr').textContent=''; const n=norm($('lName').value), p=$('lPass').value;
@@ -188,15 +188,15 @@ $('loginForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=
   b.disabled=true; try{ await auth.signInWithEmailAndPassword(twUserEmail(n),p); }catch(err){ $('lErr').textContent=authErr(err); } b.disabled=false; });
 
 $('regForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=e.submitter; const out=$('rErr'); out.textContent='';
-  const n=norm($('rName').value), p=$('rPass').value, p2=$('rPass2').value; const bad=checkName(n);
+  const disp=$('rName').value.trim(), n=disp.toLowerCase(), p=$('rPass').value, p2=$('rPass2').value; const bad=checkName(disp);
   if(bad){ out.textContent=bad; return; } if(p.length<6){ out.textContent='Parolei jābūt vismaz 6 zīmēm.'; return; } if(p!==p2){ out.textContent='Paroles nesakrīt.'; return; }
   b.disabled=true;
   try{
     if((await db.ref('usernames/'+n).get()).exists()) throw {code:'auth/email-already-in-use'};
     const cred=await auth.createUserWithEmailAndPassword(twUserEmail(n),p); const uid=cred.user.uid;
     try{ await db.ref('usernames/'+n).set(uid); }catch(x){ await cred.user.delete(); throw {code:'auth/email-already-in-use'}; }
-    await db.ref('users/'+uid).set({name:n,created:TS,notify:false});
-    await db.ref('stats/'+uid).set({name:n,level:1,xp:0,painted:0,city:1,updated:TS});
+    await db.ref('users/'+uid).set({name:disp,created:TS,notify:false});
+    await db.ref('stats/'+uid).set({name:disp,level:1,xp:0,painted:0,city:1,updated:TS});
   }catch(err){ out.textContent=authErr(err); }
   b.disabled=false; });
 
@@ -206,8 +206,8 @@ auth.onAuthStateChanged(async u=>{
   $('loading').style.display='none';
   if(!u){ $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
   let name=u.email.split('@')[0]; try{ const s=await db.ref('users/'+u.uid+'/name').get(); if(s.exists()) name=s.val(); }catch(e){}
-  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; $('meName').textContent='👤 '+name;
-  $('hello').innerHTML=`Sveiks, ${name}! <span class="wave">👋</span>`;
+  $('auth').style.display='none'; $('games').style.display='block'; $('me').style.display='flex'; $('meName').textContent=(twIsAdmin(name)?'👑 ':'👤 ')+name;
+  $('hello').innerHTML=`Sveiks, ${name}${twIsAdmin(name)?' 👑':''}! <span class="wave">👋</span>`;
   setupNotify(u.uid);
 });
 

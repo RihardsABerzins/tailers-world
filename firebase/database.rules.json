@@ -17,17 +17,21 @@
     },
     "stats": {
       ".read": true,
-      ".indexOn": ["level", "xp"],
+      ".indexOn": [
+        "level",
+        "xp"
+      ],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['name','level','xp']) && newData.child('level').isNumber() && newData.child('level').val() >= 1 && newData.child('level').val() <= 99 && newData.child('name').isString() && newData.child('name').val().length <= 16"
+        ".validate": "newData.hasChildren(['name','level','xp']) && newData.child('level').isNumber() && newData.child('level').val() >= 1 && newData.child('level').val() <= 99 && newData.child('name').isString() && newData.child('name').val().length <= 16 && root.child('usernames/'+newData.child('name').val().toLowerCase()).val() === auth.uid"
       }
     },
     "presence": {
       "$city": {
         ".read": true,
         "$uid": {
-          ".write": "auth != null && auth.uid === $uid"
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['n','x','t']) && newData.child('n').isString() && root.child('usernames/'+newData.child('n').val().toLowerCase()).val() === $uid"
         }
       }
     },
