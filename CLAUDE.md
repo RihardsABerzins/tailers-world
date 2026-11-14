@@ -17,6 +17,10 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - `index.html` – sākumlapa ("Labdien!", spēļu kartītes). Jaunu spēli pievieno `GAMES` sarakstā.
 - `grafiti/` – Graffiti RPG. Kods raksta tekstus angliski; valodas slānis (skripts `<head>` sākumā, `PHRASES`/`WORDS`) pārtulko visu redzamo latviski. Noklusējums – latviešu; iestatījumos LV/EN slēdzis (localStorage `twLang`). Jaunam tekstam pievieno tulkojumu `PHRASES` sarakstā.
 
+## Instrukcija spēlē
+- Pirmajā reizē rāda soļu instrukciju (1–2 teikumi par katru funkciju + mērķis): `TUT_LV`/`TUT_EN` grafiti/index.html, atzīme `grafitiTut` localStorage; vēlreiz – pauzē „❓ Kā spēlēt”. Jaunai funkcijai pievieno soli.
+- Spēlētāju vārdus kanvā zīmē ar `fillTextRaw` (netulko, piem. „Gold”).
+
 ## Mobilā vadība (principi)
 - **Spied uz objekta pasaulē**: durvis, siena, miskaste, metro, vilciens → tēls pats aiziet un izdara darbību. Staigāšana un lēkšana – tikai ar bultiņām (spiediens uz tukšas vietas neko nedara).
 - **Viena kontekstuālā poga** labajā apakšā (īkšķa zonā) rāda, ko tieši var izdarīt (🎨 Zīmēt, 🛒 Veikals, 🍔 Ēst, 🚇 Metro…); paslēpta, ja nav ko darīt. 🫣 poga parādās tikai pie slēptuves.

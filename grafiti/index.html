@@ -88,7 +88,7 @@
     ['Riverside','Upmala'],['Uptown','Augšpilsēta'],['Crown Hill','Kroņkalns'],
     ['PAINT DEPOT','KRĀSU DEPO'],['CAFÉ','KAFEJNĪCA'],['PIZZERIA','PICĒRIJA'],['BIKES','VELO'],['SHOES','APAVI'],['ARCADE','SPĒĻU ZĀLE'],['FLOWERS','ZIEDI'],['BARBER','FRIZIERIS'],
     ['On foot','Kājām'],['Skateboard','Skrituļdēlis'],['Scooter','Skūteris'],['Hatchback','Hečbeks'],['Sports car','Sporta auto'],['Supercar','Superauto'],
-    ['New medal!','Jauna medaļa!'],['Good work – police not interested.','Labs darbs – policijai neinteresē.'],['sloppy drawing','paviršs zīmējums'],['patrol saw you','patrulis tevi redzēja'],['Hiding spot','Slēptuve'],['hiding spot','slēptuve'],['Wall (lvl','Siena (līm.'],['Wall –','Siena –'],
+    ['New medal!','Jauna medaļa!'],['How to play','Kā spēlēt'],['Good work – police not interested.','Labs darbs – policijai neinteresē.'],['sloppy drawing','paviršs zīmējums'],['patrol saw you','patrulis tevi redzēja'],['Hiding spot','Slēptuve'],['hiding spot','slēptuve'],['Wall (lvl','Siena (līm.'],['Wall –','Siena –'],
   ];
   // Atsevišķi vārdi (tikai veseli vārdi)
   const WORDS=[
@@ -112,6 +112,7 @@
 
   // Uz kanvas zīmētie uzraksti
   const C=CanvasRenderingContext2D.prototype, f=C.fillText, st=C.strokeText;
+  C.fillTextRaw=f; C.strokeTextRaw=st; // spēlētāju vārdiem – bez tulkošanas
   C.fillText=function(t,...a){ return f.call(this,tr(String(t)),...a); };
   C.strokeText=function(t,...a){ return st.call(this,tr(String(t)),...a); };
 
@@ -192,6 +193,19 @@
   #pTitle{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;color:#ddd}
   #pVol{width:84px;height:4px;accent-color:#ffd34d}
   #pVolTxt{font-size:11px;color:#ccc;min-width:30px}
+  #tutOv{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:#000c;backdrop-filter:blur(6px);padding:16px}
+  #tutOv.on{display:flex}
+  #tut{width:min(460px,100%);max-height:94vh;overflow:auto;background:linear-gradient(160deg,#2a2350,#1e2027 70%);border:1px solid #fff3;border-radius:22px;padding:20px 20px 16px;text-align:center;color:#fff;box-shadow:0 20px 60px #000a}
+  #tut .ti{font-size:64px;line-height:1;display:block;margin:4px 0 8px;animation:tutPop .5s cubic-bezier(.2,1.6,.4,1) both}
+  #tut h3{margin:0 0 8px;font-size:23px}
+  #tut p{margin:0 auto;font-size:17px;line-height:1.45;color:#e8e4ff;max-width:380px;min-height:3em}
+  #tut .dots{display:flex;gap:6px;justify-content:center;margin:14px 0 12px}
+  #tut .dots i{width:8px;height:8px;border-radius:50%;background:#fff3}
+  #tut .dots i.on{background:#ffd34d;width:20px;border-radius:5px}
+  #tut .tb{display:flex;gap:10px}
+  #tut .tb button{flex:1;min-height:52px;font-size:17px;border-radius:14px}
+  #tut .skip{background:none;border:0;color:#aab;font-size:14px;margin-top:10px;min-height:36px;cursor:pointer;text-decoration:underline}
+  @keyframes tutPop{from{transform:scale(.3) rotate(-15deg);opacity:0}to{transform:none;opacity:1}}
   #pauseBox{width:min(540px,94vw);max-height:90vh;overflow:auto;background:#1e2027;border-radius:16px;padding:20px;border:1px solid #fff2}
   #pauseBox input[type=range]{width:210px;accent-color:#ffd34d}
   #setBtn{position:fixed;left:290px;bottom:12px;z-index:12;background:#000a;color:#eee;border:1px solid #fff3}
@@ -300,6 +314,7 @@
 </div>
 <div class="overlay" id="shopOv"><div id="shop"></div></div>
 <div class="overlay" id="tpOv" style="background:#000c;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center"><div id="tp"></div></div>
+<div id="tutOv" data-notr><div id="tut"><span class="ti" id="tutI"></span><h3 id="tutH"></h3><p id="tutP"></p><div class="dots" id="tutD"></div><div class="tb"><button class="sec" id="tutBack"></button><button id="tutNext"></button></div><button class="skip" id="tutSkip"></button></div></div>
 <div class="overlay" id="pauseOv" style="display:flex;align-items:center;justify-content:center;background:#000b;backdrop-filter:blur(6px);z-index:40"><div id="pauseBox">
   <h2>⏸ Pause · Settings</h2>
   <div class="row"><div class="n">🔊 Game volume (master)</div><input id="sMaster" type="range" min="0" max="100"></div>
@@ -309,7 +324,7 @@
   <div class="row"><div class="n">🌐 Valoda / Language</div><button id="lgLv" class="sec">🇱🇻 LV</button><button id="lgEn" class="sec">🇬🇧 EN</button></div>
   <div class="row"><div class="n">Music</div><button id="pzPrev">⏮</button><button id="pzPlay">⏯</button><button id="pzNext">⏭</button><button id="pzMute" class="sec">🔇 Mute</button></div>
   <div style="margin:12px 0;font-size:13px;color:#aab;line-height:1.7">A D – run · W – jump · E – paint / metro / shop · ↓ S – hide · T – metro · Z X C V – items · M – music · F – fullscreen</div>
-  <button id="pzResume">▶ Resume (Esc)</button> <button class="sec" id="pzFs">⛶ Fullscreen</button> <a href="../index.html" class="sec" style="display:inline-block;background:#444;color:#eee;border-radius:8px;padding:8px 16px;font-weight:700;font-size:14px;text-decoration:none">🏠 Tailers World</a>
+  <button id="pzResume">▶ Resume (Esc)</button> <button class="sec" id="pzHelp">❓ How to play</button> <button class="sec" id="pzFs">⛶ Fullscreen</button> <a href="../index.html" class="sec" style="display:inline-block;background:#444;color:#eee;border-radius:8px;padding:8px 16px;font-weight:700;font-size:14px;text-decoration:none">🏠 Tailers World</a>
 </div></div>
 <div class="overlay" id="lootOv" style="display:flex;align-items:center;justify-content:center;background:#000d;z-index:36"><div id="loot"></div></div>
 <div class="overlay" id="rideOv" style="display:flex;align-items:center;justify-content:center;background:#000;z-index:38;font-size:28px;font-weight:800;text-align:center"><div id="rideText"></div></div>
@@ -1565,6 +1580,7 @@ addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(e.target&&e.target.tagName==='INPUT'&&k!=='escape'&&k!=='enter') return;
   if(typeof lootOpen!=='undefined'&&lootOpen){ if(k==='enter'||k===' '){ const b=lootEl.querySelector('button'); b&&b.click(); } return; }
+  if(document.getElementById('tutOv').classList.contains('on')){ if(k==='escape') closeTut(); else if(k==='arrowright'||k==='enter'||k===' ') document.getElementById('tutNext').click(); else if(k==='arrowleft') showTut(tutI-1); return; }
   if(mode==='pause'){ if(k==='escape'||k==='p') closePause(); return; }
   if(mode==='chat'){ if(k==='escape') TWS.close(); return; }
   if(mode==='ride') return;
@@ -1632,24 +1648,24 @@ function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&n
   NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
   if(window.TWA) TWA.sync(NET.uid,Object.assign({},save.st,NET.visits,{level:level(),painted:save.painted||0,city:save.st.maxCity=Math.max(save.st.maxCity||1,curCity+1),rich:save.st.rich=Math.max(save.st.rich||0,save.money),colors:save.colors.length,cars:save.cars})).then(n=>{ n.forEach((m,i)=>setTimeout(()=>{ toast(`🏅 <b>New medal!</b><br><span style="font-size:30px">${m.i}</span> ${TWA.title(m)}`); ding([784,988,1175,1568]); buzz(30); },4200*i)); }).catch(()=>{}); }
 const myMedals=()=>window.TWA&&TWA.owned?TWA.LIST.filter(m=>TWA.owned[m.id]).length:0;
-function drawNameTag(x,y,name,uid,medals){ if(!name) return; const role=window.TW?TW.role(uid):'', adm=role==='admin', mod=role==='mod', lab=(adm?'👑 ':mod?'🛡️ ':'')+name;
+function drawNameTag(x,y,name,uid,medals){ if(!name) return; const fT=(...a)=>(ctx.fillTextRaw||ctx.fillText).apply(ctx,a), sT=(...a)=>(ctx.strokeTextRaw||ctx.strokeText).apply(ctx,a); const role=window.TW?TW.role(uid):'', adm=role==='admin', mod=role==='mod', lab=(adm?'👑 ':mod?'🛡️ ':'')+name;
   ctx.save(); ctx.font='900 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
   if(adm){ const w=ctx.measureText(lab).width, sh=((time*120)%(w+160))-80;
     const g=ctx.createLinearGradient(x-w/2,y-9,x-w/2,y+9); g.addColorStop(0,'#fff8d0'); g.addColorStop(.35,'#ffd34d'); g.addColorStop(.6,'#b07a12'); g.addColorStop(1,'#ffe68a');
-    ctx.lineWidth=5; ctx.strokeStyle='#2a1a00'; ctx.strokeText(lab,x,y); ctx.shadowColor='#ffcc33'; ctx.shadowBlur=12; ctx.fillStyle=g; ctx.fillText(lab,x,y); ctx.shadowBlur=0;
+    ctx.lineWidth=5; ctx.strokeStyle='#2a1a00'; sT(lab,x,y); ctx.shadowColor='#ffcc33'; ctx.shadowBlur=12; ctx.fillStyle=g; fT(lab,x,y); ctx.shadowBlur=0;
     const hl=ctx.createLinearGradient(x-w/2+sh-30,0,x-w/2+sh+30,0); hl.addColorStop(0,'rgba(255,255,255,0)'); hl.addColorStop(.5,'rgba(255,255,255,.85)'); hl.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.globalCompositeOperation='source-atop'; ctx.fillStyle=hl; ctx.fillText(lab,x,y); }
-  else if(mod){ const fl=.85+.15*Math.sin(time*9)*(Math.sin(time*1.3)>.9?1:0); ctx.lineWidth=5; ctx.strokeStyle='#00243a'; ctx.strokeText(lab,x,y);
-    ctx.shadowColor='#2ec5ff'; ctx.shadowBlur=16; ctx.globalAlpha=fl; ctx.fillStyle='#bff3ff'; ctx.fillText(lab,x,y); ctx.shadowBlur=6; ctx.fillText(lab,x,y); }
-  else if(medals>=50){ const blue=medals>=100, pul=.6+.4*Math.sin(time*(blue?3:4)); ctx.lineWidth=5; ctx.strokeStyle=blue?'#001033':'#2a0008'; ctx.strokeText(lab,x,y); // 50 medaļas – sarkans, 100 – zils spīdums
+    ctx.globalCompositeOperation='source-atop'; ctx.fillStyle=hl; fT(lab,x,y); }
+  else if(mod){ const fl=.85+.15*Math.sin(time*9)*(Math.sin(time*1.3)>.9?1:0); ctx.lineWidth=5; ctx.strokeStyle='#00243a'; sT(lab,x,y);
+    ctx.shadowColor='#2ec5ff'; ctx.shadowBlur=16; ctx.globalAlpha=fl; ctx.fillStyle='#bff3ff'; fT(lab,x,y); ctx.shadowBlur=6; fT(lab,x,y); }
+  else if(medals>=50){ const blue=medals>=100, pul=.6+.4*Math.sin(time*(blue?3:4)); ctx.lineWidth=5; ctx.strokeStyle=blue?'#001033':'#2a0008'; sT(lab,x,y); // 50 medaļas – sarkans, 100 – zils spīdums
     ctx.shadowColor=blue?'#3d8bff':'#ff1f3d'; ctx.shadowBlur=10+10*pul;
     if(blue){ const w=ctx.measureText(lab).width, sh=((time*140)%(w+160))-80, g=ctx.createLinearGradient(x-w/2+sh-60,0,x-w/2+sh+60,0); g.addColorStop(0,'#5b9dff'); g.addColorStop(.5,'#ffffff'); g.addColorStop(1,'#5b9dff'); ctx.fillStyle=g; }
     else ctx.fillStyle='#ff6b78';
-    ctx.fillText(lab,x,y); ctx.shadowBlur=4; ctx.fillText(lab,x,y); }
-  else { ctx.lineWidth=4; ctx.strokeStyle='#000'; ctx.strokeText(lab,x,y); ctx.fillStyle='#fff'; ctx.fillText(lab,x,y); }
+    fT(lab,x,y); ctx.shadowBlur=4; fT(lab,x,y); }
+  else { ctx.lineWidth=4; ctx.strokeStyle='#000'; sT(lab,x,y); ctx.fillStyle='#fff'; fT(lab,x,y); }
   ctx.restore();
-  if(medals>0){ ctx.save(); ctx.font='900 17px system-ui'; const w=ctx.measureText(window.tr?window.tr(lab):lab).width, mx=x+w/2+5, t='🏅'+medals; // medaļu skaits mazs blakus vārdam
-    ctx.font='800 11px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.lineJoin='round'; ctx.lineWidth=3; ctx.strokeStyle='#000'; ctx.strokeText(t,mx,y+1); ctx.fillStyle='#ffd34d'; ctx.fillText(t,mx,y+1); ctx.restore(); } }
+  if(medals>0){ ctx.save(); ctx.font='900 17px system-ui'; const w=ctx.measureText(lab).width, mx=x+w/2+5, t='🏅'+medals; // medaļu skaits mazs blakus vārdam
+    ctx.font='800 11px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.lineJoin='round'; ctx.lineWidth=3; ctx.strokeStyle='#000'; sT(t,mx,y+1); ctx.fillStyle='#ffd34d'; fT(t,mx,y+1); ctx.restore(); } }
 // ---- čats: atver paneli, frāžu burbuļi virs galvām ----
 function openChat(fn){ if(!NET.on||!window.TWS||(mode!=='world'&&mode!=='chat')) return; mode='chat'; for(const k in keys) keys[k]=false; autoT=null; promptEl.style.display='none'; (fn||(()=>TWS.openPanel()))(); }
 document.getElementById('pChat').onclick=e=>{ e.stopPropagation(); audioInit(); if(!NET.on) return toast('Čats strādā, kad esi ielogojies.'); openChat(); };
@@ -1686,6 +1702,49 @@ function drawOther(o,mv){ ctx.save(); ctx.globalAlpha=.93;
 setInterval(netTick,500);
 
 updateHud();
+// ---- Pirmās spēles instrukcija (1–2 teikumi par katru funkciju) ----
+const TUT_LV=[
+  ['🎯','Tavs mērķis','Kļūsti par labāko grafiti mākslinieku! Zīmē sienas, krāj naudu un XP, kāp līmeņos un tiec līdz 99. līmenim un 10. pilsētai.'],
+  ['🕹️','Kustība',isTouch?'Staigā ar ◀ ▶ bultiņām un lec ar ⤒. Uzspied uz veikala, sienas vai miskastes – tēls pats aizies un izdarīs.':'Skrien ar A / D, lec ar W. Pie sienas, veikala vai metro spied E.'],
+  ['🎨','Zīmēšana',isTouch?'Pie sienas spied 🎨 Zīmēt un ar pirkstu apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.':'Pie sienas spied E un ar peli apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.'],
+  ['🧱','Līmeņi','Katrā līmenī ir 3 sienas. Sakrāj XP, un atveras nākamā līmeņa sienas – grūtākas, bet maksā vairāk.'],
+  ['🚓','Policija','Paviršs vai slikts zīmējums piesauc policiju – īpaši, ja redz patrulis vai cilvēki ar 📱. Bēdz vai paslēpies miskastē 🫣.'],
+  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Dārgāka krāsa dod lielāku bonusu, ātrāks transports – ātrāku ceļu.'],
+  ['🍔','Ēdiens','Tēlam vajag ēst. Kad ēdiens ir zems, ieej kafejnīcā.'],
+  ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
+  ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
+  ['⚙️','Iestatījumi','⚙ pogā ir skaņa, gaišums un valoda, 🎵 – radio. Šo instrukciju vari atvērt vēlreiz pauzē: ❓ Kā spēlēt.'],
+];
+const TUT_EN=[
+  ['🎯','Your goal','Become the best graffiti artist! Paint walls, earn money and XP, level up and reach level 99 and city 10.'],
+  ['🕹️','Moving',isTouch?'Walk with the ◀ ▶ arrows and jump with ⤒. Tap a shop, wall or dumpster – your character walks there and does it.':'Run with A / D, jump with W. Press E at a wall, shop or metro.'],
+  ['🎨','Painting',isTouch?'At a wall tap 🎨 Paint and trace the shape with your finger. The more accurate, the more money and XP.':'Press E at a wall and trace the shape with the mouse. The more accurate, the more money and XP.'],
+  ['🧱','Levels','Every level has 3 walls. Earn XP to unlock the next level\'s walls – harder, but they pay more.'],
+  ['🚓','Police','Sloppy or bad drawings attract the police – especially if a patrol or people with 📱 see you. Run or hide in a dumpster 🫣.'],
+  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Pricier colors give a bigger bonus, faster vehicles get you around faster.'],
+  ['🍔','Food','Your character needs to eat. When food is low, visit a café.'],
+  ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
+  ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
+  ['⚙️','Settings','The ⚙ button has sound, brightness and language, 🎵 is the radio. Open this guide again from pause: ❓ How to play.'],
+];
+let tutI=0, tutPrev='world';
+function showTut(i){ const T=window.TW_LANG==='en'?TUT_EN:TUT_LV, en=window.TW_LANG==='en'; tutI=Math.max(0,Math.min(T.length-1,i)); const [ic,h,t]=T[tutI];
+  const ti=document.getElementById('tutI'); ti.textContent=ic; ti.style.animation='none'; ti.offsetWidth; ti.style.animation='';
+  document.getElementById('tutH').textContent=h; document.getElementById('tutP').textContent=t;
+  document.getElementById('tutD').innerHTML=T.map((_,k)=>`<i class="${k===tutI?'on':''}"></i>`).join('');
+  const b=document.getElementById('tutBack'); b.textContent=en?'← Back':'← Atpakaļ'; b.style.visibility=tutI?'visible':'hidden';
+  document.getElementById('tutNext').textContent=tutI===T.length-1?(en?'Let\'s play! ▶':'Spēlējam! ▶'):(en?'Next →':'Tālāk →');
+  document.getElementById('tutSkip').textContent=en?'Skip':'Izlaist'; }
+function openTut(){ tutPrev=mode==='pause'?'pause':'world'; if(mode==='world') mode='pause'; pauseOv.classList.remove('on'); document.getElementById('tutOv').classList.add('on'); showTut(0); }
+function closeTut(){ document.getElementById('tutOv').classList.remove('on'); try{ localStorage.setItem('grafitiTut','1'); }catch(e){} if(tutPrev==='pause') openPauseAgain(); else mode='world'; }
+function openPauseAgain(){ mode='world'; openPause(); }
+document.getElementById('tutNext').onclick=()=>{ const T=window.TW_LANG==='en'?TUT_EN:TUT_LV; if(tutI>=T.length-1) closeTut(); else { showTut(tutI+1); buzz(8); } };
+document.getElementById('tutBack').onclick=()=>showTut(tutI-1);
+document.getElementById('tutSkip').onclick=closeTut;
+document.getElementById('pzHelp').onclick=openTut;
+{ let sx=null; const ov=document.getElementById('tutOv'); ov.addEventListener('pointerdown',e=>{ sx=e.clientX; }); ov.addEventListener('pointerup',e=>{ if(sx==null) return; const dx=e.clientX-sx; sx=null; if(Math.abs(dx)>50){ if(dx<0) document.getElementById('tutNext').click(); else showTut(tutI-1); } }); }
+let tutSeen=false; try{ tutSeen=localStorage.getItem('grafitiTut')==='1'; }catch(e){}
+if(!tutSeen) openTut(); else
 toast('Run along the street with <b>A / D</b>. Press <b>E</b> at a brick wall and paint. The Paint Depot (pink sign) sells colors and vehicles. People with 📱 can report you to the police – hide with <b>S</b>.');
 requestAnimationFrame(frame);
 </script>
