@@ -245,8 +245,8 @@ let save = { xp: 0, calls: 0, saved: 0, cpr: 0, perfect: 0, best: 0, last: [] };
 const levelOf = xp => { let l = 1, need = 120; while (xp >= need) { xp -= need; l++; need = 120 + 60 * (l - 1); } return { l, cur: xp, need }; };
 const M = { state: 'idle', c: null, px: 0, py: 0, t: 0, bumps: 0, route: null, rt: 0, cond: 100, sc: {}, expect: 0 };
 function newCall() {
-  const night = isNight(), lv = levelOf(save.xp).l + (night ? 2 : 0), pool = CASES.filter(c => c.lv <= lv && !save.last.includes(c.id) && (!night || c.lv >= Math.min(3, lv - 1)));
-  const c0 = (pool.length ? pool : CASES.filter(c => c.lv <= lv))[(Math.random() * (pool.length || 1)) | 0] || CASES[0], c = Object.assign({}, c0, { night });
+  const night = isNight(), lv = levelOf(save.xp).l + (night ? 2 : 0), okT = c => !c.time || c.time === 'any' || c.time === (night ? 'night' : 'day'), pool = CASES.filter(c => c.lv <= lv && okT(c) && !save.last.includes(c.id) && (!night || c.lv >= Math.min(3, lv - 1)));
+  const c0 = (pool.length ? pool : CASES.filter(c => c.lv <= lv && okT(c)))[(Math.random() * (pool.length || 1)) | 0] || CASES[0], c = Object.assign({}, c0, { night });
   save.last = [c.id, ...(save.last || [])].slice(0, 2);
   // pacients uz ietves pie kāda kvartāla, ne pārāk tuvu
   let b, side, px, py, tries = 0;
