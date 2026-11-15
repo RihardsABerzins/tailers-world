@@ -124,8 +124,14 @@
   .medals{margin-top:26px}
   .medals h2 span{color:var(--muted);font-size:16px;font-weight:700}
   .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
-  .mgroup{font-size:17px;margin:16px 0 10px}
-  .mgroup span{color:var(--muted);font-size:14px;font-weight:700}
+  .mgroup{background:var(--card);border:1px solid var(--line);border-radius:18px;margin:10px 0;overflow:hidden}
+  .mgroup summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px;font-size:17px;font-weight:800;min-height:56px}
+  .mgroup summary::-webkit-details-marker{display:none}
+  .mgroup summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:transform .2s}
+  .mgroup[open] summary::after{transform:rotate(180deg)}
+  .mgroup .mn{color:var(--muted);font-size:14px}
+  .mgroup .mp{font-size:18px;letter-spacing:2px;overflow:hidden;white-space:nowrap;text-overflow:clip;flex:1;min-width:0;text-align:right}
+  .mgroup .mgrid{padding:0 12px 14px}
   .medal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 8px;text-align:center;animation:rise .5s both}
   .medal .mi{font-size:38px;line-height:1.1;display:block}
   .medal b{display:block;font-size:14px;margin-top:6px;line-height:1.2}
@@ -392,7 +398,10 @@ async function checkMedals(){ if(!MED.uid) return; const st=MED.stats;
 function renderMedals(){ const own=TWA.owned||{}, got=TWA.LIST.filter(m=>own[m.id]).length;
   $('mCount').textContent=`${got}/${TWA.LIST.length}`;
   $('mGrid').innerHTML=TWA.GROUPS.map(G=>{ const ms=TWA.LIST.filter(m=>m.g===G.g), n=ms.filter(m=>own[m.id]).length;
-    return `<h3 class="mgroup">${G.t} <span>${n}/${ms.length}</span></h3><div class="mgrid">`+ms.map((m,i)=>`<div class="medal ${own[m.id]?'got':'lock'}" style="animation-delay:${i*.03}s"><span class="mi">${m.i}</span><b>${m.t}</b><small>${m.d}</small></div>`).join('')+'</div>'; }).join(''); }
+    // katra sadaļa sakļauta; virsrakstā – iegūto medaļu ikonas, spied, lai redzētu visas
+    const prev=ms.filter(m=>own[m.id]).slice(-8).map(m=>m.i).join('');
+    return `<details class="mgroup" data-g="${G.g}"${MED.openG&&MED.openG[G.g]?' open':''}><summary><span class="mt">${G.t}</span><span class="mn">${n}/${ms.length}</span><span class="mp">${prev||'—'}</span></summary><div class="mgrid">`+ms.map((m,i)=>`<div class="medal ${own[m.id]?'got':'lock'}" style="animation-delay:${i*.03}s"><span class="mi">${m.i}</span><b>${m.t}</b><small>${m.d}</small></div>`).join('')+'</div></details>'; }).join('');
+  $('mGrid').querySelectorAll('details').forEach(d=>d.ontoggle=()=>{ MED.openG=MED.openG||{}; MED.openG[d.dataset.g]=d.open; }); }
 function showNextMedal(){ const m=MED.queue.shift(); if(!m){ $('medalModal').classList.remove('on'); return; }
   $('nmIcon').textContent=m.i; $('nmTitle').textContent=m.t; $('nmDesc').textContent=m.d;
   $('nmMore').textContent=MED.queue.length?`+ vēl ${MED.queue.length} ${MED.queue.length===1?'medaļa':'medaļas'}`:'';
