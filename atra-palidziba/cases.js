@@ -534,7 +534,7 @@ window.CASES = [
     tools: ['recovery', 'blanket', 'calm', 'spoon', 'cpr', 'food'], need: ['recovery'], bonus: ['blanket', 'calm'], go: false,
     fact: 'Mirgojošas gaismas dažiem cilvēkiem ar epilepsiju var izraisīt krampjus. Kad krampji beigušies un cilvēks elpo – uz sāniem un paliec blakus, līdz viņš atžirgst.' },
 
-  { id: 'stroke', time: 'day', pose: 'sit', place: 'park', prop: 'benchP', inj: { k: 'sweat', z: 'face' }, p: { age: 'old', hair: '#d0d0d0', long: true, shirt: '#16a085', pants: '#34495e' }, cond: 35, lv: 5, who: '👵', name: 'Rasma, 72 gadi',
+  { id: 'stroke', time: 'day', pose: 'sit', place: 'park', prop: 'bench', inj: { k: 'sweat', z: 'face' }, p: { age: 'old', hair: '#d0d0d0', long: true, shirt: '#16a085', pants: '#34495e' }, cond: 35, lv: 5, who: '👵', name: 'Rasma, 72 gadi',
     call: 'Parkā sievietei pēkšņi nolaidās mutes kakts, un runa kļuva neskaidra.',
     see: 'Sieviete sēž uz soliņa. Viena sejas puse nokārusies, labā roka vāja. Viņa runā neskaidri.',
     q: [
@@ -664,7 +664,7 @@ window.CASES = [
     tools: ['still', 'blanket', 'calm', 'sit', 'walk', 'water'], need: ['still', 'blanket'], bonus: ['calm'], go: true,
     fact: 'Ja sāp kakls vai mugura vai tirpst kājas – cilvēku nekustina! Atbalsti galvu, apsedz un gaidi ātros. Naktī ar riteni brauc ar lukturiem un ķiveri.' },
 
-  { id: 'hypotherm', time: 'night', pose: 'slump', place: 'park', prop: 'benchP', inj: { k: 'sweat', z: 'body' }, p: { age: 'old', hair: '#bdbdbd', long: false, shirt: '#6d4c41', pants: '#2c3e50' }, cond: 35, lv: 4, who: '👴', name: 'Pēteris, 77 gadi',
+  { id: 'hypotherm', time: 'night', pose: 'slump', place: 'park', prop: 'bench', inj: { k: 'sweat', z: 'body' }, p: { age: 'old', hair: '#bdbdbd', long: false, shirt: '#6d4c41', pants: '#2c3e50' }, cond: 35, lv: 4, who: '👴', name: 'Pēteris, 77 gadi',
     call: 'Naktī parkā aukstumā sēž vecs vīrs. Viņš izmircis un trīc.',
     see: 'Vīrietis sēž uz soliņa, drēbes slapjas no lietus. Viņš stipri trīc un runā lēni. Viņš apmaldījās.',
     q: [
@@ -729,7 +729,7 @@ window.CASES = [
     tools: ['tweezer', 'soap', 'plaster', 'oil', 'butter', 'heat'], need: ['tweezer', 'soap'], bonus: ['plaster'], go: false,
     fact: 'Ērci izņem ar pinceti, satverot tuvu ādai, un izvelk taisni. Vietu nomazgā. Vēro: ja ap kodumu parādās sarkans aplis vai sākas drudzis – pie ārsta. Latvijā der potēties pret ērcēm!' },
 
-  { id: 'dog', time: 'day', pose: 'sit', place: 'park', prop: 'benchP', inj: { k: 'scrape', z: 'knee' }, p: { age: 'kid', hair: '#3b2a1a', long: true, shirt: '#f78fb3', pants: '#2c3e50' }, first: { bandage: 'soap' }, cond: 60, lv: 3, who: '👧', name: 'Anete, 10 gadi',
+  { id: 'dog', time: 'day', pose: 'sit', place: 'park', prop: 'bench', inj: { k: 'scrape', z: 'knee' }, p: { age: 'kid', hair: '#3b2a1a', long: true, shirt: '#f78fb3', pants: '#2c3e50' }, first: { bandage: 'soap' }, cond: 60, lv: 3, who: '👧', name: 'Anete, 10 gadi',
     call: 'Parkā svešs suns iekoda meitenei kājā.',
     see: 'Meitene sēž uz soliņa. Pie ceļa zobu pēdas, nedaudz asiņo. Suņa saimnieks ir blakus.',
     q: [

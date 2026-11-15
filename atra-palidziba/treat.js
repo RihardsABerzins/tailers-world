@@ -18,14 +18,14 @@
       P.Z = { head: z(L.head, 26), face: z([0, L.head[1] + 4], 14), nose: z([0, L.head[1] + 2], 9), chest: z([0, shY + 28], 24), thigh: z([-10, -72], 16), legs: z([0, -40], 30), knee: z(L.legL[1], 14),
         handL: z(L.armL[2], 13), handR: z(L.armR[2], 13), armR: z(L.armR[1], 15), body: [cx - 90, cy, 100] };
       return P; }
-    const bench = c.prop === 'bench' && pose === 'sit', slump = pose === 'slump', lean = A.has('lean') ? 5 : A.has('back') ? -3 : 0;
+    const bench = c.prop === 'bench' && (pose === 'sit' || pose === 'slump'), slump = pose === 'slump' && !bench, lean = A.has('lean') ? 5 : A.has('back') ? -3 : 0;
     const fr = c.inj.k === 'fracture', burn = c.inj.k === 'burn', bee = c.id === 'bee';
     let P;
     if (bench) { // sēž uz soliņa: gurni uz sēdekļa, apakšstilbi uz leju
       const hipY = 226, shY = 166, head = [240, shY - HR - 8 + lean];
       P = { lie: false, bench, hr: HR, shoeA: 0, head, neck: [240, shY - 6], shL: [217, shY], shR: [263, shY], hipL: [226, hipY], hipR: [254, hipY],
-        armL: [[219, shY + 6], [208, shY + 32], [214, hipY - 2]], armR: [[261, shY + 6], [272, shY + 32], [266, hipY - 2]],
-        legL: [[232, hipY], [226, hipY + 18], [224, 278]], legR: [[248, hipY], [256, hipY + 18], [258, 278]] };
+        armL: [[219, shY + 6], [209, shY + 34], [227, hipY + 6]], armR: [[261, shY + 6], [271, shY + 34], [253, hipY + 6]],
+        thighs: [[228, hipY], [252, hipY]], legL: [[228, hipY + 14], [227, 252], [226, 278]], legR: [[252, hipY + 14], [253, 252], [254, 278]] };
     } else { // sēž uz zemes: gurni pie zemes, kājas izstieptas pa labi, ceļgals nedaudz pacelts
       const hipY = 264, shY = 202 + (slump ? 10 : 0), sx = slump ? 8 : 0, head = [236 + sx + (slump ? 4 : 0), shY - HR - 8 + lean + (slump ? 4 : 0)];
       const armR = fr ? [[256 + sx, shY + 6], [262 + sx, shY + 30], [238 + sx, shY + 40]] : burn ? [[256 + sx, shY + 6], [276 + sx, shY + 24], [298 + sx, shY + 30]] : [[256 + sx, shY + 6], [266 + sx, shY + 28], [270, 256]];
@@ -42,7 +42,7 @@
   const OL = '#24222b', LW = 2.6;
   const sh = (hex, k) => { const n = parseInt(String(hex).slice(1), 16); if (isNaN(n)) return hex; return `rgb(${Math.min(255, Math.round(((n >> 16) & 255) * k))},${Math.min(255, Math.round(((n >> 8) & 255) * k))},${Math.min(255, Math.round((n & 255) * k))})`; };
   function limb(g, pts, w, col) { g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke(); }
-  const cap = (g, pts, w, col) => { limb(g, pts, w + LW * 2, OL); limb(g, pts, w, col); };
+  const cap = (g, pts, w, col) => { limb(g, pts, w + LW * 2, OL); limb(g, pts, w, col); if (w > 7) limb(g, pts.map(([x, y]) => [x + w * .26, y + w * .08]), w * .38, 'rgba(0,0,0,.13)'); };
   const along = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   function hand(g, [x, y], skin, r = 5.2) { g.fillStyle = skin; g.strokeStyle = OL; g.lineWidth = LW; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.stroke(); }
   function shoe(g, [x, y], col, ang = 0) { g.save(); g.translate(x, y); g.rotate(ang); g.fillStyle = col; g.strokeStyle = OL; g.lineWidth = LW;
@@ -82,6 +82,8 @@
   function body(g, B, o) { const skin = o.skin, shoeC = o.shoe || '#26242c';
     [B.legR, B.legL].forEach(l => { cap(g, l, 14, o.pants); const n = l.length, a = l[n - 2], b = l[n - 1]; cap(g, [along(a, b, .8), b], 16, sh(o.pants, 1.22)); });
     shoe(g, B.legR[B.legR.length - 1], shoeC, B.shoeA); shoe(g, B.legL[B.legL.length - 1], shoeC, B.shoeA);
+    if (B.thighs) B.thighs.forEach(([x, y]) => { g.fillStyle = o.pants; g.strokeStyle = OL; g.lineWidth = LW; g.beginPath(); g.roundRect(x - 12, y - 6, 24, 24, 10); g.fill(); g.stroke();
+      g.fillStyle = sh(o.pants, 1.18); g.beginPath(); g.roundRect(x - 9, y - 3, 18, 9, 5); g.fill(); g.fillStyle = 'rgba(0,0,0,.14)'; g.fillRect(x - 10, y + 13, 20, 4); });
     const [nx, ny] = B.neck; g.fillStyle = skin; g.strokeStyle = OL; g.lineWidth = LW; g.beginPath(); g.rect(nx - B.hr * .26, B.head[1] + B.hr * .6, B.hr * .52, ny - B.head[1] - B.hr * .4); g.fill(); g.stroke();
     torso(g, B, o.shirt);
     g.fillStyle = skin; g.beginPath(); g.arc(nx, B.shL[1] - 3, B.hr * .34, .05 * Math.PI, .95 * Math.PI); g.fill(); g.stroke(); // kakla izgriezums
@@ -159,6 +161,27 @@
       g.fillStyle = N ? '#ffe7a0' : C('#f4f1e4', z); g.beginPath(); g.arc(lx, ly, Math.max(1.5, 6 * s), 0, 7); g.fill(); };
     const treeLine = col => { for (let x = -10; x < SW + 20; x += 9 + R() * 8) { g.fillStyle = C(col, 7); g.beginPath(); g.arc(x, VY - 2, 7 + R() * 9, Math.PI, 0); g.fill(); } };
     // fasāde ar logiem perspektīvā (sāniska siena gar ielu)
+    // māja ar apjomu: fasāde gar ielu + priekšējā gala siena, dzega, veikals ar markīzi pirmajā stāvā, logi ar rāmjiem
+    const building = ({ X, sd, z0, z1, H, col, aw }) => { const zc = (z0 + z1) / 2, ol = OLz(z0), D = 220, Xo = X + sd * D;
+      poly([pz(Xo, z0), pz(X, z0), pz(X, z0, H), pz(Xo, z0, H)], C(mixc(col, '#000000', .16), z0), ol); // gala siena (ēnā)
+      for (let r = 0; r * 56 + 116 < H - 12; r++) for (let k = 0; k < 3; k++) { const xa = X + sd * (30 + k * 66), xb = xa + sd * 40, ha = 80 + r * 56, hb = ha + 36; poly([pz(xa, z0, ha), pz(xb, z0, ha), pz(xb, z0, hb), pz(xa, z0, hb)], N && R() < .5 ? '#ffd36a' : C(N ? '#262c50' : '#8fbad8', z0), C('#ffffff', z0), 1.6); }
+      poly([pz(X, z0), pz(X, z1), pz(X, z1, H), pz(X, z0, H)], C(col, zc), ol);
+      const sg = g.createLinearGradient(...pz(X, zc, 0), ...pz(X, zc, 60)); sg.addColorStop(0, 'rgba(0,0,0,.18)'); sg.addColorStop(1, 'rgba(0,0,0,0)'); poly([pz(X, z0), pz(X, z1), pz(X, z1, 60), pz(X, z0, 60)], sg);
+      poly([pz(X, z0, H - 2), pz(X, z1, H - 2), pz(X - sd * 10, z1, H + 10), pz(X - sd * 10, z0, H + 10)], C(mixc(col, '#000000', .3), zc), ol); // dzega
+      const n = Math.max(2, Math.round((z1 - z0) / z0 * 3.2)), rows = Math.max(2, Math.round((H - 80) / 56));
+      for (let i = 0; i < n; i++) { const za = z0 + (z1 - z0) * (i + .2) / n, zb = z0 + (z1 - z0) * (i + .8) / n;
+        poly([pz(X, za, 8), pz(X, zb, 8), pz(X, zb, 54), pz(X, za, 54)], N ? '#ffd98a' : C('#bfe3f7', za), C('#ffffff', za), 2); // veikala skatlogs
+        poly([pz(X, za - .02 * za, 58), pz(X, zb + .02 * zb, 58), pz(X - sd * 26, zb + .02 * zb, 48), pz(X - sd * 26, za - .02 * za, 48)], C(i % 2 ? aw : '#ffffff', za), ol, .8); // markīze
+        for (let r = 0; r < rows; r++) { const ha = 80 + r * 56, hb = ha + 36; if (hb > H - 12) break; const lit = N && R() < .55;
+          poly([pz(X, za, ha), pz(X, zb, ha), pz(X, zb, hb), pz(X, za, hb)], lit ? ['#ffd36a', '#ff9ad5', '#9ae6ff'][(i + r) % 3] : C(N ? '#2a3156' : '#9fcbe8', za), C('#ffffff', za), Math.max(.8, 2.4 / za));
+          if (!N) poly([pz(X, za + (zb - za) * .15, ha + 6), pz(X, za + (zb - za) * .3, ha + 6), pz(X, za + (zb - za) * .5, hb - 4), pz(X, za + (zb - za) * .35, hb - 4)], 'rgba(255,255,255,.35)'); // atspīdums
+          poly([pz(X, za, ha - 4), pz(X, zb, ha - 4), pz(X - sd * 5, zb, ha - 1), pz(X - sd * 5, za, ha - 1)], C('#ffffff', za)); } } }; // palodze
+    // stāvoša mašīna no aizmugures (dziļuma sajūtai)
+    const carBack = (X, z, col) => { const [x, y] = pz(X, z), s = 1 / z, w = 92 * s, ol = OLz(z); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(x, y, w * .62, 7 * s, 0, 0, 7); g.fill();
+      g.fillStyle = OLz(z); [-1, 1].forEach(k => g.fillRect(x + k * w * .36 - 7 * s, y - 16 * s, 14 * s, 16 * s));
+      g.strokeStyle = ol; g.lineWidth = Math.max(.8, 2.4 * s); g.fillStyle = C(col, z); g.beginPath(); g.roundRect(x - w / 2, y - 52 * s, w, 40 * s, 8 * s); g.fill(); g.stroke();
+      g.beginPath(); g.roundRect(x - w * .36, y - 80 * s, w * .72, 30 * s, 10 * s); g.fill(); g.stroke(); g.fillStyle = C(N ? '#1c2340' : '#9fcbe8', z); g.beginPath(); g.roundRect(x - w * .3, y - 76 * s, w * .6, 22 * s, 6 * s); g.fill();
+      g.fillStyle = '#ff4d4d'; [-1, 1].forEach(k => g.fillRect(x + k * w * .36 - 8 * s, y - 44 * s, 16 * s, 8 * s)); g.fillStyle = '#f4f1e4'; g.fillRect(x - 14 * s, y - 30 * s, 28 * s, 9 * s); };
     const facade = (X, z0, z1, H, col, rows) => { wallX(X, z0, z1, H, C(col, (z0 + z1) / 2), OLz(z0));
       const cols = Math.max(2, Math.round((z1 - z0) * 2.2));
       for (let i = 0; i < cols; i++) for (let r = 0; r < rows; r++) { const za = z0 + (z1 - z0) * (i + .25) / cols, zb = z0 + (z1 - z0) * (i + .75) / cols, ha = H * (r + .3) / rows, hb = H * (r + .78) / rows;
@@ -193,8 +216,9 @@
       [[70, 1.5], [390, 1.5]].forEach(([X]) => { g.strokeStyle = C('#e7e1d6', 3); g.lineWidth = 2; g.beginPath(); g.moveTo(...pz(X, 1.5)); g.lineTo(...pz(X, 60)); g.stroke(); });
       g.strokeStyle = C('#b8ad9c', 1.2); g.lineWidth = 1; for (let X = -200; X < 700; X += 60) { g.beginPath(); g.moveTo(...pz(X, 1)); g.lineTo(...pz(X, 1.5)); g.stroke(); } [1.15, 1.32].forEach(z => { g.beginPath(); g.moveTo(...pz(-300, z)); g.lineTo(...pz(800, z)); g.stroke(); });
       const cols = ['#e3c9a8', '#c98f6f', '#d9d2c3', '#b9c7d6', '#e8b979', '#c4a3c8'];
-      [[-40, 1], [500, -1]].forEach(([X]) => { let z = X < VX ? 1.25 : 1.6, i = X < VX ? 0 : 3; while (z < 30) { const z1 = z * (1.5 + R() * .4), H = 170 + R() * 160; facade(X, z, z1, H, cols[i++ % cols.length], Math.round(H / 60)); z = z1; } });
-      [2.2, 3.6, 6, 10].forEach(z => { lamp(60, z); lamp(400, z); }); [2.8, 4.8].forEach(z => tree(440, z, 0, .7)); }
+      const blds = []; [[-40, -1], [500, 1]].forEach(([X, sd]) => { let z = X < VX ? 1.25 : 1.6, i = X < VX ? 0 : 3; while (z < 30) { const z1 = z * (1.5 + R() * .4); blds.push({ X, sd, z0: z, z1, H: 190 + R() * 150, col: cols[i++ % cols.length], aw: ['#e74c3c', '#2e86de', '#27ae60', '#f39c12'][i % 4] }); z = z1; } });
+      blds.sort((a, b) => b.z0 - a.z0).forEach(b => building(b));
+      [[330, 5.5, '#3d6fb6'], [130, 3.4, '#e8b93a'], [335, 2.6, '#c0392b']].forEach(([X, z, col]) => carBack(X, z, col)); [2.2, 3.6, 6, 10].forEach(z => { lamp(60, z); lamp(400, z); }); [2.8, 4.8].forEach(z => tree(440, z, 0, .7)); }
     if (pl === 'school') {
       const fz = 3.3; poly([pz(-400, fz), pz(860, fz), pz(860, fz, 230), pz(-400, fz, 230)], C('#b5553d', fz), OLz(fz));
       g.strokeStyle = C('#9c4430', fz); g.lineWidth = .8; for (let H = 12; H < 230; H += 12) { g.beginPath(); g.moveTo(...pz(-400, fz, H)); g.lineTo(...pz(860, fz, H)); g.stroke(); }
@@ -254,7 +278,7 @@
     const fr = c.inj.k === 'fracture' && !A.has('splint'), sweat = st.sweat, mood = st.mood, nb = c.inj.k === 'nosebleed' && !(A.has('lean') && A.has('pinch')), swollen = c.inj.k === 'swollen' && !A.has('epi');
     const o = { skin, shirt, pants, hair, long: p.long, age: p.age, mood, calm: A.has('calm'), sleeve: 'short', armCol: fr ? sh(shirt, .9) : shirt, tilt: P.lie ? 0 : A.has('lean') ? .18 : A.has('back') ? -.22 : 0, extra: rr => {
       if (swollen) { g.fillStyle = 'rgba(230,80,80,.28)'; g.beginPath(); g.ellipse(0, rr * .1, rr * .9, rr * .95, 0, 0, 7); g.fill(); g.fillStyle = '#d0505a'; g.beginPath(); g.ellipse(0, rr * .5, rr * .3, rr * .14, 0, 0, 7); g.fill(); }
-      if (sweat) { g.fillStyle = '#7fc8ff'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(-rr * .5 + i * rr * .5, -rr * .5 + ((T.now * 12 + i * 4) % (rr * .5)), 2.2, 0, 7); g.fill(); } }
+      if (sweat) { g.fillStyle = '#8fd3ff'; g.strokeStyle = '#3b8fd0'; g.lineWidth = 1; [[-.92, -.25, 0], [.95, -.1, 2], [-.7, -.62, 4]].forEach(([dx, dy, ph]) => { const x = dx * rr, y = dy * rr + ((T.now * 9 + ph) % 6); g.beginPath(); g.moveTo(x, y - 5); g.quadraticCurveTo(x + 3.4, y + 1, x, y + 3); g.quadraticCurveTo(x - 3.4, y + 1, x, y - 5); g.fill(); g.stroke(); }); }
       if (nb) { g.fillStyle = '#c0182b'; g.fillRect(-1.5, rr * .26, 3, rr * .2); for (let i = 0; i < 2; i++) { const yy = rr * .46 + ((T.now * 34 + i * 10) % (rr * .9)); g.beginPath(); g.arc(A.has('back') ? 0 : .5, yy, 2, 0, 7); g.fill(); } } } };
     if (P.lie) { g.save(); g.translate(P.xf[0], P.xf[1]); g.rotate(-Math.PI / 2); body(g, P.L, o); g.restore(); } else body(g, P, o);
     // traumas
