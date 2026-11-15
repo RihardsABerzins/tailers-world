@@ -1569,6 +1569,9 @@ async function loadSave(uid){
   if(!save.colors.includes(save.color)) save.color=save.colors[0];
   // tēla izskats ir kopīgs visām spēlēm – users/{uid}/look
   try{ const lk=(await NET.db.ref('users/'+uid+'/look').get()).val(); if(lk&&typeof lk==='object') save.look=lk; else if(save.look) NET.db.ref('users/'+uid+'/look').set(save.look).catch(()=>{}); }catch(e){}
+  // nauda – kopīgajā maciņā (visām spēlēm); pirmo reizi tur ieliek šīs spēles naudu
+  try{ const w=await TW.wallet.get(uid); if(w==null) await TW.wallet.set(uid,save.money||0); else save.money=w; }catch(e){}
+  walletBase=save.money; TW.wallet.watch(uid,v=>{ if(v==null||walletBusy) return; save.money=Math.max(0,v+(save.money-walletBase)); walletBase=v; dispMoney=save.money; shownMoney=-1; });
   saveUid=uid; saveOk=true; _lx=-1; dispMoney=save.money; shownMoney=-1; foodBand=3;
   metroObjs.forEach(o=>{ if(o.kind==='mwall'){ o.tier=Math.max(0,level()-1-Math.floor(Math.random()*4)); o.shape=pickShape(o.tier); } });
   renderInv(); updateHud(); setTimeout(dailyGift,2500);
@@ -1578,7 +1581,10 @@ function dailyGift(){ if(!saveOk) return; const d=new Date(Date.now()+(NET.off||
   if(save.daily===key) return; save.daily=key; save.money+=20; dispMoney=save.money-20; shownMoney=-1; persist(); ding([523,659,784,1047]);
   toast('🌙 <b>Daily gift: € 20!</b><br>Enough to refill black paint. A new gift comes every night at 02:00.'); }
 setInterval(dailyGift,60000);
-function cloudSave(){ if(NET.on&&saveOk&&saveUid) NET.db.ref(DBP+'saves/'+saveUid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
+let walletBase=0, walletBusy=false;
+function walletSync(){ if(!saveUid||walletBusy||!NET.on) return; const d=Math.round(save.money-walletBase); if(!d) return; walletBusy=true; const sent=save.money;
+  TW.wallet.add(saveUid,d).then(v=>{ save.money=Math.max(0,v+(save.money-sent)); walletBase=v; walletBusy=false; shownMoney=-1; }).catch(()=>{ walletBusy=false; }); }
+function cloudSave(){ walletSync(); if(NET.on&&saveOk&&saveUid) NET.db.ref(DBP+'saves/'+saveUid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') cloudSave(); });
 function netTick(){ if(!NET.on) return;
   if(window.TW&&TW.active&&!TW.active()){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } NET.city=-2; return; } // fonā/neaktīvs – citiem nerādāmies
