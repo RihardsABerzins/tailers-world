@@ -259,11 +259,17 @@ function newCall() {
   sfx('call'); buzz([60, 80, 60]);
   sheet(`<div class="step">📞 Izsaukums${night ? ' · 🌙 Nakts – grūtāks, bet ×1.5' : ''}</div><h2>${c.who} ${c.call}</h2><p>📍 <b>${streetOf(rx, ry)}</b> · ${Math.round(M.route.len / 10)} m</p>
     <p style="color:#9fb0ff">Ieslēdz sirēnu 🚨 – mašīnas palaidīs garām. Sarkanie ceļi kartē ir sastrēgumi.</p>
-    <button class="main red" id="go">🚑 Braucam!</button>`);
+    <button class="main red" id="go">🚑 Braucam!</button><button class="main ghostB" id="skip">🚗 Ignorēt – vienkārši braukāt</button>`);
   $('go').onclick = () => { closeSheet(); M.state = 'toPatient'; if (!amb.siren) toggleSiren(); };
+  $('skip').onclick = () => { closeSheet(); freeDrive(); };
+}
+// brīvs brauciens: izsaukumu var ignorēt; jauns pienāk pats pēc ~1 min vai uzreiz ar pogu 📞
+function freeDrive() { M.state = 'idle'; M.route = null; if (amb.siren) toggleSiren(); toast('🚗 Brīvs brauciens! Nākamais izsaukums pēc ~1 min (vai spied 📞).');
+  const id = M.freeId = (M.freeId || 0) + 1; setTimeout(() => { if (M.state === 'idle' && M.freeId === id) newCall(); }, 60000);
 }
 function act() {
   if (nearFuel() && Math.abs(amb.v) < 70 && M.state !== 'scene') { amb.v = 0; refuel(); return; }
+  if (M.state === 'idle') { newCall(); return; }
   if (M.state === 'toPatient' && near(M.rx, M.ry, 130) && Math.abs(amb.v) < 70) { amb.v = 0; startScene(); }
   else if (M.state === 'toHospital' && near(HOSP_BAY.x, HOSP_BAY.y, 140) && Math.abs(amb.v) < 70) { amb.v = 0; arriveHospital(); }
   else if (M.state === 'toPatient' || M.state === 'toHospital') toast('Piebrauc tuvāk un apstājies pie mērķa 📍');
@@ -608,7 +614,7 @@ function hud() {
   const L = levelOf(save.xp); let task = '', dist = 0, actOn = false, actI = '🩺', actT = 'Palīdzēt', go = false;
   if (M.state === 'toPatient') { dist = Math.round(M.route.len / 10); task = `${M.c.who} ${M.c.call}<small>📍 ${streetOf(M.rx, M.ry)} · ⏱ ${Math.floor(M.t)} s</small>`; actOn = near(M.rx, M.ry, 130) && Math.abs(amb.v) < 70; }
   else if (M.state === 'toHospital') { dist = Math.round(M.route.len / 10); task = `🏥 Ved pacientu uz slimnīcu<small>${M.c.who} ${M.c.name} · ⏱ ${Math.floor(M.t2)} s</small>`; actOn = near(HOSP_BAY.x, HOSP_BAY.y, 140) && Math.abs(amb.v) < 70; actI = '🏥'; actT = 'Nodot'; go = true; }
-  else if (M.state === 'scene') task = '🩺 Palīdzi pacientam'; else task = '📻 Gaidi izsaukumu…';
+  else if (M.state === 'scene') task = '🩺 Palīdzi pacientam'; else { task = '🚗 Brīvs brauciens<small>Spied 📞, kad gribi izsaukumu</small>'; actOn = true; actI = '📞'; actT = 'Izsaukums'; go = true; }
   if (nearFuel() && Math.abs(amb.v) < 70 && M.state !== 'scene' && amb.fuel < 99) { actOn = true; actI = '⛽'; actT = `€${fuelCost()}`; go = true; }
   const key = [L.l, L.cur, wallet, Math.floor(hourNow() * 6), task, dist, actOn, actI, actT, Math.round(M.cond), Math.round(amb.fuel)].join('|'); if (key === hudKey) return; hudKey = key;
   const hh = hourNow(), clk = `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.floor(hh % 1 * 60)).padStart(2, '0')}`; $('sLv').textContent = `🚑 ${L.l}. līm. · ${isNight() ? '🌙' : '☀️'} ${clk}`; $('sXp').style.width = (L.cur / L.need * 100) + '%'; $('sMoney').innerHTML = `<b style="color:${wallet < 0 ? '#ff5a6a' : '#ffd34d'};font-size:14px;display:inline">💰 €${wallet}</b> <span style="color:${amb.fuel < 20 ? '#ff5a6a' : '#cfe'}">⛽ ${Math.round(amb.fuel)}%</span>`;

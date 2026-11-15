@@ -68,6 +68,7 @@ body.kb #stick{display:none}
 .main.red{background:linear-gradient(160deg,#ff5a6a,#d81b33);color:#fff}
 .main.green{background:linear-gradient(160deg,#4cd97b,#1e9e50);color:#fff}
 .main:disabled{opacity:.4}
+.main.ghostB{background:#ffffff14;color:#dfe6ff;border:1px solid #ffffff33;font-size:15px;min-height:46px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fact{background:#3d8bff1f;border:1px solid #3d8bff55;border-radius:14px;padding:10px 12px;margin:10px 0;font-size:14.5px;line-height:1.4}
 .fact b{color:#9fc4ff}
