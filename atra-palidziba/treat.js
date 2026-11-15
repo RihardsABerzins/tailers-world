@@ -332,7 +332,7 @@
     const isGood = id => c.need.includes(id) || (c.bonus || []).includes(id);
     const apply = (id, x, y) => {
       const tile = el.querySelector(`.tile[data-t="${id}"]`);
-      if (!isGood(id)) { st.applied.add(id); st.wrong.add(id); st.cond = Math.max(0, st.cond - 15); st.fxs.push({ k: 'bad', x, y, t: 1.2 }); tile.classList.add('wrong'); opt.sfx && opt.sfx('bad'); hint(`❌ <b>${TOOLS[id].n}</b> – nē! ${TOOLS[id].why || ''}`, true); if (id === 'lie' || id === 'sit') st.pose = id === 'lie' ? c.pose : 'sit'; return; }
+      if (!isGood(id)) { st.applied.add(id); st.wrong.add(id); st.cond = Math.max(0, st.cond - 15); st.fxs.push({ k: 'bad', x, y, t: 1.2 }); tile.classList.add('wrong'); opt.sfx && opt.sfx('bad'); hint(`❌ <b>${TOOLS[id].n}</b> – nē! ${(c.why && c.why[id]) || TOOLS[id].why || ''}`, true); if (id === 'lie' || id === 'sit') st.pose = id === 'lie' ? c.pose : 'sit'; return; }
       st.applied.add(id); tile.classList.add('done'); const P = geo(c, st), z = P.Z[zoneOf(c, id)] || P.Z.body; st.fxs.push({ k: 'ok', x: z[0], y: z[1], t: 1 }); opt.sfx && opt.sfx('good');
       st.cond = Math.min(100, st.cond + (c.need.includes(id) ? Math.round((96 - (c.cond || 50)) / c.need.length) : 4));
       if (id in st.fx) st.fx[id] = 1;
