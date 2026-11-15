@@ -35,9 +35,18 @@ for (let i = 0; i < N - 1; i++) for (let j = 0; j < N - 1; j++) {
       if (w < 120 && h < 120) { lots.push(L); continue; }
       if (w >= h) { const m = a + w * (.35 + RNG() * .3); lots.push([a, c, m, e], [m, c, d, e]); } else { const m = c + h * (.35 + RNG() * .3); lots.push([a, c, d, m], [a, m, d, e]); } }
     lots.forEach(([a, c, d, e]) => { const m = 7; b.items.push({ t: 'bld', x0: a + m, y0: c + m, x1: d - m, y1: e - m, col: ROOF[(RNG() * ROOF.length) | 0], h: 36 + RNG() * RNG() * 150, win: RNG() * 1e9 | 0, det: Array.from({ length: 1 + (RNG() * 3 | 0) }, () => ({ u: RNG(), v: RNG(), k: RNG() })) }); });
-  } else if (b.kind === 'park') {
-    if (RNG() < .5) b.items.push({ t: 'pond', x: (ix0 + ix1) / 2 + (RNG() - .5) * 60, y: (iy0 + iy1) / 2 + (RNG() - .5) * 60, r: 50 + RNG() * 30 });
-    for (let k = 0; k < 14; k++) b.trees.push({ x: ix0 + 20 + RNG() * (ix1 - ix0 - 40), y: iy0 + 20 + RNG() * (iy1 - iy0 - 40), r: 16 + RNG() * 12 });
+  } else if (b.kind === 'park') { // parks: zāles laukumi, līkumoti celiņi, dīķis, puķu dobes, soliņi, lapu koki un egles
+    const W_ = ix1 - ix0, H_ = iy1 - iy0, P = b.park = { patches: [], paths: [], benches: [], beds: [] };
+    for (let k = 0; k < 9; k++) P.patches.push({ x: ix0 + RNG() * W_, y: iy0 + RNG() * H_, rx: 30 + RNG() * 50, ry: 20 + RNG() * 40, a: RNG() * 3, c: ['#7fc062', '#8acb6c', '#76b65a', '#93cf74'][(RNG() * 4) | 0] });
+    const ent = [[ix0, iy0 + H_ * (.3 + RNG() * .4)], [ix1, iy0 + H_ * (.3 + RNG() * .4)], [ix0 + W_ * (.3 + RNG() * .4), iy0], [ix0 + W_ * (.3 + RNG() * .4), iy1]], mid = [ix0 + W_ * (.4 + RNG() * .2), iy0 + H_ * (.4 + RNG() * .2)];
+    ent.forEach(e => { if (RNG() < .8) P.paths.push([e, [(e[0] + mid[0]) / 2 + (RNG() - .5) * 60, (e[1] + mid[1]) / 2 + (RNG() - .5) * 60], mid]); });
+    if (!P.paths.length) P.paths.push([ent[0], [(ent[0][0] + mid[0]) / 2, mid[1] - 40], mid]);
+    P.paths.forEach(pp => { if (RNG() < .7) { const t_ = .45 + RNG() * .2, q = [lerp(lerp(pp[0][0], pp[1][0], t_), lerp(pp[1][0], pp[2][0], t_), t_), lerp(lerp(pp[0][1], pp[1][1], t_), lerp(pp[1][1], pp[2][1], t_), t_)]; P.benches.push({ x: q[0] + 14, y: q[1] + 10, a: RNG() < .5 ? 0 : Math.PI / 2 }); } });
+    P.mid = mid;
+    if (RNG() < .65) { const q = [ix0 + 40 + RNG() * (W_ - 80), iy0 + 40 + RNG() * (H_ - 80)]; if (Math.hypot(q[0] - mid[0], q[1] - mid[1]) > 70) b.items.push({ t: 'pond', x: q[0], y: q[1], r: 34 + RNG() * 24, lil: Array.from({ length: 4 }, () => [RNG() - .5, RNG() - .5]) }); }
+    for (let k = 0; k < 3; k++) P.beds.push({ x: ix0 + 30 + RNG() * (W_ - 60), y: iy0 + 30 + RNG() * (H_ - 60), r: 12 + RNG() * 10, c: ['#ff5a7a', '#ffd34d', '#b388ff', '#ff8a3d'][(RNG() * 4) | 0] });
+    for (let k = 0; k < 18; k++) { const x = ix0 + 16 + RNG() * (W_ - 32), y = iy0 + 16 + RNG() * (H_ - 32);
+      if (Math.hypot(x - mid[0], y - mid[1]) < 40) continue; b.trees.push({ x, y, r: 13 + RNG() * 13, fir: RNG() < .3, tint: RNG() }); }
   } else if (b.kind === 'parking') {
     for (let k = 0; k < 10; k++) if (RNG() < .7) b.items.push({ t: 'pcar', x: ix0 + 30 + (k % 5) * ((ix1 - ix0 - 60) / 4), y: k < 5 ? iy0 + 50 : iy1 - 50, col: ['#e74c3c', '#3498db', '#f1c40f', '#ecf0f1', '#2c3e50', '#9b59b6'][(RNG() * 6) | 0] });
   }
@@ -426,17 +435,20 @@ function drawWorld(t) {
   for (const c of cars) { if (c.off || c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue; drawCar(c.x, c.y, c.ang, c.len, 27, c.col, false, t, c); }
   drawCar(amb.x, amb.y, amb.a, 72, 32, '#ffffff', true, t);
   // 3D mājas (tālākās vispirms), koku vainagi virs tām nav vajadzīgi
-  const dk = darkness(), lit = []; const bl = [];
+  const dk = darkness(), lit = [], neon = []; const bl = [];
   for (const b of blocks) { if (b.x1 < vx0 - 200 || b.x0 > vx1 + 200 || b.y1 < vy0 - 200 || b.y0 > vy1 + 200) continue; for (const it of b.items) if (it.t === 'bld') bl.push(it); }
   bl.sort((a, b) => Math.hypot((b.x0 + b.x1) / 2 - cam.x, (b.y0 + b.y1) / 2 - cam.y) - Math.hypot((a.x0 + a.x1) / 2 - cam.x, (a.y0 + a.y1) / 2 - cam.y));
-  bl.forEach(it => drawBuilding(it, t, dk, lit));
+  bl.forEach(it => drawBuilding(it, t, dk, lit, neon));
   // nakts: tumsa + gaismas (lampas, logi, lukturi, sirēna)
   if (dk > .02) {
-    ctx.fillStyle = `rgba(8,12,38,${dk})`; ctx.fillRect(vx0 - 200, vy0 - 200, vx1 - vx0 + 400, vy1 - vy0 + 400);
+    ctx.fillStyle = `rgba(14,10,44,${dk})`; ctx.fillRect(vx0 - 200, vy0 - 200, vx1 - vx0 + 400, vy1 - vy0 + 400);
     const nk = dk / .62; ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (const L of LAMPS) { if (L.x < vx0 - 100 || L.x > vx1 + 100 || L.y < vy0 - 100 || L.y > vy1 + 100) continue; const g = ctx.createRadialGradient(L.x, L.y, 2, L.x, L.y, 95); g.addColorStop(0, `rgba(255,200,120,${.28 * nk})`); g.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = g; ctx.fillRect(L.x - 95, L.y - 95, 190, 190); }
-    ctx.fillStyle = `rgba(255,210,110,${.85 * nk})`; for (const q of lit) { ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(q[2], q[3]); ctx.lineTo(q[4], q[5]); ctx.lineTo(q[6], q[7]); ctx.fill(); }
-    const head = (x, y, a, r) => { const fx = Math.cos(a), fy = Math.sin(a), g = ctx.createRadialGradient(x + fx * 30, y + fy * 30, 4, x + fx * 70, y + fy * 70, r); g.addColorStop(0, `rgba(255,250,220,${.5 * nk})`); g.addColorStop(1, 'rgba(255,250,220,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x + fx * 70, y + fy * 70, r, 0, 7); ctx.fill(); };
+    for (const L of LAMPS) { if (L.x < vx0 - 100 || L.x > vx1 + 100 || L.y < vy0 - 100 || L.y > vy1 + 100) continue; const g = ctx.createRadialGradient(L.x, L.y, 1, L.x, L.y, 58); g.addColorStop(0, `rgba(190,225,255,${.17 * nk})`); g.addColorStop(1, 'rgba(190,225,255,0)'); ctx.fillStyle = g; ctx.fillRect(L.x - 58, L.y - 58, 116, 116); }
+    const WC = ['255,205,120', '255,190,110', '150,215,255', '255,120,215', '170,140,255'];
+    for (const q of lit) { ctx.fillStyle = `rgba(${WC[q[8]]},${.5 * nk})`; ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(q[2], q[3]); ctx.lineTo(q[4], q[5]); ctx.lineTo(q[6], q[7]); ctx.fill(); }
+    // neona kontūras uz dažu māju jumtiem
+    ctx.lineJoin = 'round'; for (const n of neon) { ctx.strokeStyle = `rgba(${n.c},${.55 * nk})`; ctx.lineWidth = 7; ctx.strokeRect(n.x, n.y, n.w, n.h); ctx.strokeStyle = `rgba(255,255,255,${.5 * nk})`; ctx.lineWidth = 1.5; ctx.strokeRect(n.x, n.y, n.w, n.h); }
+    const head = (x, y, a, r) => { const fx = Math.cos(a), fy = Math.sin(a), g = ctx.createRadialGradient(x + fx * 30, y + fy * 30, 4, x + fx * 70, y + fy * 70, r); g.addColorStop(0, `rgba(255,250,220,${.32 * nk})`); g.addColorStop(1, 'rgba(255,250,220,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x + fx * 70, y + fy * 70, r, 0, 7); ctx.fill(); };
     for (const c of cars) { if (c.off || c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue; head(c.x, c.y, c.ang, 70); }
     head(amb.x, amb.y, amb.a, 95);
     if (amb.siren) { const on = Math.sin(t * 16) > 0, g = ctx.createRadialGradient(amb.x, amb.y, 4, amb.x, amb.y, 160); g.addColorStop(0, on ? `rgba(255,40,60,${.6 * nk})` : `rgba(40,110,255,${.6 * nk})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(amb.x, amb.y, 160, 0, 7); ctx.fill(); }
@@ -444,7 +456,8 @@ function drawWorld(t) {
 }
 // 3D māja: sienas ar logiem pret kameru (perspektīva no ekrāna centra), jumts virsū
 const PK = .0014;
-function drawBuilding(it, t, dk, lit) {
+const NEON = ['255,60,200', '40,230,255', '170,90,255', '90,255,140', '255,170,40'];
+function drawBuilding(it, t, dk, lit, neon) {
   const f = it.h * PK, cx = cam.x, cy = cam.y, R = (x, y) => [x + (x - cx) * f, y + (y - cy) * f];
   const A = [it.x0, it.y0], B = [it.x1, it.y0], C = [it.x1, it.y1], D = [it.x0, it.y1], A2 = R(...A), B2 = R(...B), C2 = R(...C), D2 = R(...D);
   const floors = Math.max(1, Math.floor(it.h / 28)), night = dk > .25;
@@ -453,9 +466,10 @@ function drawBuilding(it, t, dk, lit) {
     if (it.fuel) return;
     for (let k2 = 0; k2 < floors; k2++) for (let i = 0; i < n; i++) { const u0 = (i + .28) / n, u1 = (i + .72) / n, v0 = (k2 + .3) / floors, v1 = (k2 + .72) / floors, a = P(u0, v0), b = P(u1, v0), c = P(u1, v1), d = P(u0, v1);
       const on = night && hash(it.win + i * 7 + k2 * 131 + (p0[0] | 0)) % 3 !== 0; ctx.fillStyle = on ? '#3a3220' : 'rgba(40,60,90,.55)'; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.fill();
-      if (on) lit.push([a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]]); } };
+      if (on) lit.push([a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1], hash(it.win + i * 3 + k2) % 10 < 6 ? (hash(it.win + k2) & 1) : 2 + hash(it.win + i) % 3]); } };
   if (cy < it.y0) wall(A, B, B2, A2, .9); if (cy > it.y1) wall(D, C, C2, D2, .7); if (cx < it.x0) wall(A, D, D2, A2, .82); if (cx > it.x1) wall(B, C, C2, B2, .76);
   // jumts
+  if (dk > .25 && !it.fuel && hash(it.win) % 4 === 0) { const k = 1 + f; neon.push({ x: cx + (it.x0 - cx) * k + 3, y: cy + (it.y0 - cy) * k + 3, w: (it.x1 - it.x0) * k - 6, h: (it.y1 - it.y0) * k - 6, c: NEON[hash(it.win + 7) % NEON.length] }); }
   ctx.save(); ctx.translate(cx, cy); ctx.scale(1 + f, 1 + f); ctx.translate(-cx, -cy);
   const w = it.x1 - it.x0, h = it.y1 - it.y0; ctx.fillStyle = it.col; ctx.fillRect(it.x0, it.y0, w, h);
   ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(it.x0, it.y0, w, 4); ctx.fillRect(it.x0, it.y0, 4, h); ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(it.x0, it.y1 - 4, w, 4); ctx.fillRect(it.x1 - 4, it.y0, 4, h);
@@ -473,8 +487,17 @@ function drawBlock(b, t) {
   ctx.fillStyle = '#d8d2c6'; ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0); // ietve
   ctx.fillStyle = '#c3bcae'; ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, 3); ctx.fillRect(b.x0, b.y1 - 3, b.x1 - b.x0, 3); ctx.fillRect(b.x0, b.y0, 3, b.y1 - b.y0); ctx.fillRect(b.x1 - 3, b.y0, 3, b.y1 - b.y0);
   const ix0 = b.x0 + SWK, iy0 = b.y0 + SWK, ix1 = b.x1 - SWK, iy1 = b.y1 - SWK;
-  if (b.kind === 'park') { ctx.fillStyle = '#86c96a'; ctx.beginPath(); ctx.roundRect(ix0, iy0, ix1 - ix0, iy1 - iy0, 18); ctx.fill();
-    ctx.strokeStyle = '#e7dcc4'; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(ix0 + 10, (iy0 + iy1) / 2); ctx.bezierCurveTo(ix0 + 90, iy0 + 30, ix1 - 90, iy1 - 30, ix1 - 10, (iy0 + iy1) / 2); ctx.stroke(); }
+  if (b.kind === 'park') { const P = b.park;
+    ctx.fillStyle = '#4f8f3d'; ctx.beginPath(); ctx.roundRect(ix0 - 4, iy0 - 4, ix1 - ix0 + 8, iy1 - iy0 + 8, 20); ctx.fill(); // dzīvžogs
+    ctx.fillStyle = '#84c466'; ctx.beginPath(); ctx.roundRect(ix0 + 6, iy0 + 6, ix1 - ix0 - 12, iy1 - iy0 - 12, 16); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.roundRect(ix0 + 6, iy0 + 6, ix1 - ix0 - 12, iy1 - iy0 - 12, 16); ctx.clip();
+    P.patches.forEach(q => { ctx.fillStyle = q.c; ctx.beginPath(); ctx.ellipse(q.x, q.y, q.rx, q.ry, q.a, 0, 7); ctx.fill(); });
+    ctx.lineCap = 'round'; [[16, '#cbb995'], [11, '#e6d7b4']].forEach(([w, c]) => { ctx.strokeStyle = c; ctx.lineWidth = w; P.paths.forEach(pp => { ctx.beginPath(); ctx.moveTo(pp[0][0], pp[0][1]); ctx.quadraticCurveTo(pp[1][0], pp[1][1], pp[2][0], pp[2][1]); ctx.stroke(); }); });
+    ctx.fillStyle = '#e6d7b4'; ctx.beginPath(); ctx.arc(P.mid[0], P.mid[1], 22, 0, 7); ctx.fill(); ctx.strokeStyle = '#cbb995'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#9fc9e6'; ctx.beginPath(); ctx.arc(P.mid[0], P.mid[1], 9, 0, 7); ctx.fill(); // strūklaka
+    P.beds.forEach(d => { ctx.fillStyle = '#6b4a2e'; ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, 7); ctx.fill(); ctx.fillStyle = d.c; for (let k = 0; k < 9; k++) { const a = k * 2.4, rr_ = d.r * .65 * Math.sqrt((k + 1) / 9); ctx.beginPath(); ctx.arc(d.x + Math.cos(a) * rr_, d.y + Math.sin(a) * rr_, 2.6, 0, 7); ctx.fill(); } });
+    P.benches.forEach(q => { ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.a); ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(-11, -3, 24, 9); ctx.fillStyle = '#8e6b47'; ctx.fillRect(-12, -5, 24, 4); ctx.fillRect(-12, 0, 24, 4); ctx.restore(); });
+    ctx.restore(); }
   else if (b.kind === 'plaza') { ctx.fillStyle = '#e4ddcf'; ctx.fillRect(ix0, iy0, ix1 - ix0, iy1 - iy0); ctx.strokeStyle = '#d2c9b8'; ctx.lineWidth = 2; for (let x = ix0; x < ix1; x += 26) { ctx.beginPath(); ctx.moveTo(x, iy0); ctx.lineTo(x, iy1); ctx.stroke(); }
     const cx = (ix0 + ix1) / 2, cy = (iy0 + iy1) / 2; ctx.fillStyle = '#9fc9e6'; ctx.beginPath(); ctx.arc(cx, cy, 36, 0, 7); ctx.fill(); ctx.fillStyle = '#c9e6f7'; ctx.beginPath(); ctx.arc(cx, cy, 12 + Math.sin(t * 3) * 2, 0, 7); ctx.fill(); }
   else if (b.kind === 'parking') { ctx.fillStyle = '#5a5f6b'; ctx.fillRect(ix0, iy0, ix1 - ix0, iy1 - iy0); ctx.strokeStyle = '#ffffffaa'; ctx.lineWidth = 2;
@@ -493,14 +516,20 @@ function drawBlock(b, t) {
         if (d.k < .4) { ctx.fillStyle = '#9aa3ad'; ctx.fillRect(x, y, 22, 16); ctx.fillStyle = '#7d858f'; ctx.beginPath(); ctx.arc(x + 11, y + 8, 5, 0, 7); ctx.fill(); }
         else if (d.k < .7) { ctx.fillStyle = '#2f4b7c'; ctx.fillRect(x, y, 28, 18); ctx.strokeStyle = '#8fb0e0'; ctx.lineWidth = 1; for (let q = 1; q < 4; q++) { ctx.beginPath(); ctx.moveTo(x + q * 7, y); ctx.lineTo(x + q * 7, y + 18); ctx.stroke(); } }
         else { ctx.fillStyle = '#b8b2a6'; ctx.beginPath(); ctx.arc(x + 10, y + 10, 10, 0, 7); ctx.fill(); } }); }
-    else if (it.t === 'pond') { ctx.fillStyle = '#5fa8d8'; ctx.beginPath(); ctx.ellipse(it.x, it.y, it.r, it.r * .7, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(it.x - it.r * .3, it.y - it.r * .2, it.r * .3, it.r * .12, -.3, 0, 7); ctx.fill(); }
+    else if (it.t === 'pond') { ctx.fillStyle = '#a8996f'; ctx.beginPath(); ctx.ellipse(it.x, it.y, it.r + 6, it.r * .7 + 6, 0, 0, 7); ctx.fill(); // krasts
+      const wg = ctx.createRadialGradient(it.x, it.y, 2, it.x, it.y, it.r); wg.addColorStop(0, '#3f86b8'); wg.addColorStop(1, '#6db3dd'); ctx.fillStyle = wg; ctx.beginPath(); ctx.ellipse(it.x, it.y, it.r, it.r * .7, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(it.x - it.r * .25, it.y - it.r * .15, it.r * .35, it.r * .1, -.2, 0, 3); ctx.stroke();
+      (it.lil || []).forEach(([u, v]) => { ctx.fillStyle = '#4c9a43'; ctx.beginPath(); ctx.arc(it.x + u * it.r, it.y + v * it.r * .6, 5, .3, 6); ctx.lineTo(it.x + u * it.r, it.y + v * it.r * .6); ctx.fill(); });
+      ctx.strokeStyle = '#557a2c'; ctx.lineWidth = 2; for (let k = 0; k < 8; k++) { const a = 2.2 + k * .12, x = it.x + Math.cos(a) * (it.r + 2), y = it.y + Math.sin(a) * (it.r * .7 + 2); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 2, y - 9); ctx.stroke(); } }
     else if (it.t === 'pcar') drawCar(it.x, it.y, Math.PI / 2, 50, 26, it.col, false, 0);
   }
   // ielu lampas (stabiņi)
   ctx.fillStyle = '#3d4250'; [[b.x0 + 8, b.y0 + 8], [b.x1 - 8, b.y0 + 8], [b.x0 + 8, b.y1 - 8], [b.x1 - 8, b.y1 - 8], [(b.x0 + b.x1) / 2, b.y0 + 8], [(b.x0 + b.x1) / 2, b.y1 - 8], [b.x0 + 8, (b.y0 + b.y1) / 2], [b.x1 - 8, (b.y0 + b.y1) / 2]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); });
   for (const tr of b.trees) { ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.arc(tr.x + 5, tr.y + 6, tr.r, 0, 7); ctx.fill();
     const f = 40 * PK, x = tr.x + (tr.x - cam.x) * f, y = tr.y + (tr.y - cam.y) * f; ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(tr.x, tr.y); ctx.lineTo(x, y); ctx.stroke();
-    ctx.fillStyle = '#3f8f3a'; ctx.beginPath(); ctx.arc(x, y, tr.r, 0, 7); ctx.fill(); ctx.fillStyle = '#5bb04f'; ctx.beginPath(); ctx.arc(x - tr.r * .25, y - tr.r * .25, tr.r * .6, 0, 7); ctx.fill(); }
+    if (tr.fir) { ctx.fillStyle = '#2f6b35'; ctx.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, rr_ = k % 2 ? tr.r * .55 : tr.r; ctx.lineTo(x + Math.cos(a) * rr_, y + Math.sin(a) * rr_); } ctx.fill(); ctx.fillStyle = '#3d8445'; ctx.beginPath(); ctx.arc(x, y, tr.r * .4, 0, 7); ctx.fill(); }
+    else { const tt = tr.tint || 0, c1 = tt < .33 ? '#3f8f3a' : tt < .66 ? '#4a9a3c' : '#5d8f2f', c2 = tt < .33 ? '#5bb04f' : tt < .66 ? '#6cbf55' : '#86b347';
+      ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(x, y, tr.r, 0, 7); ctx.arc(x + tr.r * .5, y + tr.r * .2, tr.r * .7, 0, 7); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.arc(x - tr.r * .25, y - tr.r * .25, tr.r * .55, 0, 7); ctx.fill(); } }
 }
 function drawHospital(b, ix0, iy0, ix1, iy1, t) {
   ctx.fillStyle = '#9ccc82'; ctx.fillRect(ix0, iy0, ix1 - ix0, iy1 - iy0);
