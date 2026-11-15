@@ -2,38 +2,38 @@
 // q: jautājumi/pārbaudes – good:true = noderīgs, lai saprastu situāciju. dx: kas noticis (pareizā – ok:true).
 // tools: ko piedāvāt somā (pareizās – CASE.need, nepareizās dod mīnusu). go: vai jāved uz slimnīcu. cpr: sirds masāžas spēle.
 window.TOOLS = {
-  wash:    { i: '💧', n: 'Notīrīt brūci ar ūdeni' },
-  plaster: { i: '🩹', n: 'Plāksteris' },
-  bandage: { i: '🧻', n: 'Sterils pārsējs' },
-  splint:  { i: '🦴', n: 'Šina (nekustināt roku)' },
-  cold:    { i: '🧊', n: 'Aukstuma paka (caur drānu)' },
-  ice:     { i: '❄️', n: 'Ledus tieši uz ādas' },
-  epi:     { i: '💉', n: 'Adrenalīna pildspalva' },
-  oxygen:  { i: '🫁', n: 'Skābekļa maska' },
-  inhaler: { i: '💨', n: 'Inhalators' },
-  sit:     { i: '🪑', n: 'Palīdzēt apsēsties taisni' },
-  lie:     { i: '🛏️', n: 'Noguldīt uz muguras' },
-  juice:   { i: '🧃', n: 'Saldā sula' },
-  gluco:   { i: '🩸', n: 'Izmērīt cukuru asinīs' },
-  insulin: { i: '💊', n: 'Insulīns' },
-  shade:   { i: '⛱️', n: 'Pārvietot ēnā' },
-  legs:    { i: '🦵', n: 'Pacelt kājas uz augšu' },
-  water:   { i: '🥤', n: 'Iedot padzerties ūdeni' },
-  cool:    { i: '🚿', n: 'Vēss ūdens 20 minūtes' },
-  butter:  { i: '🧈', n: 'Uzziest sviestu' },
-  lean:    { i: '⬇️', n: 'Noliekt galvu uz priekšu' },
-  back:    { i: '↩️', n: 'Atgāzt galvu atpakaļ' },
-  pinch:   { i: '🤏', n: 'Saspiest deguna mīksto daļu' },
-  cpr:     { i: '❤️', n: 'Sirds masāža' },
-  aed:     { i: '⚡', n: 'Defibrilators' },
-  blanket: { i: '🧣', n: 'Sega, lai nesalst' },
-  monitor: { i: '📈', n: 'Pieslēgt monitoru (pulss)' },
-  sting:   { i: '🪝', n: 'Izkasīt dzeloni' },
-  calm:    { i: '🤗', n: 'Nomierināt, runāt mierīgi' },
+  wash:    { i: '💧', n: 'Notīrīt brūci ar ūdeni', z: 'wound', why: 'Brūci tīra, ja ir nobrāzums.' },
+  plaster: { i: '🩹', n: 'Plāksteris', z: 'wound', why: 'Plāksteri liek uz nelielas brūces.' },
+  bandage: { i: '🧻', n: 'Sterils pārsējs', z: 'wound', why: 'Sterilu pārsēju liek uz brūces vai apdeguma.' },
+  splint:  { i: '🦴', n: 'Šina (nekustināt roku)', z: 'armR', why: 'Šinu liek, ja ir aizdomas par lūzumu.' },
+  cold:    { i: '🧊', n: 'Aukstuma paka (caur drānu)', z: 'wound', why: 'Aukstums mazina pietūkumu.' },
+  ice:     { i: '❄️', n: 'Ledus tieši uz ādas', z: 'wound', why: 'Ledus tieši uz ādas var apsaldēt – aukstumu liek caur drānu.' },
+  epi:     { i: '💉', n: 'Adrenalīna pildspalva', z: 'thigh', why: 'Adrenalīnu dod tikai smagā alerģijā.' },
+  oxygen:  { i: '🫁', n: 'Skābekļa maska', z: 'face', why: 'Skābeklis vajadzīgs, ja grūti elpot.' },
+  inhaler: { i: '💨', n: 'Inhalators', z: 'face', why: 'Inhalators palīdz astmas lēkmē.' },
+  sit:     { i: '🪑', n: 'Palīdzēt apsēsties taisni', z: 'body', why: 'Apsēsties taisni – palīdz elpot.' },
+  lie:     { i: '🛏️', n: 'Noguldīt uz muguras', z: 'body', why: 'Astmas lēkmē guļus elpot ir grūtāk – labāk sēdus.' },
+  juice:   { i: '🧃', n: 'Saldā sula', z: 'face', why: 'Saldu dod, ja ir zems cukurs.' },
+  gluco:   { i: '🩸', n: 'Izmērīt cukuru asinīs', z: 'handL', why: 'Cukuru mēra diabēta slimniekiem.' },
+  insulin: { i: '💊', n: 'Insulīns', z: 'thigh', why: 'Insulīns cukuru samazina vēl vairāk – zemam cukuram vajag saldu!' },
+  shade:   { i: '⛱️', n: 'Pārvietot ēnā', z: 'body', why: 'Ēnā – ja cilvēkam ir karsti.' },
+  legs:    { i: '🦵', n: 'Pacelt kājas uz augšu', z: 'legs', why: 'Kājas uz augšu – ja cilvēks noģībis.' },
+  water:   { i: '🥤', n: 'Iedot padzerties ūdeni', z: 'face', why: 'Dzert dod tikai, ja cilvēks ir pie samaņas un nevemj.' },
+  cool:    { i: '🚿', n: 'Vēss ūdens 20 minūtes', z: 'wound', why: 'Vēsu ūdeni lej uz apdeguma.' },
+  butter:  { i: '🧈', n: 'Uzziest sviestu', z: 'wound', why: 'Sviests apdegumu nedzesē, bet notur karstumu ādā – tikai vēss ūdens!' },
+  lean:    { i: '⬇️', n: 'Noliekt galvu uz priekšu', z: 'head', why: 'Galvu uz priekšu – deguna asiņošanā.' },
+  back:    { i: '↩️', n: 'Atgāzt galvu atpakaļ', z: 'head', why: 'Atgāžot galvu, asinis tek kaklā – galvu noliec uz priekšu.' },
+  pinch:   { i: '🤏', n: 'Saspiest deguna mīksto daļu', z: 'nose', why: 'Degunu saspiež, ja tek asinis no deguna.' },
+  cpr:     { i: '❤️', n: 'Sirds masāža', z: 'chest', why: 'Sirds masāžu dara tikai tad, ja cilvēks nereaģē un neelpo!' },
+  aed:     { i: '⚡', n: 'Defibrilators', z: 'chest', why: 'Defibrilatoru lieto, ja cilvēks nereaģē un neelpo.' },
+  blanket: { i: '🧣', n: 'Sega, lai nesalst', z: 'body', why: 'Sega – lai nesalst.' },
+  monitor: { i: '📈', n: 'Pieslēgt monitoru (pulss)', z: 'chest', why: '' },
+  sting:   { i: '🪝', n: 'Izkasīt dzeloni', z: 'wound', why: 'Dzeloni izkasa, ja iedzēla bite.' },
+  calm:    { i: '🤗', n: 'Nomierināt, runāt mierīgi', z: 'head', why: 'Nomierināt vajag vienmēr! 🙂' },
 };
 
 window.CASES = [
-  { id: 'knee', lv: 1, who: '🧒', name: 'Jānis, 9 gadi', place: 'park',
+  { id: 'knee', pose: 'sit', place: 'park', prop: 'bike', inj: { k: 'scrape', z: 'knee' }, p: { age: 'kid', hair: '#6b4423', long: false, shirt: '#3498db', pants: '#34495e' }, first: { plaster: 'wash' }, cond: 70, lv: 1, who: '🧒', name: 'Jānis, 9 gadi', 
     call: 'Parkā zēns nokrita ar riteni. Asiņo celis.',
     see: 'Zēns sēž uz celiņa blakus ritenim. Celis nobrāzts un mazliet asiņo. Viņš raud, bet runā.',
     q: [
@@ -46,7 +46,7 @@ window.CASES = [
     tools: ['wash', 'plaster', 'calm', 'splint', 'inhaler', 'ice'], need: ['wash', 'plaster'], bonus: ['calm'], go: false,
     fact: 'Nobrāzumu vispirms noskalo ar tīru ūdeni, tad uzliec plāksteri. Ķivere sargā galvu – vienmēr brauc ar ķiveri!' },
 
-  { id: 'nose', lv: 1, who: '👧', name: 'Elza, 8 gadi', place: 'street',
+  { id: 'nose', pose: 'sit', place: 'school', prop: 'ball', inj: { k: 'nosebleed', z: 'nose' }, p: { age: 'kid', hair: '#e8c26a', long: true, shirt: '#ec407a', pants: '#5c6bc0' }, zones: { cold: 'nose' }, cond: 70, lv: 1, who: '👧', name: 'Elza, 8 gadi', 
     call: 'Meitenei skolas pagalmā tek asinis no deguna.',
     see: 'Meitene tur rokas pie deguna, no deguna pil asinis. Viņa ir nobijusies, bet labi elpo caur muti.',
     q: [
@@ -59,7 +59,7 @@ window.CASES = [
     tools: ['lean', 'pinch', 'back', 'cold', 'plaster', 'lie'], need: ['lean', 'pinch'], bonus: ['cold'], go: false,
     fact: 'Ja tek asinis no deguna – noliec galvu UZ PRIEKŠU un 10 minūtes saspied deguna mīksto daļu. Galvu atpakaļ neatgāž – tad asinis tek kaklā!' },
 
-  { id: 'faint', lv: 1, who: '👩', name: 'Laura, 35 gadi', place: 'park',
+  { id: 'faint', pose: 'lie', place: 'concert', prop: 'stage', inj: { k: 'sweat', z: 'head' }, p: { age: 'adult', hair: '#3b2a1a', long: true, shirt: '#f39c12', pants: '#2c3e50' }, sun: true, cond: 55, lv: 1, who: '👩', name: 'Laura, 35 gadi', 
     call: 'Koncertā parkā karstumā noģība sieviete.',
     see: 'Sieviete guļ zālē saulē. Viņa jau atver acis un runā lēni. Seja bāla un mitra.',
     q: [
@@ -72,7 +72,7 @@ window.CASES = [
     tools: ['shade', 'legs', 'water', 'cpr', 'epi', 'butter'], need: ['shade', 'legs', 'water'], bonus: [], go: false,
     fact: 'Ja cilvēks noģībst karstumā: pārvieto ēnā, pacel kājas uz augšu, un, kad viņš ir pie samaņas, iedod padzerties ūdeni.' },
 
-  { id: 'sugar', lv: 2, who: '🧑', name: 'Roberts, 14 gadi', place: 'street',
+  { id: 'sugar', pose: 'sit', place: 'street', prop: 'bench', inj: { k: 'sweat', z: 'head' }, p: { age: 'teen', hair: '#1f1f1f', long: false, shirt: '#16a085', pants: '#2c3e50' }, cond: 50, lv: 2, who: '🧑', name: 'Roberts, 14 gadi', 
     call: 'Pusaudzim ar cukura diabētu kļuvis slikti uz ielas.',
     see: 'Puisis sēž uz soliņa. Viņš trīc, svīst un runā apjucis. Viņam pie somas ir diabēta kartīte.',
     q: [
@@ -85,7 +85,7 @@ window.CASES = [
     tools: ['gluco', 'juice', 'insulin', 'water', 'inhaler', 'calm'], need: ['gluco', 'juice'], bonus: ['calm'], go: false,
     fact: 'Ja diabēta slimniekam ir zems cukurs (trīc, svīst, apjucis) un viņš var norīt – dod kaut ko saldu: sulu vai cukuru. Insulīns cukuru samazina vēl vairāk!' },
 
-  { id: 'arm', lv: 2, who: '👧', name: 'Marta, 10 gadi', place: 'park',
+  { id: 'arm', pose: 'sit', place: 'playground', prop: 'swing', inj: { k: 'fracture', z: 'armR' }, p: { age: 'kid', hair: '#a0522d', long: true, shirt: '#9b59b6', pants: '#34495e' }, zones: { cold: 'armR' }, cond: 50, lv: 2, who: '👧', name: 'Marta, 10 gadi', 
     call: 'Meitene nokrita no šūpolēm, ļoti sāp roka.',
     see: 'Meitene tur roku pie vēdera. Apakšdelms ir šķībs un pietūcis. Viņa raud, bet runā.',
     q: [
@@ -98,7 +98,7 @@ window.CASES = [
     tools: ['splint', 'cold', 'calm', 'wash', 'ice', 'juice'], need: ['splint', 'cold'], bonus: ['calm'], go: true,
     fact: 'Ja domā, ka kauls ir lauzts – roku nekustina, nostiprina ar šinu un uzliek aukstumu caur drānu. Ledu tieši uz ādas neliek – tas apsaldē!' },
 
-  { id: 'burn', lv: 3, who: '🧒', name: 'Toms, 7 gadi', place: 'house',
+  { id: 'burn', pose: 'sit', place: 'kitchen', prop: 'tea', inj: { k: 'burn', z: 'handR' }, p: { age: 'kid', hair: '#d9a066', long: false, shirt: '#2ecc71', pants: '#2c3e50' }, first: { bandage: 'cool' }, cond: 55, lv: 3, who: '🧒', name: 'Toms, 7 gadi', 
     call: 'Bērns uzlēja uz rokas karstu tēju.',
     see: 'Zēnam uz plaukstas un apakšdelma ir sarkans, sāpīgs apdegums, dažviet pūslīši. Viņš raud.',
     q: [
@@ -111,7 +111,7 @@ window.CASES = [
     tools: ['cool', 'bandage', 'butter', 'ice', 'calm', 'plaster'], need: ['cool', 'bandage'], bonus: ['calm'], go: true,
     fact: 'Apdegumu 20 minūtes dzesē ar vēsu (ne ledus aukstu) tekošu ūdeni, tad pārsien ar sterilu pārsēju. Sviestu un ledu neliek! Lielu apdegumu bērnam vienmēr parāda ārstam.' },
 
-  { id: 'asthma', lv: 3, who: '👧', name: 'Anna, 11 gadi', place: 'school',
+  { id: 'asthma', pose: 'slump', place: 'school', prop: 'cones', inj: { k: 'wheeze', z: 'face' }, p: { age: 'kid', hair: '#2b1b0e', long: true, shirt: '#e74c3c', pants: '#1f3a5f' }, cond: 40, lv: 3, who: '👧', name: 'Anna, 11 gadi', 
     call: 'Meitenei pēc skriešanas sporta stundā grūti elpot.',
     see: 'Meitene sēž saliekusies, elpa svilpj, viņa runā tikai pa vienam vārdam. Somā ir zils inhalators.',
     q: [
@@ -124,7 +124,7 @@ window.CASES = [
     tools: ['inhaler', 'sit', 'oxygen', 'lie', 'juice', 'calm'], need: ['inhaler', 'sit', 'oxygen'], bonus: ['calm'], go: true,
     fact: 'Astmas lēkmē cilvēkam palīdz apsēsties taisni un lietot savu inhalatoru. Guļus elpot ir grūtāk. Ja lēkme smaga – vajag ātro palīdzību.' },
 
-  { id: 'bee', lv: 4, who: '👨', name: 'Pēteris, 42 gadi', place: 'garden',
+  { id: 'bee', pose: 'sit', place: 'garden', prop: 'hive', inj: { k: 'swollen', z: 'face', sting: 'handL' }, p: { age: 'adult', hair: '#7f5a3a', long: false, shirt: '#27ae60', pants: '#5d4037' }, zones: { sting: 'handL' }, cond: 35, lv: 4, who: '👨', name: 'Pēteris, 42 gadi', 
     call: 'Vīrietim dārzā iedzēla bite. Viņam ir alerģija.',
     see: 'Vīrietim pietūkusi seja un lūpas, uz ādas sarkani plankumi, elpa svilpj. Kabatā ir adrenalīna pildspalva.',
     q: [
@@ -137,7 +137,7 @@ window.CASES = [
     tools: ['epi', 'oxygen', 'sting', 'plaster', 'butter', 'water'], need: ['epi', 'oxygen'], bonus: ['sting'], go: true,
     fact: 'Smagā alerģijā (pietūkst seja, grūti elpot) ātri vajag adrenalīna pildspalvu – to iedur augšstilbā. Pēc tam vienmēr uz slimnīcu!' },
 
-  { id: 'heart', lv: 5, who: '👴', name: 'Valdis, 70 gadi', place: 'park', cpr: true,
+  { id: 'heart', pose: 'lie', place: 'park', prop: 'benchP', inj: { k: 'out', z: 'chest' }, p: { age: 'old', hair: '#d0d0d0', long: false, shirt: '#7f8c8d', pants: '#34495e' }, first: { aed: 'cpr' }, cond: 10, lv: 5, who: '👴', name: 'Valdis, 70 gadi', cpr: true,
     call: 'Parkā sakņupa vecs vīrs. Viņš nereaģē!',
     see: 'Vīrietis guļ uz celiņa. Viņš nereaģē, kad uzrunā, un neelpo normāli. Garāmgājējs jau zvanīja 112.',
     q: [

@@ -85,5 +85,23 @@ body.kb #stick{display:none}
 .press:active{transform:scale(.94)}
 .cprInfo{font-weight:800;font-size:15px;text-align:center}
 
+/* aina pie pacienta + vilkšana */
+.stageWrap{position:relative;margin:6px 0 8px}
+.stage{width:100%;aspect-ratio:480/300;border-radius:16px;display:block;touch-action:none;background:#2a3358}
+.cond{position:absolute;left:8px;top:8px;background:#0f1220cc;border-radius:10px;padding:4px 8px;font-size:11.5px;font-weight:800;width:120px}
+.cond .cb{height:7px;background:#ffffff22;border-radius:4px;overflow:hidden;margin-top:3px}.cond .cb i{display:block;height:100%;width:50%;transition:width .5s,background .5s}
+.hint{position:absolute;left:8px;right:8px;bottom:8px;background:#0f1220e6;border:1px solid #2ecc7166;border-radius:12px;padding:8px 10px;font-size:14px;font-weight:700;opacity:0;transform:translateY(6px);transition:.25s;pointer-events:none}
+.hint.on{opacity:1;transform:none}.hint.bad{border-color:#ff3b4e88}
+.shockBtn{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);border:0;border-radius:16px;padding:14px 18px;font-size:17px;font-weight:900;background:linear-gradient(160deg,#ffd34d,#ff8a3d);color:#2b1a00;box-shadow:0 8px 24px #0008;animation:sir .4s infinite alternate}
+.tray{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.tile{background:#ffffff12;border:2px solid #ffffff22;border-radius:16px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;font-size:12.5px;font-weight:700;line-height:1.15;min-height:84px;justify-content:center;touch-action:none;cursor:grab}
+.tile i{font-style:normal;font-size:30px}
+.tile.drag{opacity:.35}
+.tile.done{border-color:#2ecc71;background:#2ecc7126;opacity:.75}.tile.done::after{content:'✔';color:#2ecc71;font-weight:900}
+.tile.wrong{border-color:#ff3b4e;background:#ff3b4e22;opacity:.6}.tile.wrong::after{content:'✖';color:#ff3b4e;font-weight:900}
+.ghost{position:fixed;z-index:100;font-size:48px;transform:translate(-50%,-70%);pointer-events:none;filter:drop-shadow(0 6px 10px #000a)}
+.cprOv{position:fixed;inset:0;z-index:60;background:#050814cc;display:flex;align-items:center;justify-content:center;padding:12px}
+.cprBox{background:linear-gradient(180deg,#1b2140,#11152a);border:1px solid var(--line);border-radius:22px;padding:16px;width:min(460px,100%)}
+
 /* horizontāli telefonā – kompakti (jābūt faila beigās) */
-@media (orientation:landscape) and (max-height:520px){ .ov{align-items:center} .sheet{border-radius:22px;max-height:94vh;width:min(760px,96vw);padding:12px 14px} .scene{width:auto;height:84px;margin:0 auto 6px} .opts{grid-template-columns:1fr 1fr} .tools{grid-template-columns:repeat(6,1fr)} .tool{min-height:76px;font-size:12px} .sheet h2{font-size:18px;margin:0 0 4px} .sheet p{font-size:14.5px;margin:3px 0} .main{min-height:46px;padding:10px} .press{width:110px;height:110px} .score{font-size:40px} .stars{font-size:26px} }
+@media (orientation:landscape) and (max-height:520px){ .ov{align-items:center} .sheet{border-radius:22px;max-height:94vh;width:min(760px,96vw);padding:12px 14px} .scene{width:auto;height:84px;margin:0 auto 6px} .opts{grid-template-columns:1fr 1fr} .tools{grid-template-columns:repeat(6,1fr)} .tool{min-height:76px;font-size:12px} .sheet h2{font-size:18px;margin:0 0 4px} .sheet p{font-size:14.5px;margin:3px 0} .main{min-height:46px;padding:10px} .press{width:110px;height:110px} .stage{width:auto;height:46vh;margin:0 auto} .tray{grid-template-columns:repeat(6,1fr)} .tile{min-height:70px;font-size:11px} .tile i{font-size:24px} .score{font-size:40px} .stars{font-size:26px} }

@@ -56,9 +56,10 @@ const HOSP_BAY = { x: (hospBlock.x0 + hospBlock.x1) / 2, y: hospBlock.y1 + 34 };
 const jams = new Set();
 while (jams.size < 7) { const ax = RNG() < .5 ? 'h' : 'v', idx = 1 + (RNG() * (N - 2) | 0), seg = (RNG() * (N - 1)) | 0; jams.add(`${ax}${idx}_${seg}`); }
 const isJam = (ax, idx, s) => jams.has(`${ax}${idx}_${Math.floor(clamp(s, 0, S - 1) / G)}`);
-// luksofors: krustojumā (i,j) – vai virziens zaļš
-const lightOff = (i, j) => ((i * 7 + j * 13) % 16);
-function lightGreen(i, j, ax, t) { const p = (t + lightOff(i, j)) % 16; return ax === 'h' ? p < 7 : (p >= 8 && p < 15); }
+// luksofors krustojumā (i,j): 20 s cikls – horizontālā iela zaļa 0–7.5, dzeltena 7.5–9.5, abas sarkanas līdz 10; vertikālā 10–17.5 zaļa, 17.5–19.5 dzeltena
+const lightOff = (i, j) => ((i * 7 + j * 13) % 20);
+function lightState(i, j, ax, t) { const p = (t + lightOff(i, j)) % 20, q = ax === 'h' ? p : (p + 10) % 20; return q < 7.5 ? 'g' : q < 9.5 ? 'y' : 'r'; }
+const lightGreen = (i, j, ax, t) => lightState(i, j, ax, t) === 'g';
 
 // ================= Ātrā palīdzība =================
 const amb = { x: HOSP_BAY.x, y: HOSP_BAY.y, a: 0, v: 0, siren: false, bumpT: 0, fuel: 100 };
@@ -69,47 +70,59 @@ const skids = [];
 const CAR_COLS = ['#e74c3c', '#3498db', '#f1c40f', '#ecf0f1', '#2c3e50', '#9b59b6', '#1abc9c', '#e67e22', '#95a5a6', '#c0392b', '#2980b9', '#16a085'];
 const cars = [];
 function laneXY(c) { const off = (c.ax === 'h' ? c.dir : -c.dir) * (LANE + 20 * c.pull); return c.ax === 'h' ? { x: c.s, y: c.idx * G + off } : { x: c.idx * G + off, y: c.s }; }
-function spawnCar(ax, idx, s, dir) { const c = { ax, idx, s, dir, v: 0, max: 170 + Math.random() * 70, col: CAR_COLS[(Math.random() * CAR_COLS.length) | 0], pull: 0, stun: 0, ang: 0, len: 52 + Math.random() * 10 };
-  const p = laneXY(c); c.x = p.x; c.y = p.y; c.ang = ax === 'h' ? (dir > 0 ? 0 : Math.PI) : (dir > 0 ? Math.PI / 2 : -Math.PI / 2); cars.push(c); return c; }
-for (let k = 0; k < 64; k++) { const ax = Math.random() < .5 ? 'h' : 'v', idx = (Math.random() * N) | 0, s = Math.random() * S; spawnCar(ax, idx, s, Math.random() < .5 ? 1 : -1); }
-jams.forEach(key => { const ax = key[0], idx = +key.slice(1, key.indexOf('_')), seg = +key.slice(key.indexOf('_') + 1);
-  for (let k = 0; k < 5; k++) spawnCar(ax, idx, seg * G + 80 + k * 62, Math.random() < .5 ? 1 : -1); });
-
+const laneOff = (ax, dir) => (ax === 'h' ? dir : -dir) * LANE;
+const angOf = (ax, dir) => ax === 'h' ? (dir > 0 ? 0 : Math.PI) : (dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+function spawnCar(ax, idx, s, dir) { const c = { ax, idx, s, dir, v: 0, max: 150 + Math.random() * 80, col: CAR_COLS[(Math.random() * CAR_COLS.length) | 0], pull: 0, stun: 0, ang: angOf(ax, dir), len: 50 + Math.random() * 12, plan: null, turn: null, brake: false };
+  const p = laneXY(c); c.x = p.x; c.y = p.y; cars.push(c); return c; }
+for (let k = 0; k < 70; k++) { const ax = Math.random() < .5 ? 'h' : 'v', idx = (Math.random() * N) | 0, dir = Math.random() < .5 ? 1 : -1;
+  let s = Math.random() * S; if (cars.some(o => o.ax === ax && o.idx === idx && o.dir === dir && Math.abs(o.s - s) < 90)) continue; spawnCar(ax, idx, s, dir); }
+jams.forEach(key => { const ax = key[0], idx = +key.slice(1, key.indexOf('_')), seg = +key.slice(key.indexOf('_') + 1), dir = Math.random() < .5 ? 1 : -1;
+  for (let k = 0; k < 4; k++) spawnCar(ax, idx, seg * G + RW / 2 + 40 + k * 72, dir); });
+// kur mašīna var nogriezties nākamajā krustojumā: 's' taisni, 'r' pa labi, 'l' pa kreisi (pilsētas malā – tikai iespējamie)
+function planAt(c, next) { const opts = [], atEdge = (next <= 0 && c.dir < 0) || (next >= S && c.dir > 0), here = c.idx * G, rd = c.ax === 'h' ? c.dir : -c.dir;
+  if (!atEdge) opts.push('s', 's', 's'); if (!((here <= 0 && rd < 0) || (here >= S && rd > 0))) opts.push('r', 'r'); if (!((here <= 0 && -rd < 0) || (here >= S && -rd > 0))) opts.push('l');
+  return opts[(Math.random() * opts.length) | 0] || 's'; }
+const bez = (p0, p1, p2, t) => ({ x: (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * p1.x + t * t * p2.x, y: (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * p1.y + t * t * p2.y });
 function updateCars(dt, t) {
-  // sekošana: tās pašas joslas mašīnas
-  const lanes = {}; cars.forEach(c => { const k = c.ax + c.idx + (c.dir > 0 ? '+' : '-'); (lanes[k] = lanes[k] || []).push(c); });
-  Object.values(lanes).forEach(arr => arr.sort((a, b) => (a.s - b.s) * a.dir));
-  Object.values(lanes).forEach(arr => arr.forEach((c, n) => { c.ahead = arr[n + 1] || null; }));
+  const lanes = {}; cars.forEach(c => { if (c.turn) return; const k = c.ax + c.idx + (c.dir > 0 ? '+' : '-'); (lanes[k] = lanes[k] || []).push(c); });
+  Object.values(lanes).forEach(arr => { arr.sort((a, b) => (a.s - b.s) * a.dir); arr.forEach((c, n) => { c.ahead = arr[n + 1] || null; }); });
   for (const c of cars) {
-    if (c.stun > 0) { c.stun -= dt; c.v = 0; continue; }
-    let target = isJam(c.ax, c.idx, c.s) ? 55 : c.max;
-    if (c.ahead) { const gap = (c.ahead.s - c.s) * c.dir; if (gap < 66) target = 0; else if (gap < 130) target = Math.min(target, c.ahead.v * .9); }
-    // luksofors
-    const next = c.dir > 0 ? Math.ceil((c.s + 1) / G) * G : Math.floor((c.s - 1) / G) * G, ni = Math.round(next / G);
-    if (ni > 0 && ni < N - 1) { const stop = next - c.dir * (RW / 2 + 16), d = (stop - c.s) * c.dir;
-      const [li, lj] = c.ax === 'h' ? [ni, c.idx] : [c.idx, ni];
-      if (d > 0 && d < 90 && !lightGreen(li, lj, c.ax, t)) target = Math.min(target, d < 8 ? 0 : d * 1.5); }
-    // ātrā palīdzība priekšā – nebrauc virsū; ar sirēnu – nobrauc malā
-    const p = laneXY(c), dx = amb.x - p.x, dy = amb.y - p.y, dd = Math.hypot(dx, dy), fx = Math.cos(c.ang), fy = Math.sin(c.ang);
+    if (c.stun > 0) { c.stun -= dt; c.v = 0; c.brake = true; continue; }
+    // ---- pagrieziens pa līkni krustojumā ----
+    if (c.turn) { const T_ = c.turn; let block = false;
+      for (const o of cars) if (o !== c && Math.hypot(o.x - c.x, o.y - c.y) < 46) { const fx = Math.cos(c.ang), fy = Math.sin(c.ang); if ((o.x - c.x) * fx + (o.y - c.y) * fy > 10) block = true; }
+      if (Math.hypot(amb.x - c.x, amb.y - c.y) < 70) block = true;
+      c.v = lerp(c.v, block ? 0 : 95, Math.min(1, dt * 3)); T_.t = Math.min(1, T_.t + c.v * dt / T_.len); const p = bez(T_.p0, T_.p1, T_.p2, T_.t), p2 = bez(T_.p0, T_.p1, T_.p2, Math.min(1, T_.t + .02));
+      c.x = p.x; c.y = p.y; if (T_.t < .99) c.ang = Math.atan2(p2.y - p.y, p2.x - p.x); c.brake = block;
+      if (T_.t >= 1) { c.ax = T_.ax; c.idx = T_.idx; c.dir = T_.dir; c.s = T_.s; c.turn = null; c.plan = null; c.ang = angOf(c.ax, c.dir); }
+      continue; }
+    let target = isJam(c.ax, c.idx, c.s) ? 50 : c.max;
+    if (c.ahead) { const gap = (c.ahead.s - c.s) * c.dir; if (gap < 64) target = 0; else if (gap < 140) target = Math.min(target, c.ahead.v * .9 + (gap - 64)); }
+    // nākamais krustojums, stop līnija, luksofors (dzeltenajā apstājas, ja var paspēt)
+    const next = c.dir > 0 ? Math.ceil((c.s + 1) / G) * G : Math.floor((c.s - 1) / G) * G, ni = Math.round(next / G), stop = next - c.dir * (RW / 2 + 14), d = (stop - c.s) * c.dir;
+    if (!c.plan && d < 170) c.plan = planAt(c, next);
+    if (ni > 0 && ni < N - 1 && d > 0 && d < 120) { const [li, lj] = c.ax === 'h' ? [ni, c.idx] : [c.idx, ni], L = lightState(li, lj, c.ax, t);
+      if (L === 'r' || (L === 'y' && d > 30)) target = Math.min(target, d < 6 ? 0 : d * 1.6); }
+    if (c.plan && c.plan !== 's' && d < 110) target = Math.min(target, 110);
+    // ātrā palīdzība priekšā – nebrauc virsū; ar sirēnu – nobrauc malā un palaiž garām
+    const fx = Math.cos(c.ang), fy = Math.sin(c.ang), dx = amb.x - c.x, dy = amb.y - c.y, dd = Math.hypot(dx, dy);
     if (dd < 110 && (dx * fx + dy * fy) > 20) target = 0;
     let wantPull = 0;
-    if (amb.siren && dd < 300) { const ax_ = Math.cos(amb.a), ay_ = Math.sin(amb.a); if (-(dx * ax_ + dy * ay_) > -40) { wantPull = 1; target = Math.min(target, 40); } }
+    if (amb.siren && dd < 320) { const ax_ = Math.cos(amb.a), ay_ = Math.sin(amb.a); if (-(dx * ax_ + dy * ay_) > -40) { wantPull = 1; target = Math.min(target, 30); } }
     c.pull = lerp(c.pull, wantPull, Math.min(1, dt * 2.5));
-    c.v = lerp(c.v, target, Math.min(1, dt * (target < c.v ? 3.2 : 1.1)));
+    c.brake = target < c.v - 8; c.v = lerp(c.v, target, Math.min(1, dt * (target < c.v ? 3.4 : .9)));
     const ps = c.s; c.s += c.dir * c.v * dt;
-    // krustojums: pagriezties vai taisni
-    if ((ps - next) * (c.s - next) <= 0 && ps !== next) {
-      const atEdgeAhead = (next <= 0 && c.dir < 0) || (next >= S && c.dir > 0), opts = [];
-      if (!atEdgeAhead) opts.push('s', 's');
-      const ni2 = Math.round(next / G), rd = c.ax === 'h' ? c.dir : -c.dir, ld = -rd, here = c.idx * G; // pa labi / pa kreisi uz perpendikulārās ielas
-      if (!((here <= 0 && rd < 0) || (here >= S && rd > 0))) opts.push('r');
-      if (!((here <= 0 && ld < 0) || (here >= S && ld > 0))) opts.push('l');
-      const ch = opts[(Math.random() * opts.length) | 0] || 's';
-      if (ch !== 's') { const nd = ch === 'r' ? rd : ld; c.ax = c.ax === 'h' ? 'v' : 'h'; c.idx = ni2; c.s = here + nd * 1; c.dir = nd; c.v *= .6; }
-    }
-    if (c.s < -40 || c.s > S + 40) { c.dir *= -1; c.s = clamp(c.s, 0, S); }
-    const q = laneXY(c); c.x = lerp(c.x, q.x, Math.min(1, dt * 10)); c.y = lerp(c.y, q.y, Math.min(1, dt * 10)); c.x = c.ax === 'h' ? q.x : c.x; c.y = c.ax === 'v' ? q.y : c.y;
-    const ta = c.ax === 'h' ? (c.dir > 0 ? 0 : Math.PI) : (c.dir > 0 ? Math.PI / 2 : -Math.PI / 2); c.ang += wrapA(ta - c.ang) * Math.min(1, dt * 7);
+    // iebrauc krustojumā: taisni turpina, pagriezienam – līkne līdz jaunās ielas joslai
+    const entry = next - c.dir * (RW / 2 + 4);
+    if ((ps - entry) * (c.s - entry) <= 0 && ps !== entry && c.plan && c.plan !== 's') {
+      const here = c.idx * G, rd = c.ax === 'h' ? c.dir : -c.dir, nd = c.plan === 'r' ? rd : -rd, nax = c.ax === 'h' ? 'v' : 'h', nidx = ni;
+      const p0 = { x: c.x, y: c.y }, exitS = here + nd * (RW / 2 + 4), lo = laneOff(nax, nd);
+      const p2 = nax === 'h' ? { x: exitS, y: nidx * G + lo } : { x: nidx * G + lo, y: exitS }, p1 = c.ax === 'h' ? { x: p2.x, y: p0.y } : { x: p0.x, y: p2.y };
+      c.turn = { p0, p1, p2, t: 0, len: Math.hypot(p1.x - p0.x, p1.y - p0.y) + Math.hypot(p2.x - p1.x, p2.y - p1.y), ax: nax, idx: nidx, dir: nd, s: exitS }; c.pull = 0; continue; }
+    if ((ps - next) * (c.s - next) <= 0 && ps !== next) c.plan = null; // taisni cauri krustojumam
+    if (c.s < -RW / 2 || c.s > S + RW / 2) { c.dir *= -1; c.s = clamp(c.s, 0, S); c.plan = null; }
+    const q = laneXY(c); c.x = c.ax === 'h' ? q.x : lerp(c.x, q.x, Math.min(1, dt * 8)); c.y = c.ax === 'v' ? q.y : lerp(c.y, q.y, Math.min(1, dt * 8));
+    c.ang += wrapA(angOf(c.ax, c.dir) - c.ang) * Math.min(1, dt * 8);
   }
 }
 
@@ -229,10 +242,11 @@ function startScene() {
   M.state = 'scene'; M.t1 = M.t; M.bumps1 = M.bumps; if (amb.siren) toggleSiren(); sfx('door');
   const c = M.c;
   const render = () => {
-    sheet(`${sceneCanvas()}<div class="step">1. solis · Noskaidro situāciju</div><h2>${c.who} ${c.name}</h2><p>${c.see}</p>
+    if (M.tc) M.tc.destroy();
+    sheet(`<div id="stg"></div><div class="step">1. solis · Noskaidro situāciju</div><h2>${c.who} ${c.name}</h2><p>${c.see}</p>
       <div class="opts">${c.q.map((q, k) => `<button class="opt${M.asked.has(k) ? ' asked' : ''}" data-q="${k}">❓ ${q.t}${M.asked.has(k) ? `<span class="ans">💬 ${q.a}</span>` : ''}</button>`).join('')}</div>
       <button class="main" id="next" ${M.asked.size ? '' : 'disabled'}>Es saprotu, kas noticis →</button>`);
-    drawScene();
+    M.tc = Treat.mount($('stg'), c, {});
     document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const k = +b.dataset.q; if (M.asked.has(k)) return; M.asked.add(k); sfx('tick'); render(); });
     $('next').onclick = stepDx; };
   render();
@@ -247,40 +261,33 @@ function stepDx() {
     document.querySelectorAll('[data-d]').forEach(x => { const o = opts[+x.dataset.d]; x.disabled = true; if (o.ok) x.classList.add('right'); else if (x === b) x.classList.add('wrong'); });
     sfx(d.ok ? 'good' : 'bad'); setTimeout(stepTools, d.ok ? 700 : 1500); });
 }
+// 3. solis: palīdzība – rīkus velk no somas uz pacienta ķermeņa daļu
 function stepTools() {
-  const c = M.c, list = [...c.tools].sort(() => Math.random() - .5);
-  const render = () => {
-    sheet(`<div class="step">3. solis · Palīdzība</div><h2>🧰 Ko darīsi? <small style="font-size:14px;color:#9fb0ff">(izvēlies visu, kas vajadzīgs)</small></h2>
-      <div class="tools">${list.map(id => `<button class="tool${M.picked.has(id) ? ' sel' : ''}" data-t="${id}"><i>${TOOLS[id].i}</i>${TOOLS[id].n}</button>`).join('')}</div>
-      <button class="main green" id="next" ${M.picked.size ? '' : 'disabled'}>✔ Palīdzēt</button>`);
-    document.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const id = b.dataset.t; M.picked.has(id) ? M.picked.delete(id) : M.picked.add(id); sfx('tick'); render(); });
-    $('next').onclick = () => {
-      const need = c.need, right = need.filter(id => M.picked.has(id)).length, wrong = [...M.picked].filter(id => !need.includes(id) && !(c.bonus || []).includes(id)).length, bonus = (c.bonus || []).filter(id => M.picked.has(id)).length;
-      M.sc.help = clamp(Math.round(right / need.length * 100 - wrong * 25 + bonus * 10), 0, 100);
-      document.querySelectorAll('[data-t]').forEach(x => { const id = x.dataset.t, p = M.picked.has(id); x.disabled = true;
-        if (need.includes(id)) x.classList.add(p ? 'right' : 'miss'); else if ((c.bonus || []).includes(id)) { if (p) x.classList.add('right'); } else if (p) x.classList.add('wrong'); });
-      $('next').disabled = true; $('next').textContent = wrong ? '⚠️ Dažas lietas nevajadzēja' : right === need.length ? '👍 Pareizi!' : '🤔 Kaut kas palika neizdarīts';
-      sfx(wrong || right < need.length ? 'bad' : 'good');
-      setTimeout(() => c.cpr && M.picked.has('cpr') ? stepCpr() : stepDecide(), 1700); };
-  };
-  render();
+  const c = M.c; if (M.tc) M.tc.destroy();
+  sheet(`<div class="step">3. solis · Palīdzība</div><h2>🧰 Velc no somas uz pacientu <small style="font-size:13.5px;color:#9fb0ff">– tur, kur vajag</small></h2>
+    <div id="stg"></div><button class="main green" id="next" disabled>✔ Esmu palīdzējis</button>`);
+  const tc = M.tc = Treat.mount($('stg'), c, { interactive: true, sfx,
+    onChange: st => { $('next').disabled = !st.applied.size; },
+    onCpr: done => cprGame(done), onShock: () => { cam.shake = 14; buzz([80, 40, 80]); save.cpr = (save.cpr || 0) + 1; } });
+  $('next').onclick = () => { const st = tc.st, need = c.need, right = need.filter(id => st.applied.has(id)).length, wrong = st.wrong.size, bonus = (c.bonus || []).filter(id => st.applied.has(id)).length;
+    M.picked = st.applied; M.sc.help = clamp(Math.round(right / need.length * 100 - wrong * 25 + bonus * 10), 0, 100);
+    if (c.cpr) M.sc.cpr = st.cprScore || 0;
+    if (right < need.length) { const miss = need.filter(id => !st.applied.has(id)).map(id => TOOLS[id].i + ' ' + TOOLS[id].n).join(', '); tc.hint(`🤔 Vēl vajadzēja: <b>${miss}</b>`, true); sfx('bad'); $('next').disabled = true; setTimeout(stepDecide, 2600); return; }
+    sfx('good'); stepDecide(); };
 }
-// sirds masāža: 30 spiedieni ritmā 100–120 reizes minūtē (starp spiedieniem ~0,5–0,6 s)
-function stepCpr() {
-  let taps = [], goodN = 0, n = 0, t0 = performance.now(), raf = 0;
-  sheet(`<div class="step">Sirds masāža</div><h2>❤️ Spied ritmā!</h2><p>Spied lielo pogu, kad sarkanais punkts ir zaļajā zonā. Īstā dzīvē – 100–120 reizes minūtē, stipri krūškurvja vidū.</p>
-    <div class="cpr"><div class="beat"><div class="zone"></div><div class="dot" id="dot"></div></div><button class="press" id="press">❤️</button><div class="cprInfo" id="cprI">0 / 30</div></div>`);
-  const dot = $('dot'), info = $('cprI'), per = 545;
+// sirds masāža: 30 spiedieni ritmā 100–120 reizes minūtē (starp spiedieniem ~0,5–0,6 s); atveras virs ainas
+function cprGame(done) {
+  let taps = [], goodN = 0, n = 0, t0 = performance.now(), raf = 0; const ov = document.createElement('div'); ov.className = 'cprOv';
+  ov.innerHTML = `<div class="cprBox"><h2>❤️ Spied ritmā!</h2><p>Spied, kad sarkanais punkts ir zaļajā zonā. Īstā dzīvē – 100–120 reizes minūtē, stipri krūškurvja vidū.</p>
+    <div class="cpr"><div class="beat"><div class="zone"></div><div class="dot"></div></div><button class="press">❤️</button><div class="cprInfo">0 / 30</div></div></div>`;
+  document.body.appendChild(ov); const dot = ov.querySelector('.dot'), info = ov.querySelector('.cprInfo'), per = 545;
   const loop = () => { const ph = ((performance.now() - t0) % per) / per; dot.style.left = (8 + 84 * (ph < .5 ? ph * 2 : 2 - ph * 2)) + '%'; raf = requestAnimationFrame(loop); }; loop();
-  $('press').addEventListener('pointerdown', e => { e.preventDefault(); const now = performance.now(); n++; sfx('beat'); buzz(20);
+  ov.querySelector('.press').addEventListener('pointerdown', e => { e.preventDefault(); const now = performance.now(); n++; sfx('beat'); buzz(20);
     if (taps.length) { const dtp = now - taps[taps.length - 1]; const ok = dtp > 470 && dtp < 660; if (ok) goodN++; info.textContent = `${n} / 30 · ${ok ? '👍 Labi!' : dtp <= 470 ? '⏩ Par ātru' : '⏪ Par lēnu'}`; } else info.textContent = `${n} / 30`;
-    taps.push(now); if (n >= 30) { cancelAnimationFrame(raf); M.cprScore = Math.round(goodN / 29 * 100); M.sc.cpr = M.cprScore; setTimeout(M.picked.has('aed') ? stepAed : stepDecide, 400); } });
-}
-function stepAed() {
-  sheet(`<div class="step">Defibrilators</div><h2>⚡ Defibrilators analizē sirdi…</h2><p>„Šoks ieteikts. Neviens nepieskaras pacientam!”</p><button class="main red" id="shock">⚡ Visi atkāpjas – ŠOKS!</button>`);
-  $('shock').onclick = () => { sfx('shock'); cam.shake = 14; buzz([80, 40, 80]); sheet(`<h2>💓 Sirds atkal pukst!</h2><p>Pacients atkal elpo. Viņam ātri jānokļūst slimnīcā.</p><button class="main" id="ok">Tālāk →</button>`); $('ok').onclick = stepDecide; save.cpr = (save.cpr || 0) + 1; };
+    taps.push(now); if (n >= 30) { cancelAnimationFrame(raf); const sc = Math.round(goodN / 29 * 100); setTimeout(() => { ov.remove(); done(sc); }, 400); } });
 }
 function stepDecide() {
+  if (M.tc) { M.tc.destroy(); M.tc = null; }
   sheet(`<div class="step">4. solis · Ko tālāk?</div><h2>Vai ${M.c.name.split(',')[0]} jāved uz slimnīcu?</h2>
     <div class="row2"><button class="main red" id="dH">🏥 Vest uz slimnīcu</button><button class="main green" id="dS">🏠 Palīdzēts uz vietas</button></div>`);
   const pick = go => { M.decision = go; M.sc.decide = go === M.c.go ? 100 : 0;
@@ -321,16 +328,8 @@ let toastT = 0; function toast(t) { const e = $('toast'); e.innerHTML = t; e.cla
 
 // ---- ainas attēls (vieta + pacients + tavs mediķis) ----
 let LOOK = { skin: '#f2c9a0', hat: 'cap', cap: '#1b1b1f' };
-function sceneCanvas() { return '<canvas class="scene" id="scn" width="420" height="170"></canvas>'; }
-function drawScene() { const c = $('scn'); if (!c) return; const g = c.getContext('2d'), pl = M.c.place; g.scale(420 / 560, 170 / 150);
-  const sky = g.createLinearGradient(0, 0, 0, 150); sky.addColorStop(0, pl === 'house' || pl === 'school' ? '#f3e5d0' : '#9fd3ff'); sky.addColorStop(1, '#e8f4ff'); g.fillStyle = sky; g.fillRect(0, 0, 560, 150);
-  if (pl === 'park' || pl === 'garden') { g.fillStyle = '#7cc46a'; g.fillRect(0, 95, 560, 55); for (let k = 0; k < 6; k++) { g.fillStyle = '#4e9a45'; g.beginPath(); g.arc(40 + k * 100, 70, 26, 0, 7); g.fill(); g.fillStyle = '#6b4a2e'; g.fillRect(37 + k * 100, 90, 6, 14); } if (pl === 'garden') { g.font = '22px system-ui'; for (let k = 0; k < 10; k++) g.fillText('🌷', 20 + k * 56, 140); } }
-  else if (pl === 'street') { g.fillStyle = '#c9c2b6'; g.fillRect(0, 100, 560, 50); g.fillStyle = '#d9cbb7'; for (let k = 0; k < 5; k++) g.fillRect(k * 120, 20, 100, 80); }
-  else { g.fillStyle = '#c9a77c'; g.fillRect(0, 105, 560, 45); g.fillStyle = '#fff8'; g.fillRect(380, 20, 120, 70); }
-  g.font = '64px system-ui'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(M.c.who, 200, 132);
-  g.font = '30px system-ui'; g.fillText(M.c.cpr ? '💤' : '😣', 240, 70);
-  drawMedic(g, 340, 140, 2.3); }
 // mediķis – tavs tēls no frizētavas (āda, cepure/mati), ātrās palīdzības formā
+window.APmedic = (g, x, y, s) => drawMedic(g, x, y, s);
 function drawMedic(g, x, y, s) { g.save(); g.translate(x, y); g.scale(s, s); const L = LOOK, rr = (a, b, w, h, r, c) => { g.fillStyle = c; g.beginPath(); g.roundRect(a, b, w, h, r); g.fill(); };
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(0, 0, 13, 4, 0, 0, 7); g.fill();
   rr(-7, -16, 6, 15, 3, '#1f3a5f'); rr(1, -16, 6, 15, 3, '#1f3a5f'); rr(-8, -3, 7, 4, 2, '#222'); rr(1, -3, 7, 4, 2, '#222');
@@ -367,10 +366,16 @@ function drawWorld(t) {
       if (j < N - 1) ctx.fillRect(X + k * 22 - 6, Y + RW / 2 + 6, 12, 18); if (j > 0) ctx.fillRect(X + k * 22 - 6, Y - RW / 2 - 24, 12, 18); } }
   // kvartāli
   for (const b of blocks) { if (b.x1 < vx0 || b.x0 > vx1 || b.y1 < vy0 || b.y0 > vy1) continue; drawBlock(b, t); }
-  // luksofori
-  for (let i = 1; i < N - 1; i++) for (let j = 1; j < N - 1; j++) { const X = i * G, Y = j * G; if (X < vx0 || X > vx1 || Y < vy0 || Y > vy1) continue;
-    const hg = lightGreen(i, j, 'h', t), vg = lightGreen(i, j, 'v', t), dot = (x, y, on) => { ctx.fillStyle = '#1b1d24'; ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fill(); ctx.fillStyle = on ? '#3dff7a' : '#ff3b3b'; ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); };
-    dot(X - RW / 2 - 8, Y + RW / 2 + 8, hg); dot(X + RW / 2 + 8, Y - RW / 2 - 8, hg); dot(X - RW / 2 - 8, Y - RW / 2 - 8, vg); dot(X + RW / 2 + 8, Y + RW / 2 + 8, vg); }
+  // luksofori: katrai pieejai sava krāsaina stop līnija joslas platumā + luksofors labajā stūrī (sarkans / dzeltens / zaļš)
+  const LC = { r: '#ff3b3b', y: '#ffc533', g: '#36e06f' };
+  for (let i = 1; i < N - 1; i++) for (let j = 1; j < N - 1; j++) { const X = i * G, Y = j * G; if (X < vx0 - 100 || X > vx1 + 100 || Y < vy0 - 100 || Y > vy1 + 100) continue;
+    const hs = lightState(i, j, 'h', t), vs = lightState(i, j, 'v', t), e = RW / 2 + 14;
+    const bar = (x, y, w, h, st) => { ctx.fillStyle = LC[st]; ctx.globalAlpha = .85; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1; };
+    bar(X - e - 6, Y + 4, 8, RW / 2 - 8, hs); bar(X + e - 2, Y - RW / 2 + 4, 8, RW / 2 - 8, hs); bar(X - RW / 2 + 4, Y - e - 6, RW / 2 - 8, 8, vs); bar(X + 4, Y + e - 2, RW / 2 - 8, 8, vs);
+    const head = (x, y, st) => { ctx.fillStyle = '#5b6070'; ctx.fillRect(x - 2, y - 2, 4, 14); ctx.fillStyle = '#15171d'; ctx.beginPath(); ctx.roundRect(x - 8, y - 26, 16, 40, 5); ctx.fill();
+      ['r', 'y', 'g'].forEach((k, n) => { const on = k === st; ctx.fillStyle = on ? LC[k] : '#2c2f38'; ctx.beginPath(); ctx.arc(x, y - 18 + n * 12, 5, 0, 7); ctx.fill();
+        if (on) { ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(x, y - 18 + n * 12, 11, 0, 7); ctx.fill(); ctx.globalAlpha = 1; } }); };
+    head(X - e - 12, Y + e + 14, hs); head(X + e + 12, Y - e - 4, hs); head(X - e - 12, Y - e - 4, vs); head(X + e + 12, Y + e + 14, vs); }
   // bremžu pēdas
   ctx.fillStyle = 'rgba(20,20,24,.28)'; for (const s of skids) { if (s.x < vx0 || s.x > vx1 || s.y < vy0 || s.y > vy1) continue; ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.a); ctx.fillRect(-4, -2.5, 8, 5); ctx.restore(); }
   // maršruts uz ielas
@@ -384,7 +389,7 @@ function drawWorld(t) {
     ctx.fillStyle = '#ff3b4e'; ctx.beginPath(); ctx.arc(M.px + 22, M.py - 26, 12, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui'; ctx.fillText('!', M.px + 22, M.py - 25); }
   if (M.state === 'toHospital') { const pu = (t * 1.2) % 1; ctx.strokeStyle = `rgba(255,255,255,${1 - pu})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(HOSP_BAY.x, HOSP_BAY.y, 30 + pu * 50, 0, 7); ctx.stroke(); }
   // mašīnas
-  for (const c of cars) { if (c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue; drawCar(c.x, c.y, c.ang, c.len, 27, c.col, false, t); }
+  for (const c of cars) { if (c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue; drawCar(c.x, c.y, c.ang, c.len, 27, c.col, false, t, c); }
   drawCar(amb.x, amb.y, amb.a, 72, 32, '#ffffff', true, t);
 }
 function drawBlock(b, t) {
@@ -432,7 +437,7 @@ function drawHospital(b, ix0, iy0, ix1, iy1, t) {
   ctx.fillStyle = '#e53950'; ctx.fillRect(ix0 + 30, iy0 + 20, 14, 42); ctx.fillRect(ix0 + 16, iy0 + 34, 42, 14); ctx.fillRect(ix1 - 44, iy0 + 20, 14, 42); ctx.fillRect(ix1 - 58, iy0 + 34, 42, 14);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui'; ctx.fillText('SLIMNĪCA', cx, iy1 - 40);
 }
-function drawCar(x, y, a, L, Wd, col, isAmb, t) {
+function drawCar(x, y, a, L, Wd, col, isAmb, t, c) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(a);
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 4, -Wd / 2 + 5, L, Wd, 8); ctx.fill();
   if (isAmb && amb.siren) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const on = Math.sin(t * 16) > 0;
@@ -450,7 +455,11 @@ function drawCar(x, y, a, L, Wd, col, isAmb, t) {
     ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 16, -Wd / 2 + 4, L - 38, Wd - 8, 4); ctx.fill();
   }
   ctx.fillStyle = '#fff6c4'; ctx.fillRect(L / 2 - 3, -Wd / 2 + 3, 3, 6); ctx.fillRect(L / 2 - 3, Wd / 2 - 9, 3, 6);
-  ctx.fillStyle = '#ff5050'; ctx.fillRect(-L / 2, -Wd / 2 + 3, 2, 6); ctx.fillRect(-L / 2, Wd / 2 - 9, 2, 6);
+  const br = c && c.brake; ctx.fillStyle = br ? '#ff2020' : '#a83a3a'; ctx.fillRect(-L / 2 - (br ? 1 : 0), -Wd / 2 + 3, br ? 4 : 2, 6); ctx.fillRect(-L / 2 - (br ? 1 : 0), Wd / 2 - 9, br ? 4 : 2, 6);
+  if (br) { ctx.fillStyle = 'rgba(255,40,40,.25)'; ctx.beginPath(); ctx.arc(-L / 2 - 4, 0, 14, 0, 7); ctx.fill(); }
+  // pagriezienu rādītāji (oranži mirgo): pa labi – labā puse (+y), pa kreisi – kreisā
+  const pl = c && (c.turn ? (wrapA(angOf(c.turn.ax, c.turn.dir) - angOf(c.ax, c.dir)) > 0 ? 'r' : 'l') : c.plan);
+  if ((pl === 'r' || pl === 'l') && Math.sin(t * 9) > 0) { ctx.fillStyle = '#ffae1a'; const sy = pl === 'r' ? Wd / 2 - 3 : -Wd / 2 - 1; ctx.fillRect(L / 2 - 6, sy, 6, 4); ctx.fillRect(-L / 2, sy, 6, 4); }
   ctx.restore();
 }
 function drawMini(t) {
@@ -543,7 +552,10 @@ if (ONLINE && window.firebase && window.TW_FIREBASE) {
     try { const v = (await db.ref('users/' + UID).get()).val() || {}; if (v.name) NAME = v.name; NICK = v.nick || ''; if (v.look) LOOK = Object.assign(LOOK, v.look); } catch (e) {}
     try { const s = (await db.ref('ap/saves/' + UID).get()).val(); if (s) save = Object.assign(save, s); else { const l = JSON.parse(localStorage.getItem(LKEY())); if (l) save = Object.assign(save, l); } } catch (e) {}
     TW.wallet.watch(UID, v => { if (v != null) { wallet = v; hudKey = ''; } });
-    if (window.TW) { await TW.ready; TW.heartbeat(UID, () => ({ game: 'Ātrā palīdzība', where: M.state === 'toHospital' ? 'Ved pacientu uz slimnīcu' : M.state === 'scene' ? 'Pie pacienta' : `Līm. ${levelOf(save.xp).l}`, name: NAME, nick: NICK })); }
+    if (window.TW) await TW.ready;
+    // spēle vēl nav atvērta visiem – pagaidām tikai admini/moderatori var testēt
+    if (window.TW && !TW.isStaff(UID)) { sheet(`<h2>🚑 Ātrā palīdzība 112</h2><p>Drīzumā! Spēle vēl top. 🔒</p><a class="main" style="display:block;text-align:center;text-decoration:none" href="../index.html">← Uz sākumlapu</a>`); return; }
+    if (window.TW) { TW.heartbeat(UID, () => ({ game: 'Ātrā palīdzība', where: M.state === 'toHospital' ? 'Ved pacientu uz slimnīcu' : M.state === 'scene' ? 'Pie pacienta' : `Līm. ${levelOf(save.xp).l}`, name: NAME, nick: NICK })); }
     db.ref('kicks/' + UID).on('value', s => { const k = s.val(); if (k && k.until > TW.now()) { alert('Tevi uz laiku izmeta no spēles. Spēlē draudzīgi! 🙂'); location.href = '../index.html'; } }, () => {});
     if (window.TWA) TWA.load ? TWA.load(UID).catch(() => {}) : 0;
     start();
