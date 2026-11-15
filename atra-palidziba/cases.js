@@ -963,6 +963,41 @@ CASES.push(
     why: { heat: 'Svaigu punu nesilda – tas uztūkst vairāk. Aukstums caur drānu!', ice: 'Ledu tieši uz ādas neliek – aukstuma paku caur drānu.', sleep: 'Pēc sitiena pa galvu bērnu neatstāj vienu – vēro, vai nekļūst sliktāk.', butter: 'Sviests punu nemazina. Aukstums!' },
     fact: 'Punam palīdz aukstums caur drānu. Pēc sitiena pa galvu bērnu vēro: ja viņš vemj, kļūst miegains vai uzvedas dīvaini – zvani 112.' }
 );
+// ===== Simulētāji: kāds izliekas – pavedieni ir bildē (mirkšķina, kečupa pudele, saldējums “lauztajā” rokā…) =====
+CASES.push(
+  { id: 'faketest', time: 'day', pose: 'sit', place: 'school', prop: 'test', mood: 'fake', inj: { k: 'none', z: 'body' }, p: { age: 'kid', hair: '#6b4423', long: false, shirt: '#27ae60', pants: '#34495e' }, cond: 95, lv: 2, who: '🧒', name: 'Ralfs, 10 gadi', fake: true,
+    call: 'Skolēns saka, ka viņam briesmīgi sāp vēders un jābrauc uz slimnīcu!',
+    see: 'Zēns sēž skolas pagalmā, tur vēderu un skaļi vaid. Skaties uzmanīgi uz bildi! 🔍',
+    q: [{ t: 'Kur tieši sāp?', a: 'Te… nē, te! Nu, visur! 😖', good: true }, { t: 'Vai šodien skolā ir kas īpašs?', a: 'Matemātikas kontroldarbs… 😬', good: true }, { t: 'Vai ēdi brokastis?', a: 'Jā, divas porcijas pankūku!', good: true }, { t: 'Vai tev ir mājdzīvnieks?', a: 'Kāmis Fredis.', good: false }],
+    dx: [{ t: 'Izliekas – baidās no kontroldarba', ok: true }, { t: 'Akūts apendicīts', ok: false }, { t: 'Saindēšanās', ok: false }],
+    tools: ['calm', 'water', 'cpr', 'splint', 'epi', 'legs'], need: ['calm'], bonus: ['water'], go: false,
+    why: { cpr: 'Ralfs runā un pat smīn – sirds strādā lieliski! 😄', splint: 'Nekas nav lauzts.', epi: 'Nav nekādu alerģijas pazīmju.', legs: 'Kājas ceļ ģībonim, bet Ralfs ir pilnīgi možs.' },
+    fact: 'Dažreiz bērni izliekas slimi, jo no kaut kā baidās – piemēram, no kontroldarba. Ja tevi kaut kas biedē, labāk pastāsti pieaugušajam! Un, ja vēders tiešām stipri sāp, vienmēr pasaki – tad palīdzība ir vajadzīga.' },
+  { id: 'ketchup', time: 'day', pose: 'sit', place: 'street', prop: 'ketchup', mood: 'fake', inj: { k: 'scrape', z: 'knee' }, p: { age: 'teen', hair: '#1f1f1f', long: false, shirt: '#e67e22', pants: '#2c3e50' }, cond: 95, lv: 3, who: '🧑', name: 'Kristers, 15 gadi', fake: true,
+    call: 'Garāmgājējs zvana: uz ietves sēž puisis, kājas pilnas ar asinīm!',
+    see: 'Puisis sēž uz ietves un vaid, uz ceļgala sarkans traips. Pavēro apkārtni! 🔍',
+    q: [{ t: 'Vai ļoti sāp?', a: 'Ļoti!… haha… nē, tiešām ļoti! 😅', good: true }, { t: 'Kā tas notika?', a: 'Es… nokritu. Vai sasitos. Vai abi.', good: true }, { t: 'Kas tur aiz tevis filmē?', a: 'Neviens! Paslēp telefonu, ātri!', good: true }, { t: 'Kurā skolā mācies?', a: 'Rīgas 1. vidusskolā.', good: false }],
+    dx: [{ t: 'Joks – tas ir kečups, ne asinis', ok: true }, { t: 'Dziļš griezums', ok: false }, { t: 'Lauzta kāja', ok: false }],
+    tools: ['calm', 'wash', 'press', 'bandage', 'splint', 'cpr'], need: ['calm'], bonus: ['wash'], go: false,
+    why: { press: 'Tur nav brūces – tas ir kečups! Paskaties uz pudeli blakus. 🍅', bandage: 'Pārsējs nav vajadzīgs – tā nav brūce, bet kečups.', splint: 'Kāja ir vesela – viņš to kustina un smejas.', cpr: 'Kristers runā un smejas – sirds masāža nav vajadzīga!' },
+    fact: 'Viltus zvans uz 112 nav joks – tas ir aizliegts, un par to var būt sods. Kamēr ātrā brauc pie viltus izsaukuma, kāds cits var gaidīt palīdzību. Jokot drīkst, bet ne ar 112!' },
+  { id: 'icecream', time: 'day', pose: 'sit', place: 'playground', prop: 'icecream', mood: 'fake', inj: { k: 'none', z: 'armR' }, p: { age: 'kid', hair: '#e8c26a', long: true, shirt: '#ff5a7a', pants: '#5c6bc0' }, cond: 95, lv: 2, who: '👧', name: 'Paula, 8 gadi', fake: true,
+    call: 'Meitene saka, ka salauza roku. Ļoti sāp!',
+    see: 'Meitene sēž rotaļu laukumā un skaļi raud, ka roka ir lauzta. Paskaties uz rokām! 🔍',
+    q: [{ t: 'Kuru roku tu salauzi?', a: 'Šo! …nē, to otru! 😖', good: true }, { t: 'Vai vari pakustināt pirkstus?', a: 'Nē, nemaz nevaru!', good: true }, { t: 'Kā tas notika?', a: 'Nokritu no… no slidkalniņa. Laikam.', good: true }, { t: 'Kāds tev saldējums?', a: 'Zemeņu! 🍓', good: false }],
+    dx: [{ t: 'Izliekas – roka ir vesela', ok: true }, { t: 'Lauzta roka', ok: false }, { t: 'Sastiepta potīte', ok: false }],
+    tools: ['calm', 'splint', 'cold', 'ice', 'cpr', 'epi'], need: ['calm'], bonus: [], go: false,
+    why: { splint: '“Lauztajā” rokā Paula tur saldējumu – roka ir vesela! 🍦', cold: 'Roka nav ne pietūkusi, ne šķība – aukstums nav vajadzīgs.', ice: 'Ledus nav vajadzīgs – roka ir vesela.', cpr: 'Paula runā un raud – sirds strādā!', epi: 'Nav alerģijas pazīmju.' },
+    fact: 'Lūzuma pazīmes: roka ir šķība, stipri pietūkusi un to nevar pakustināt. Labs glābējs vienmēr skatās uzmanīgi – pazīmes neslēpj! 🔍' },
+  { id: 'fakefaint', time: 'any', pose: 'lie', place: 'concert', prop: 'stage', mood: 'fake', inj: { k: 'none', z: 'head' }, p: { age: 'teen', hair: '#a0522d', long: true, shirt: '#9b59b6', pants: '#2c3e50' }, cond: 95, lv: 3, who: '👧', name: 'Evelīna, 16 gadi', fake: true,
+    call: 'Koncertā pie skatuves noģība meitene! Draudzenes sauc palīdzību.',
+    see: 'Meitene guļ zālē ar aizvērtām acīm. Draudzenes čukst un smejas. Skaties uz seju! 🔍',
+    q: [{ t: 'Pārbaudīt elpošanu (10 sekundes)', a: 'Elpo normāli… un lūpas sāk smaidīt. 🤨', good: true }, { t: 'Uzrunāt: „Vai tu mani dzirdi?”', a: '…(viņa pamirkšķina ar vienu aci)', good: true }, { t: 'Jautāt draudzenēm, kas notika', a: 'Viņa grib, lai mūziķi viņu ienes aizkulisēs! 🤭', good: true }, { t: 'Jautāt, kura dziesma patīk', a: '„Lido tu”! ✈️', good: false }],
+    dx: [{ t: 'Izliekas – grib tikt pie mūziķiem', ok: true }, { t: 'Sirds apstāšanās', ok: false }, { t: 'Karstuma dūriens', ok: false }],
+    tools: ['calm', 'water', 'cpr', 'aed', 'recovery', 'oxygen'], need: ['calm'], bonus: ['water'], go: false,
+    why: { cpr: 'Evelīna elpo normāli un smaida – sirds masāža nav vajadzīga! 😄', aed: 'Defibrilatoru lieto tikai, ja cilvēks neelpo. Evelīna elpo un mirkšķina!', recovery: 'Viņa nav bez samaņas – tikai izliekas.', oxygen: 'Viņa elpo pilnīgi normāli.' },
+    fact: 'Pārbaudi elpošanu un reakciju – tā redzēsi, vai cilvēks tiešām ir bez samaņas. Izlikšanās var aizkavēt palīdzību kādam, kam tā tiešām vajadzīga. Mūziķi labprāt parakstīs autogrāfu arī bez ģīboņa! ✍️' }
+);
 // Paskaidrojumi katram gadījumam: kāpēc TIEŠI ŠEIT šis rīks neder un ko darīt vietā (bērnam saprotami).
 // Ja gadījumam nav sava teksta, rāda vispārīgo TOOLS[id].why.
 window.WHY = {

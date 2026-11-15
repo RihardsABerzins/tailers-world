@@ -66,12 +66,17 @@
       else { [[.8, -.3], [.6, -.44], [.4, -.32], [.18, -.5], [-.06, -.36], [-.3, -.52], [-.52, -.36], [-.72, -.42], [-.84, -.2]].forEach(([a, b]) => g.lineTo(r * a, r * b)); }
       g.closePath(); g.fill(); g.stroke(); } }
     // seja
-    const m = o.mood, ey = -r * .02, ex = r * .34; g.lineWidth = 2.2;
+    // izlicējs ('fake'): lielāko laiku vaid, bet ik pa ~4 s pamirkšķina un pasmīn – pavediens bildē
+    let m = o.mood; if (m === 'fake') m = (T.now % 4) > 3.0 ? 'wink' : (o.age === 'kid' ? 'cry' : 'pain');
+    const ey = -r * .02, ex = r * .34; g.lineWidth = 2.2;
     g.fillStyle = 'rgba(255,110,110,.25)'; [-1, 1].forEach(s => { g.beginPath(); g.ellipse(s * r * .52, r * .34, r * .15, r * .09, 0, 0, 7); g.fill(); });
     g.fillStyle = OL;
     if (m === 'ok') { [-1, 1].forEach(s => { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(s * ex, ey, r * .17, r * .2, 0, 0, 7); g.fill(); g.lineWidth = 1.8; g.stroke(); g.fillStyle = OL; g.beginPath(); g.arc(s * ex + r * .03, ey + r * .03, r * .08, 0, 7); g.fill(); });
       g.lineWidth = 2.6; [-1, 1].forEach(s => { g.beginPath(); g.moveTo(s * (ex - r * .16), ey - r * .32); g.lineTo(s * (ex + r * .14), ey - r * .36); g.stroke(); });
       g.lineWidth = 2.2; g.beginPath(); g.arc(0, r * .36, r * .24, .2 * Math.PI, .8 * Math.PI); g.stroke(); }
+    else if (m === 'wink') { g.beginPath(); g.moveTo(-ex - r * .16, ey); g.quadraticCurveTo(-ex, ey + r * .1, -ex + r * .16, ey); g.stroke();
+      g.fillStyle = '#fff'; g.beginPath(); g.ellipse(ex, ey, r * .17, r * .2, 0, 0, 7); g.fill(); g.lineWidth = 1.8; g.stroke(); g.fillStyle = OL; g.beginPath(); g.arc(ex + r * .09, ey + r * .02, r * .08, 0, 7); g.fill();
+      g.lineWidth = 2.6; g.beginPath(); g.moveTo(ex - r * .16, ey - r * .42); g.lineTo(ex + r * .14, ey - r * .34); g.stroke(); g.lineWidth = 2.2; g.beginPath(); g.moveTo(-r * .2, r * .48); g.quadraticCurveTo(r * .05, r * .56, r * .26, r * .38); g.stroke(); }
     else if (m === 'out') { [-1, 1].forEach(s => { g.beginPath(); g.arc(s * ex, ey - r * .04, r * .15, .1 * Math.PI, .9 * Math.PI); g.stroke(); }); g.beginPath(); g.moveTo(-r * .14, r * .52); g.lineTo(r * .14, r * .52); g.stroke(); }
     else { [-1, 1].forEach(s => { g.beginPath(); g.moveTo(s * (ex + r * .17), ey - r * .08); g.lineTo(s * (ex - r * .1), ey); g.lineTo(s * (ex + r * .17), ey + r * .08); g.stroke();
         g.lineWidth = 2.6; g.beginPath(); g.moveTo(s * (ex + r * .2), ey - r * .26); g.lineTo(s * (ex - r * .14), ey - r * .38); g.stroke(); g.lineWidth = 2.2; });
@@ -287,6 +292,13 @@
     else if (p === 'cones') { g.fillStyle = '#ff7a1a'; [[340, 250], [400, 262], [455, 248]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x, y - 30); g.lineTo(x - 12, y); g.lineTo(x + 12, y); g.fill(); g.fillStyle = '#fff'; g.fillRect(x - 7, y - 16, 14, 4); g.fillStyle = '#ff7a1a'; }); }
     else if (p === 'hive') { g.fillStyle = '#e6b84a'; for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(410, 200 - i * 16, 36 - i * 5, 10, 0, 0, 7); g.fill(); } g.fillStyle = '#3a2a10'; g.beginPath(); g.arc(410, 205, 5, 0, 7); g.fill();
       for (let i = 0; i < 4; i++) { const a = T.now * 2 + i * 1.6, x = 410 + Math.cos(a) * (40 + i * 6), y = 160 + Math.sin(a * 1.3) * 26; g.fillStyle = '#ffd34d'; g.beginPath(); g.ellipse(x, y, 5, 3.5, 0, 0, 7); g.fill(); g.fillStyle = '#222'; g.fillRect(x - 1, y - 3, 2, 6); } }
+    else if (p === 'test') { g.save(); g.translate(176, 280); g.rotate(-.12); g.fillStyle = '#fff'; g.strokeStyle = OL; g.lineWidth = 1.6; g.beginPath(); g.rect(-26, -17, 52, 34); g.fill(); g.stroke();
+      g.fillStyle = '#c0392b'; g.font = 'bold 7px system-ui'; g.textAlign = 'center'; g.fillText('KONTROLDARBS', 0, -8); g.fillStyle = '#7f8c8d'; for (let i = 0; i < 4; i++) g.fillRect(-20, -2 + i * 5, 34 - (i % 2) * 10, 1.5); g.restore();
+      g.fillStyle = '#3d6fb6'; g.strokeStyle = OL; g.lineWidth = 2; g.beginPath(); g.roundRect(150, 236, 34, 30, 7); g.fill(); g.stroke(); g.fillStyle = '#2c5aa0'; g.fillRect(156, 250, 22, 9); } // kontroldarbs + soma
+    else if (p === 'ketchup') { g.fillStyle = 'rgba(200,20,30,.75)'; [[352, 286, 9], [366, 290, 5], [340, 291, 4]].forEach(([x, y, r]) => { g.beginPath(); g.ellipse(x, y, r * 1.6, r * .6, 0, 0, 7); g.fill(); });
+      g.save(); g.translate(358, 268); g.fillStyle = '#d81b33'; g.strokeStyle = OL; g.lineWidth = 2; g.beginPath(); g.roundRect(-8, -18, 16, 30, 5); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.fillRect(-6, -8, 12, 8); g.fillStyle = '#d81b33'; g.font = 'bold 5px system-ui'; g.textAlign = 'center'; g.fillText('KEČUPS', 0, -2); g.fillStyle = '#f4f1e4'; g.fillRect(-3, -25, 6, 7); g.restore();
+      g.save(); g.translate(430, 196); g.strokeStyle = '#555'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, 6); g.lineTo(-12, 52); g.moveTo(0, 6); g.lineTo(12, 52); g.moveTo(0, 6); g.lineTo(0, 54); g.stroke();
+      g.fillStyle = '#1b1b22'; g.strokeStyle = OL; g.beginPath(); g.roundRect(-11, -16, 22, 22, 4); g.fill(); g.stroke(); g.fillStyle = Math.sin(T.now * 6) > 0 ? '#ff3b4e' : '#5a1a1a'; g.beginPath(); g.arc(-5, -10, 3, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = 'bold 6px system-ui'; g.fillText('REC', 4, -8); g.restore(); } // kečups + filmē
     else if (p === 'stage' && c.sun) {}
   }
   // ---- pacients ----
@@ -307,6 +319,8 @@
     if (CHKEYS.has(ck) && chDraw(g, ck, [['skin', nightK(skin, N)], ['shirt', nightK(o.armCol === shirt ? shirt : shirt, N)], ['pants', nightK(pants, N)], ['fixed', nightK('#ffffff', N)], [hv, nightK(hair, N)], ['line_' + hv, '#ffffff']]))
       { const H0 = geo(c, { pose: st.pose, applied: new Set() }).head; head(g, H0[0], H0[1], CHR, Object.assign({}, o, { faceOnly: true, tilt: 0 })); }
     else if (P.lie) { g.save(); g.translate(P.xf[0], P.xf[1]); g.rotate(-Math.PI / 2); body(g, P.L, o); g.restore(); } else body(g, P, o);
+    if (c.prop === 'icecream') { const [hx, hy] = P.armR[2]; g.save(); g.translate(hx + 2, hy - 6); g.scale(1.6, 1.6); g.rotate(-.3); g.fillStyle = '#e0a458'; g.strokeStyle = OL; g.lineWidth = 2; g.beginPath(); g.moveTo(-6, -4); g.lineTo(6, -4); g.lineTo(0, 14); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#ff9ad5'; g.beginPath(); g.arc(0, -9, 8, 0, 7); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(-3, -12, 2, 0, 7); g.fill(); g.restore(); } // “lauztā” roka tur saldējumu
     // traumas
     const Z = P.Z;
     if (c.inj.k === 'scrape' && !st.applied.has('plaster')) { const [x, y] = Z.knee; g.fillStyle = st.applied.has('wash') ? '#f0a0a0' : '#c0392b'; g.beginPath(); g.ellipse(x, y, 8, 6, .3, 0, 7); g.fill(); if (!st.applied.has('wash')) { g.fillStyle = '#7a1a10'; for (let i = 0; i < 5; i++) g.fillRect(x - 6 + (i * 5) % 12, y - 4 + (i * 7) % 8, 1.6, 1.6); } }
@@ -357,7 +371,7 @@
   // ================= montēšana =================
   const ageK = c => c.p.age === 'kid' ? .8 : c.p.age === 'teen' ? .92 : 1, piv = P => P.lie ? [250, 262] : [240, 268];
   window.Treat = { geo, mount(el, c, opt = {}) {
-    const st = { pose: c.pose, applied: new Set(), wrong: new Set(), mood: c.inj.k === 'out' ? 'out' : c.p.age === 'kid' ? 'cry' : 'pain', sweat: c.inj.k === 'sweat', pale: c.id === 'faint' || c.id === 'sugar', cond: c.cond || 50, fx: { cool: 0, wash: 0, inhaler: 0, calm: 0 }, fxs: [], hover: null, shocked: false };
+    const st = { pose: c.pose, applied: new Set(), wrong: new Set(), mood: c.mood ? c.mood : c.inj.k === 'out' ? 'out' : c.p.age === 'kid' ? 'cry' : 'pain', sweat: c.inj.k === 'sweat', pale: c.id === 'faint' || c.id === 'sugar', cond: c.cond || 50, fx: { cool: 0, wash: 0, inhaler: 0, calm: 0 }, fxs: [], hover: null, shocked: false };
     el.innerHTML = `<div class="stageWrap"><canvas class="stage" width="${SW * 2}" height="${SH * 2}"></canvas><div class="cond"><span>🫀 Stāvoklis</span><div class="cb"><i></i></div></div><div class="hint"></div><button class="shockBtn" style="display:none">⚡ Visi atkāpjas – ŠOKS!</button></div>`
       + (opt.interactive ? `<div class="tray">${c.tools.slice().sort(() => Math.random() - .5).map(id => `<div class="tile" data-t="${id}"><i>${TOOLS[id].i}</i><span>${TOOLS[id].n}</span></div>`).join('')}</div>` : '');
     const cv = el.querySelector('canvas'), g = cv.getContext('2d'), hintEl = el.querySelector('.hint'), cb = el.querySelector('.cb i'), shockBtn = el.querySelector('.shockBtn');
