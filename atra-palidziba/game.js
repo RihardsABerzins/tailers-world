@@ -283,16 +283,22 @@ function refuel() { const cost = fuelCost(); if (cost <= 0) { toast('⛽ Bāka j
   const pay = Math.min(cost, wallet), add = pay / .2; amb.fuel = Math.min(100, amb.fuel + add); walletAdd(-pay); save.fuel = amb.fuel; persist(); sfx('good'); toast(`⛽ Uzpildīts! ${Math.round(amb.fuel)}% · −€${pay}`); }
 
 // ---- pie pacienta: 1) jautājumi 2) kas noticis 3) palīdzība 4) (sirds masāža) 5) lēmums ----
+// smieklīgi jautājumi – nejauši viens katrā izsaukumā (neietekmē rezultātu); smagos gadījumos (bez samaņas, sirds masāža) nav
+const FUN = [['Kāda ir tava mīļākā krāsa?', 'Zaļa… bet varbūt vispirms palīdzēsi? 😅'], ['Vai tev mājās ir suns?', 'Jā, viņu sauc Bumbulis! 🐶'], ['Vai tev garšo pica?', 'Kuram gan negaršo! 🍕'],
+  ['Vai tu proti dejot?', 'Šobrīd labāk ne… 🕺'], ['Kas labāks – kaķi vai suņi?', 'Abi! 🐱🐶'], ['Vai tu klausies Papīra Lidmašīnas?', 'Protams! Lido tu! ✈️'], ['Vai esi kādreiz redzējis pūķi?', 'Nē… vai TEV viss kārtībā? 🐉'],
+  ['Vai tev garšo brokoļi?', 'Fui! 🥦'], ['Kāds ir tavs mīļākais dzīvnieks?', 'Pingvīns! 🐧'], ['Vai tu māki svilpot?', 'Fiū-fiū… nu, gandrīz. 😄'], ['Vai tu tici rūķīšiem?', 'Tikai Ziemassvētkos! 🎅'], ['Cik tev ir zobu?', 'Neesmu skaitījis… 🦷']];
 function startScene() {
   M.state = 'scene'; M.t1 = M.t; M.bumps1 = M.bumps; if (amb.siren) toggleSiren(); sfx('door');
-  const c = M.c;
+  const c = M.c, grave = c.cpr || c.inj.k === 'out';
+  const fun = grave ? null : FUN[(Math.random() * FUN.length) | 0], qs = c.q.map((q, k) => ({ t: q.t, a: q.a, k }));
+  if (fun) qs.splice((Math.random() * (qs.length + 1)) | 0, 0, { t: fun[0], a: fun[1], k: 'f' });
   const render = () => {
     if (M.tc) M.tc.destroy();
     sheet(`<div id="stg"></div><div class="step">1. solis · Noskaidro situāciju</div><h2>${c.who} ${c.name}</h2><p>${c.see}</p>
-      <div class="opts">${c.q.map((q, k) => `<button class="opt${M.asked.has(k) ? ' asked' : ''}" data-q="${k}">❓ ${q.t}${M.asked.has(k) ? `<span class="ans">💬 ${q.a}<em class="${q.good ? 'qg' : 'qb'}">${q.good ? '👍 Noderīgs jautājums' : '🤷 Tas nepalīdz saprast'}</em></span>` : ''}</button>`).join('')}</div>
+      <div class="opts">${qs.map(q => `<button class="opt${M.asked.has(q.k) ? ' asked' : ''}" data-q="${q.k}">❓ ${q.t}${M.asked.has(q.k) ? `<span class="ans">💬 ${q.a}</span>` : ''}</button>`).join('')}</div>
       <button class="main" id="next" ${M.asked.size ? '' : 'disabled'}>Es saprotu, kas noticis →</button>`);
     M.tc = Treat.mount($('stg'), c, {});
-    document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const k = +b.dataset.q; if (M.asked.has(k)) return; M.asked.add(k); sfx('tick'); render(); });
+    document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const k = b.dataset.q === 'f' ? 'f' : +b.dataset.q; if (M.asked.has(k)) return; M.asked.add(k); sfx('tick'); render(); });
     $('next').onclick = stepDx; };
   render();
 }
