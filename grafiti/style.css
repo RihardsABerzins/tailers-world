@@ -21,6 +21,9 @@
   #result .rc span{background:#ffffff14;border-radius:999px;padding:4px 10px;font-weight:800;font-size:15px}
   #result .rc .gold{color:#ffd34d}#result .rc .bad{background:#b71c1c66}#result .rc .ok{background:#2e7d3266}
   #result .rl{margin-top:8px;font-size:18px;font-weight:900;color:#7cff8a}
+  /* zems ekrāns (telefons horizontāli): kartīte kompaktāka; padoms paslēpts, kamēr kartīte redzama */
+  @media (max-height:520px){ #result{top:calc(6px + env(safe-area-inset-top));padding:6px 12px 8px} #result .rs{font-size:28px} #result .rt{font-size:17px;margin:0 0 4px} #result canvas{width:auto;max-height:min(110px,30vh);margin-bottom:6px} #result .rc span{font-size:13px;padding:3px 8px} }
+  body.res-on #guide{opacity:0!important}
   #prompt{position:fixed;left:50%;top:22%;transform:translateX(-50%);background:#000b;padding:8px 16px;border-radius:10px;display:none;pointer-events:none;z-index:10;border:1px solid #fff3}
   #fsBtn{position:fixed;left:12px;bottom:12px;z-index:12;background:#000a;color:#eee;border:1px solid #fff3}
   .overlay{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .4s;z-index:20}
@@ -154,8 +157,8 @@
     #prompt{bottom:108px}
     #touch button{width:50px;height:50px}
     #touch div{gap:6px}
-    #toast{top:110px;max-width:92vw}
-    #policeSign{top:76px}
+    #toast{top:150px;max-width:92vw}
+    #policeSign{top:74px;left:auto;right:6px;transform:none;padding:6px 14px} #policeSign .psBig{font-size:22px;letter-spacing:1px} #policeSign .psSmall{font-size:12px} /* labajā pusē – neaizsedz līmeni, somu un paziņojumu */
   }
   /* mobilā vadība: salokāmi paneļi, kontekstuālā poga */
   #hud{pointer-events:auto;cursor:pointer}

@@ -1162,7 +1162,7 @@ function showResult(o){ const el=document.getElementById('result'); clearTimeout
   // zīmējums ar balto kontūru virsū – redz, kur trāpīja
   const c=el.querySelector('canvas'), g=c.getContext('2d'), cr=o.art.crop, k=240/cr.w; g.drawImage(o.art,0,0,240,147);
   g.save(); g.strokeStyle='#fff'; g.globalAlpha=.75; g.lineWidth=1.5; g.setLineDash([4,3]); targetPaths.forEach(p=>{ g.beginPath(); p.forEach(([x,y],i)=>{ const X=(x-cr.x)*k, Y=(y-cr.y)*k; i?g.lineTo(X,Y):g.moveTo(X,Y); }); g.stroke(); }); g.restore();
-  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); resT=setTimeout(()=>el.classList.remove('on'),4200); }
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); document.body.classList.add('res-on'); resT=setTimeout(()=>{ el.classList.remove('on'); document.body.classList.remove('res-on'); },4200); }
 // Freestyle: zīmē, ko gribi; bez precizitātes – samaksa, ja uzzīmēts pietiekami daudz. Var zīmēt virsū vai notīrīt iepriekšējo.
 function finishFree(){ const w=curWall, f=freeFrame(); let tot=0, wsum=0;
   strokes.forEach(s_=>{ let L=0; for(let i=1;i<s_.pts.length;i++) L+=Math.hypot(s_.pts[i].x-s_.pts[i-1].x,s_.pts[i].y-s_.pts[i-1].y); tot+=L; wsum+=L*colorById(s_.color).mult; });
