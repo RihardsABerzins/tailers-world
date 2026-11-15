@@ -188,3 +188,5 @@
 .bagRow{align-items:center}.bagRow .bi{font-size:30px;width:44px;text-align:center;flex:none}.bagRow small{color:#aab}
 .foodBar{height:14px;background:#333;border-radius:7px;overflow:hidden;margin:6px 0 10px}.foodBar div{height:100%}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+/* iPhone Safari: ar user-select:none uz body laukos nevar rakstīt (čuksti, profils) */
+input,textarea,[contenteditable]{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default}

@@ -58,7 +58,7 @@
   .tws-m.me{align-self:flex-end;background:#7b2ff7}
   .tws-m small{display:block;color:#ffffff99;font-size:11px;margin-top:2px}
   .tws-in{display:flex;gap:8px;padding:10px 12px max(12px,env(safe-area-inset-bottom));border-top:1px solid #ffffff1a}
-  .tws-in input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border-radius:14px;border:2px solid #ffffff2a;background:#0f0c20;color:#fff;outline:none}
+  .tws-in input{-webkit-user-select:text;user-select:text;flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border-radius:14px;border:2px solid #ffffff2a;background:#0f0c20;color:#fff;outline:none}
   .tws-ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;padding:8px 12px max(12px,env(safe-area-inset-bottom));border-top:1px solid #ffffff1a;max-height:min(36vh,280px);overflow:auto}
   .tws-ph button{min-height:46px;border-radius:14px;border:2px solid #ffffff26;background:#ffffff12;color:#fff;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
   .tws-empty{color:#c4bde6;text-align:center;padding:24px 10px}
