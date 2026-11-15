@@ -293,7 +293,7 @@ function setSrc(u,isHls){ if(music.hls){ music.hls.destroy(); music.hls=null; }
   else music.el.src=u; }
 const applyVol=()=>{ if(music.el) music.el.volume=clamp(music.vol*masterVol*(music.muted?0:1),0,1); };
 function playRadio(r){ ensureEl(); music.radio=(r+RADIOS.length)%RADIOS.length; music.pl=false; music.nextPL=nowS()+480; const R=RADIOS[music.radio]; setSrc(R.u,R.hls); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
-function playPL(){ ensureEl(); music.pl=true; setSrc('music/'+TRACKS[music.i].f,false); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
+function playPL(){ ensureEl(); music.pl=true; setSrc('../music/'+TRACKS[music.i].f,false); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
 function loadTrack(i,play=true){ music.i=(i+TRACKS.length)%TRACKS.length; if(play) playPL(); }
 function cycleSource(){ audioInit(); if(music.pl) music.i=(music.i+1)%TRACKS.length; playPL(); }
 function startMusic(){ if(music.started) return; music.started=true; playRadio(music.radio); music.nextPL=nowS()+480; }

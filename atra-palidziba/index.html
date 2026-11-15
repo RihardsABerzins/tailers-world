@@ -9,6 +9,7 @@
 <script src="../firebase-config.js?v=4"></script>
 <script src="../tw-common.js?v=6"></script>
 <script src="../tw-ach.js?v=4"></script>
+<script src="../tw-radio.js?v=1"></script>
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,14 +17,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0f1220">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <canvas id="cv"></canvas>
 
 <!-- augšā: statuss un uzdevums -->
 <div id="top">
-  <div id="stat" class="glass"><a id="home" href="../index.html" title="Uz sākumlapu">🏠</a><b id="sLv">Līm. 1</b><div class="xp"><i id="sXp"></i></div><span id="sMoney">💰 €0</span></div>
+  <div id="stat" class="glass"><a id="home" href="../index.html" title="Uz sākumlapu">🏠</a><button id="gear" title="Iestatījumi">⚙</button><b id="sLv">Līm. 1</b><div class="xp"><i id="sXp"></i></div><span id="sMoney">💰 €0</span></div>
   <div id="task" class="glass"></div>
   <canvas id="mini" width="240" height="240"></canvas>
   <div id="pBar" class="glass"><span id="pTxt">🫀 Pacients</span><div class="bar"><i id="pFill"></i></div></div>
@@ -42,6 +43,6 @@
 
 <script src="cases.js?v=2"></script>
 <script src="treat.js?v=5"></script>
-<script src="game.js?v=6"></script>
+<script src="game.js?v=9"></script>
 </body>
 </html>

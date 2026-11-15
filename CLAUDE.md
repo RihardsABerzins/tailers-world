@@ -9,9 +9,11 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Spēles ir **bez maksas**. Nekādu īstu naudu spēlēs (lootboxi tikai par spēles naudu/precizitāti).
 - Bērnu drošība: nevākt personas datus (lietotājvārds + parole, e-pasts tikai pēc izvēles). Publiskajā čatā **tikai gatavas frāzes**; brīvs teksts tikai privātos čukstos, ar rupju vārdu filtru (zvaigznītes) un garu ciparu (telefona numuru) slēpšanu. Var bloķēt un ziņot.
 
-## Mūzika
-- Spēlē skan latviešu radio (Radio TEV, SWH, Latvijas Radio 5) un **ik pēc ~8 minūtēm Papīra Lidmašīnu dziesma**.
-- Publiskajā repo drīkst būt **tikai izdotās** Papīra Lidmašīnu dziesmas (Spotify singli + albums "Turbulence"), 128 kbps MP3. Neizdotās glabājas `~/Documents/Tclaude/music-archive/`.
+## Mūzika un iestatījumi (visās spēlēs)
+- **Radio ir kopīgs visām spēlēm**: `tw-radio.js` (`TWRadio`) – Radio TEV, SWH, Latvijas Radio 5 un **ik pēc ~8 minūtēm Papīra Lidmašīnu dziesma**. Dziesmas – kopīgajā mapē `/music/` (128 kbps MP3). Iestatījumi `localStorage twMusic` – vienādi visās spēlēs.
+- Publiskajā repo drīkst būt **tikai izdotās** Papīra Lidmašīnu dziesmas (Spotify singli + albums "Turbulence"). Neizdotās glabājas `~/Documents/Tclaude/music-archive/`.
+- **Katrā spēlē ir ⚙ iestatījumi**: radio vadība (`TWRadio.controlsHTML()` + `TWRadio.wire(el)`), mūzikas skaļums un efektu skaļums (+ Graffiti: gaišums, valoda). Jaunai spēlei tie jāpievieno.
+- Graffiti pagaidām izmanto savu radio kodu (tas pats saraksts, ceļš `../music/`) – vēlāk pāriet uz `tw-radio.js`.
 
 ## Struktūra
 - **Katrai spēlei sava mape** (`/grafiti/`, nākamā – `/<spēle>/`): `index.html` (iezīmējums), `style.css`, `game.js`, `lang.js` (tulkojumi), mūzika/attēli tajā pašā mapē. Kopīgi tikai `tw-*.js`, `firebase-config.js` un sākumlapa.
@@ -80,6 +82,9 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Vadība: kursorsvira parādās tur, kur pieskaras kartei (telefons) / bultiņas (dators), S – sirēna, E – darbība. Maršruts (Dijkstra, apiet sastrēgumus) – dzeltena līnija + minikarte.
 - Izsaukums: jautājumi (noderīgi/nevajadzīgi) → kas noticis → palīdzība no somas (`cases.js`: `TOOLS`, `CASES` ar need/bonus) → sirds masāža ritmā 100–120/min (+ defibrilators) → slimnīca vai uz vietas → rezultāts % pa daļām + „Vai zināji?” + „zvani 112”. **Matemātiku šajā spēlē neliekam.** Operācijas – nākotnes slimnīcas spēlē.
 - Aina pie pacienta (`treat.js`, `Treat.mount`): zīmēta katram gadījumam – vieta (`place`), rekvizīts (`prop`), pacients pozā (`pose`: sit/slump/lie), izskats (`p`), trauma (`inj`). Palīdzība ar **vilkšanu**: rīks no somas uz ķermeņa zonu (`TOOLS[id].z`, gadījuma `zones` pārraksta; 'wound' = trauma); secība `first` (piem. plāksteris pēc tīrīšanas); mīti ar paskaidrojumu (`why`) dod mīnusu. Sirds masāža atveras virs ainas, defibrilators – poga „ŠOKS”.
+- Pilsēta 14×14 ielas. **3D mājas** (`drawBuilding`): sienas ar logiem un jumts ar perspektīvu no ekrāna centra (`PK`), zīmē pēc mašīnām, tālākās vispirms; slimnīca un benzīntanki arī 3D.
+- **Diena un nakts** (`DAYLEN` 6 min, `hourNow`, `isNight` 21–6): naktī tumsa + ielu lampas, logi, lukturi; ~60% mašīnu nav; luksofori mirgo dzelteni ('f'); izsaukumi grūtāki (līmenis +2) un ×1.5 XP/nauda.
+- Satiksme nedrīkst braukt cauri citai mašīnai: konusa pārbaude priekšā (`fwd/lat`), pagriezienā gaida, ja izbrauktuve aizņemta; pret iestrēgšanu – pēc 3 s cits virziens, pēc 12 s ārpus redzesloka parādās citur.
 - Luksofori: 20 s cikls ar dzelteno (`lightState`); katrai joslai krāsaina stop līnija + luksofors labajā stūrī. Satiksme: plāno pagriezienu pirms krustojuma (rādītāji mirgo), brauc pa līkni, bremžu lukturi, apstājas uz sarkano/dzelteno.
 - Spēle pagaidām **aizslēgta** visiem, izņemot adminus/moderatorus (sākumlapā „Drīzumā” kartīte ar bildi + „Testēt (admins)”).
 - Nauda: kopīgais maciņš; tēriņi – degviela (pilna bāka €20, benzīntankā), avārija = remonts −€3.
