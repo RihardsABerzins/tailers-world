@@ -13,6 +13,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - **Radio ir kopīgs visām spēlēm**: `tw-radio.js` (`TWRadio`) – Radio TEV, SWH, Latvijas Radio 5 un **ik pēc ~8 minūtēm Papīra Lidmašīnu dziesma**. Dziesmas – kopīgajā mapē `/music/` (128 kbps MP3). Iestatījumi `localStorage twMusic` – vienādi visās spēlēs.
 - Publiskajā repo drīkst būt **tikai izdotās** Papīra Lidmašīnu dziesmas (Spotify singli + albums "Turbulence"). Neizdotās glabājas `~/Documents/Tclaude/music-archive/`.
 - **Katrā spēlē ir ⚙ iestatījumi**: radio vadība (`TWRadio.controlsHTML()` + `TWRadio.wire(el)`), mūzikas skaļums un efektu skaļums (+ Graffiti: gaišums, valoda). Jaunai spēlei tie jāpievieno.
+- **Iestatījumi visās spēlēs izskatās un darbojas vienādi**: ⚙ poga tajā pašā vietā (augšējā joslā), tas pats loga izskats (tumšs panelis, noapaļots, virsraksts „⚙ Iestatījumi”), tā pati secība – 1) radio (⏮ ⏯ ⏭ 🔇 + mūzikas skaļums), 2) efektu skaļums, 3) spēles specifiskie iestatījumi, 4) poga „Gatavs”. Jaunu iestatījumu pievieno visās spēlēs vienādi; atšķirīgu dizainu katrai spēlei netaisa.
 - Graffiti arī izmanto `tw-radio.js` (atskaņotāja josla un pauzes iestatījumi vada `TWRadio`).
 
 ## Struktūra
