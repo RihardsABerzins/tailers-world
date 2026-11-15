@@ -75,5 +75,13 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Policija: aizdomas rada pats zīmēšanas fakts – cik cilvēku redz (👀), patruļa, zvanītāji; ne zīmējuma kvalitāte. Notverts → sods 10%+2%/★, izlaiž pie metro tajā pašā pilsētā.
 - No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (`need`, katrā pilsētā jauna); bez tās jāpērk, ar citu krāsu – puse samaksas. Krāsu bonuss pēc līniju garuma.
 
+## Ātrā palīdzība 112 (`/atra-palidziba/`)
+- Pilsēta no putna lidojuma (ielu režģis 10×10, kvartāli: mājas, parki, stāvvietas, laukumi, slimnīca, benzīntanki), satiksme ar luksoforiem un sastrēgumiem (`jams`), sirēna – mašīnas nobrauc malā.
+- Vadība: kursorsvira (telefons) / bultiņas (dators), S – sirēna, E – darbība. Maršruts (Dijkstra, apiet sastrēgumus) – dzeltena līnija + minikarte.
+- Izsaukums: jautājumi (noderīgi/nevajadzīgi) → kas noticis → palīdzība no somas (`cases.js`: `TOOLS`, `CASES` ar need/bonus) → sirds masāža ritmā 100–120/min (+ defibrilators) → slimnīca vai uz vietas → rezultāts % pa daļām + „Vai zināji?” + „zvani 112”. **Matemātiku šajā spēlē neliekam.** Operācijas – nākotnes slimnīcas spēlē.
+- Nauda: kopīgais maciņš; tēriņi – degviela (pilna bāka €20, benzīntankā), avārija = remonts −€3.
+- Teksti rakstīti latviski uzreiz (bez lang.js). Saglabāšana `ap/saves/{uid}`, medaļas grupa `ap` (apCalls, apSaved, apCpr, apPerfect, apLevel), mediķis zīmēts pēc `users/{uid}/look`.
+- Kešatmiņa: mainot style.css/game.js/cases.js, palielini `?v=` atra-palidziba/index.html.
+
 ## Plānots
 - "Atbalsti mani" saite sākumlapā.

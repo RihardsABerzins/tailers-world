@@ -6,7 +6,7 @@
 // Ar 50 medaļām vārds sarkani spīd, ar 100 – zili (TW.nameHTML / spēles vārda zīme).
 (function(){
   const A = window.TWA = { owned: null, uid: null };
-  A.GROUPS = [{ g: 'profils', t: '👤 Profils un draugi' }, { g: 'grafiti', t: '🎨 Graffiti RPG' }];
+  A.GROUPS = [{ g: 'profils', t: '👤 Profils un draugi' }, { g: 'grafiti', t: '🎨 Graffiti RPG' }, { g: 'ap', t: '🚑 Ātrā palīdzība' }];
   const L = A.LIST = [];
   const add = (g, id, i, t, te, d, de, ok) => L.push({ g, id, i, t, te, d, de, ok });
   // Pakāpju medaļas: rows = [[skaits, ikona, nosaukums, nosaukums EN, id?]]
@@ -26,6 +26,18 @@
     n => `Ielogojies ${n} dienas pēc kārtas`, n => `Logged in ${n} days in a row`);
   tiers('profils', 'days', 'days', [[10, '🎈', '10 dienas', '10 days'], [50, '🎯', '50 dienas', '50 days'], [100, '🏵️', '100 dienas', '100 days'], [200, '🎗️', '200 dienas', '200 days'], [365, '🎂', 'Vesels gads', 'A whole year']],
     n => `Spēlēji kopā ${n} dažādās dienās`, n => `Played on ${n} different days`);
+
+  // ---- Ātrā palīdzība (ctx: apCalls, apSaved, apCpr, apPerfect, apLevel) ----
+  tiers('ap', 'apCalls', 'apc', [[1, '🚑', 'Pirmais izsaukums', 'First call'], [10, '🩺', '10 izsaukumi', '10 calls'], [50, '🏥', '50 izsaukumi', '50 calls'], [100, '🦸', 'Glābējs', 'Rescuer'], [250, '🚁', 'Leģendārais glābējs', 'Legendary rescuer']],
+    n => n === 1 ? 'Pabeidzi pirmo izsaukumu' : `Pabeidzi ${n} izsaukumus`, n => `Completed ${n} call${n > 1 ? 's' : ''}`);
+  tiers('ap', 'apSaved', 'aps', [[10, '💚', '10 izglābti', '10 helped'], [50, '💖', '50 izglābti', '50 helped'], [100, '❤️‍🔥', '100 izglābti', '100 helped']],
+    n => `${n} izsaukumi ar 60%+ rezultātu`, n => `${n} calls with 60%+ score`);
+  tiers('ap', 'apCpr', 'apcpr', [[1, '❤️', 'Sirds glābējs', 'Heart saver'], [10, '⚡', '10 atdzīvināti', '10 revived']],
+    n => n === 1 ? 'Veici sirds masāžu un defibrilāciju' : `Atdzīvināji ${n} pacientus`, n => n === 1 ? 'Did CPR and defibrillation' : `Revived ${n} patients`);
+  tiers('ap', 'apPerfect', 'apper', [[1, '💯', 'Bez kļūdām', 'Flawless'], [10, '🎖️', '10 izcili izsaukumi', '10 flawless calls']],
+    n => n === 1 ? 'Izsaukums ar 95%+ rezultātu' : `${n} izsaukumi ar 95%+`, n => `${n} call${n > 1 ? 's' : ''} with 95%+`);
+  tiers('ap', 'apLevel', 'aplv', [[5, '🩹', 'Mediķis', 'Medic'], [10, '🏅', 'Pieredzējis mediķis', 'Senior medic'], [20, '👑', 'Brigādes vadītājs', 'Crew chief']],
+    n => `Sasniedzi ${n}. līmeni ātrajā palīdzībā`, n => `Reached level ${n} in the ambulance game`);
 
   // ---- Graffiti RPG ----
   tiers('grafiti', 'painted', 'paint', [[1, '🎨', 'Pirmais grafiti', 'First graffiti'], [10, '🖍️', '10 sienas', '10 walls'], [25, '🖌️', 'Ielu mākslinieks', 'Street artist'], [50, '🧱', '50 sienas', '50 walls'], [100, '🌈', 'Grafiti meistars', 'Graffiti master'], [250, '🏙️', '250 sienas', '250 walls'], [500, '🎭', '500 sienas', '500 walls'], [1000, '🗿', '1000 sienas', '1000 walls'], [2000, '🏛️', 'Pilsētas leģenda', 'City legend']],

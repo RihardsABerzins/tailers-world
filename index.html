@@ -288,6 +288,7 @@
 // Spēļu saraksts – jaunu spēli pievieno šeit
 const GAMES=[
   {title:'Graffiti RPG', desc:'Skrien pa pilsētu, zīmē grafiti, krāj naudu, pērc krāsas un mašīnas – un bēdz no policijas!', cover:'grafiti/cover.svg', url:'grafiti/index.html', players:'speletaji.html?spele=grafiti'},
+  {title:'Ātrā palīdzība 112', desc:'Brauc ar ātro palīdzību pa pilsētu, palīdzi pacientiem un mācies pirmo palīdzību!', cover:'atra-palidziba/cover.svg', url:'atra-palidziba/index.html'},
 ];
 // Atbalsta saite (piem., Buy Me a Coffee) – kad būs, ieliec šeit
 const SUPPORT_URL='';
@@ -297,7 +298,7 @@ const grid=$('grid');
 GAMES.forEach((g,i)=>{
   const d=document.createElement('div'); d.className='card'; d.style.animationDelay=(.15+i*.1)+'s';
   d.innerHTML=`<a href="${g.url}"><img class="thumb" src="${g.cover}" alt="${g.title}"></a><div class="body"><p class="title">${g.title}</p><p class="desc">${g.desc}</p>
-    <div class="btns"><a class="btn play" href="${g.url}">▶ Spēlēt</a><a class="btn ghost" href="${g.players}">👥 Citi spēlētāji</a></div></div>`;
+    <div class="btns"><a class="btn play" href="${g.url}">▶ Spēlēt</a>${g.players?`<a class="btn ghost" href="${g.players}">👥 Citi spēlētāji</a>`:''}</div></div>`;
   grid.appendChild(d);
 });
 const soon=document.createElement('div'); soon.className='card soon';
