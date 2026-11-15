@@ -193,7 +193,7 @@ function updateAmb(dt) {
   const MAX = amb.fuel > 0 ? 430 : 90, turnK = Math.min(1, (Math.abs(amb.v) + 110) / 220);
   let target = 0;
   if (ta !== null) { const d = wrapA(ta - amb.a);
-    if (Math.abs(d) > 2.3 && amb.v < 80) { target = -170 * thr; amb.a += clamp(wrapA(ta + Math.PI - amb.a), -2.2 * dt, 2.2 * dt) * turnK; } // atpakaļgaitā
+    if (Math.abs(d) > 1.9 && amb.v < 160) { target = 130 * thr; amb.a += clamp(d, -3.2 * dt, 3.2 * dt); } // pretējā virzienā – apgriežas uz vietas (U-pagrieziens), nevis brauc atpakaļgaitā
     else { target = MAX * thr * (Math.abs(d) > 1.1 ? .45 : 1); amb.a += clamp(d, -2.9 * dt * turnK, 2.9 * dt * turnK); if (Math.abs(d) > .55 && amb.v > 250) skid(); } }
   else { if (window.FP) FP.steer = steer; target = thr > 0 ? MAX * thr : thr < 0 ? (amb.v > 10 ? 0 : -170) : 0; amb.a += steer * 2.7 * dt * turnK * (thr < 0 && amb.v < -15 ? -1 : 1); if (Math.abs(steer) && amb.v > 300) skid(); }
   const acc = target > amb.v ? (amb.v < 0 ? 900 : 360) : (target === 0 ? 420 : 820);
@@ -254,7 +254,7 @@ function newCall() {
     px = side < 2 ? lerp(b.x0, b.x1, p) : side === 2 ? b.x0 + 6 : b.x1 - 6; py = side >= 2 ? lerp(b.y0, b.y1, p) : side === 0 ? b.y0 + 6 : b.y1 - 6; tries++; }
   while ((b.kind === 'hospital' || b.kind === 'fuel' || Math.hypot(px - amb.x, py - amb.y) < 800 || Math.hypot(px - amb.x, py - amb.y) > 2600) && tries < 80);
   const rx = side === 2 ? px - 44 : side === 3 ? px + 44 : px, ry = side === 0 ? py - 44 : side === 1 ? py + 44 : py; // vieta uz ielas, kur apstāties
-  Object.assign(M, { state: 'call', night, c, px, py, rx, ry, t: 0, bumps: 0, cond: 100, sc: {}, asked: new Set(), picked: new Set(), cprScore: null, decision: null, t2: 0, bumps1: 0 });
+  Object.assign(M, { state: 'call', night, c, px, py, rx, ry, t: 0, bumps: 0, cond: 100, sc: {}, asked: new Set(), picked: new Set(), cprScore: null, decision: null, hinted: false, t2: 0, bumps1: 0 });
   M.route = route(amb.x, amb.y, rx, ry); M.expect = M.route.len / 300 + 6;
   sfx('call'); buzz([60, 80, 60]);
   sheet(`<div class="step">📞 Izsaukums${night ? ' · 🌙 Nakts – grūtāks, bet ×1.5' : ''}</div><h2>${c.who} ${c.call}</h2><p>📍 <b>${streetOf(rx, ry)}</b> · ${Math.round(M.route.len / 10)} m</p>
@@ -289,7 +289,7 @@ function startScene() {
   const render = () => {
     if (M.tc) M.tc.destroy();
     sheet(`<div id="stg"></div><div class="step">1. solis · Noskaidro situāciju</div><h2>${c.who} ${c.name}</h2><p>${c.see}</p>
-      <div class="opts">${c.q.map((q, k) => `<button class="opt${M.asked.has(k) ? ' asked' : ''}" data-q="${k}">❓ ${q.t}${M.asked.has(k) ? `<span class="ans">💬 ${q.a}</span>` : ''}</button>`).join('')}</div>
+      <div class="opts">${c.q.map((q, k) => `<button class="opt${M.asked.has(k) ? ' asked' : ''}" data-q="${k}">❓ ${q.t}${M.asked.has(k) ? `<span class="ans">💬 ${q.a}<em class="${q.good ? 'qg' : 'qb'}">${q.good ? '👍 Noderīgs jautājums' : '🤷 Tas nepalīdz saprast'}</em></span>` : ''}</button>`).join('')}</div>
       <button class="main" id="next" ${M.asked.size ? '' : 'disabled'}>Es saprotu, kas noticis →</button>`);
     M.tc = Treat.mount($('stg'), c, {});
     document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const k = +b.dataset.q; if (M.asked.has(k)) return; M.asked.add(k); sfx('tick'); render(); });
@@ -300,11 +300,14 @@ function stepDx() {
   const c = M.c, good = c.q.filter(q => q.good).length, gotGood = c.q.filter((q, k) => q.good && M.asked.has(k)).length, bad = c.q.filter((q, k) => !q.good && M.asked.has(k)).length;
   M.sc.ask = clamp(Math.round(gotGood / good * 100 - bad * 15), 0, 100);
   const opts = [...c.dx].sort(() => Math.random() - .5);
-  sheet(`<div class="step">2. solis · Kas noticis?</div><h2>Kā tu domā – kas notika ar ${c.name.split(',')[0]}?</h2>
+  sheet(`<div class="step">2. solis · Kas noticis?</div><h2>Kā tu domā – kas noticis?</h2><p style="color:#9fb0ff">${c.who} ${c.name} · ${c.see}</p>
     <div class="opts">${opts.map((d, k) => `<button class="opt" data-d="${k}">🩺 ${d.t}</button>`).join('')}</div>`);
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const d = opts[+b.dataset.d]; M.sc.dx = d.ok ? 100 : 0;
     document.querySelectorAll('[data-d]').forEach(x => { const o = opts[+x.dataset.d]; x.disabled = true; if (o.ok) x.classList.add('right'); else if (x === b) x.classList.add('wrong'); });
-    sfx(d.ok ? 'good' : 'bad'); setTimeout(stepTools, d.ok ? 700 : 1500); });
+    sfx(d.ok ? 'good' : 'bad'); if (d.ok) { setTimeout(stepTools, 800); return; }
+    // nepareizi – parāda pareizo atbildi un ļauj izlasīt savā tempā
+    const right = opts.find(o => o.ok), fb = document.createElement('div'); fb.className = 'fact'; fb.innerHTML = `❌ Šoreiz nē. Pareizi ir: <b>${right.t}</b>.<br><small>Pievērs uzmanību pazīmēm aprakstā un pacienta atbildēm.</small>`;
+    const nb = document.createElement('button'); nb.className = 'main'; nb.textContent = 'Saprotu, palīdzam →'; nb.onclick = stepTools; $('sheet').append(fb, nb); nb.scrollIntoView({ behavior: 'smooth', block: 'end' }); });
 }
 // 3. solis: palīdzība – rīkus velk no somas uz pacienta ķermeņa daļu
 function stepTools() {
@@ -315,10 +318,11 @@ function stepTools() {
     onChange: st => { $('next').disabled = !st.applied.size; },
     onCpr: done => cprGame(done), onShock: () => { cam.shake = 14; buzz([80, 40, 80]); save.cpr = (save.cpr || 0) + 1; } });
   $('next').onclick = () => { const st = tc.st, need = c.need, right = need.filter(id => st.applied.has(id)).length, wrong = st.wrong.size, bonus = (c.bonus || []).filter(id => st.applied.has(id)).length;
-    M.picked = st.applied; M.sc.help = clamp(Math.round(right / need.length * 100 - wrong * 25 + bonus * 10), 0, 100);
+    // ja kaut kas pietrūkst – pasaka, ko vēl vajag, un ļauj to izdarīt (bērns mācās), nevis aizlec tālāk
+    if (right < need.length && !M.hinted) { M.hinted = true; const miss = need.filter(id => !st.applied.has(id)).map(id => TOOLS[id].i + ' ' + TOOLS[id].n).join(', '); tc.hint(`🤔 Vēl vajag: <b>${miss}</b> – atrodi somā un uzvelc!`, true); sfx('bad'); $('next').textContent = 'Turpināt tik un tā →'; return; }
+    M.picked = st.applied; M.sc.help = clamp(Math.round(right / need.length * 100 - wrong * 20 + bonus * 10 - (M.hinted ? 10 : 0)), 0, 100);
     if (c.cpr) M.sc.cpr = st.cprScore || 0;
-    if (right < need.length) { const miss = need.filter(id => !st.applied.has(id)).map(id => TOOLS[id].i + ' ' + TOOLS[id].n).join(', '); tc.hint(`🤔 Vēl vajadzēja: <b>${miss}</b>`, true); sfx('bad'); $('next').disabled = true; setTimeout(stepDecide, 2600); return; }
-    sfx('good'); stepDecide(); };
+    sfx(right < need.length ? 'bad' : 'good'); stepDecide(); };
 }
 // sirds masāža: 30 spiedieni ritmā 100–120 reizes minūtē (starp spiedieniem ~0,5–0,6 s); atveras virs ainas
 function cprGame(done) {
@@ -351,13 +355,13 @@ function finish() {
   const parts = [['🔎 Noskaidroji', S1.ask || 0, 1], ['🩺 Kas noticis', S1.dx || 0, 1], ['🧰 Palīdzība', S1.help || 0, 1.5], ...(c.cpr ? [['❤️ Sirds masāža', S1.cpr || 0, 1]] : []), ['🏥 Lēmums', S1.decide || 0, 1], ['🚑 Brauciens', drive, 1]];
   if (M.decision) parts.push(['🫀 Pacienta stāvoklis', Math.round(M.cond), .8]);
   const wsum = parts.reduce((a, p) => a + p[2], 0), pct = Math.round(parts.reduce((a, p) => a + p[1] * p[2], 0) / wsum);
-  const stars = pct >= 90 ? 3 : pct >= 70 ? 2 : pct >= 45 ? 1 : 0, xp = Math.round((20 + pct * .7) * (M.night ? 1.5 : 1)), money = Math.round((8 + pct * .25) * (M.night ? 1.5 : 1));
+  const stars = pct >= 85 ? 3 : pct >= 60 ? 2 : pct >= 30 ? 1 : 0, xp = Math.round((20 + pct * .7) * (M.night ? 1.5 : 1)), money = Math.round((8 + pct * .25) * (M.night ? 1.5 : 1));
   const lv0 = levelOf(save.xp).l; save.xp += xp; save.calls++; if (pct >= 60) save.saved++; if (pct >= 95) save.perfect++; save.best = Math.max(save.best || 0, pct);
   const lv1 = levelOf(save.xp).l; persist(); walletAdd(money); medals();
   M.state = 'result'; $('pBar').classList.remove('on'); sfx(stars >= 2 ? 'win' : 'good');
   const col = v => v >= 80 ? '#2ecc71' : v >= 50 ? '#ffb020' : '#ff3b4e';
   sheet(`<div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div><div class="score" style="color:${col(pct)}">${pct}%</div>
-    <p style="text-align:center;font-weight:800">${pct >= 90 ? 'Izcils darbs, glābēj! 🦸' : pct >= 70 ? 'Labs darbs! 👍' : pct >= 45 ? 'Pacientam palīdzēts, bet var labāk.' : 'Nākamreiz izdosies labāk! 💪'}</p>
+    <p style="text-align:center;font-weight:800">${pct >= 85 ? 'Izcils darbs, glābēj! 🦸' : pct >= 60 ? 'Labs darbs! 👍' : pct >= 30 ? 'Pacientam palīdzēts! Nākamreiz vēl labāk 💪' : 'Labs mēģinājums! Izlasi padomu un mēģini vēlreiz 💪'}</p>
     <div class="parts">${parts.map(([n, v]) => `<div class="part"><span style="width:150px">${n}</span><div class="pb"><i style="width:${v}%;background:${col(v)}"></i></div><em>${v}%</em></div>`).join('')}</div>
     ${M.c.go !== M.decision ? `<div class="fact">${M.c.go ? '🏥 Šim pacientam vajadzēja uz slimnīcu.' : '🏠 Šim pacientam pietika ar palīdzību uz vietas.'}</div>` : ''}
     <div class="fact"><b>💡 Vai zināji?</b><br>${c.fact}<br><small style="color:#9fb0ff">Īstā dzīvē nelaimes gadījumā zvani <b>112</b>.</small></div>
@@ -438,7 +442,7 @@ function drawWorld(t) {
   if (M.route && (M.state === 'toPatient' || M.state === 'toHospital')) { ctx.save(); ctx.strokeStyle = M.state === 'toHospital' ? 'rgba(255,90,110,.55)' : 'rgba(255,214,70,.6)'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([2, 22]); ctx.lineDashOffset = -t * 60;
     ctx.beginPath(); M.route.pts.forEach((p, k) => k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.stroke(); ctx.restore(); }
   // pacients
-  if (M.state === 'toPatient' || M.state === 'call') { const pu = (t * 1.4) % 1;
+  if (M.state === 'toPatient' || M.state === 'call') { const pu = ((t * 1.4) % 1 + 1) % 1;
     ctx.strokeStyle = `rgba(255,59,78,${1 - pu})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(M.px, M.py, 20 + pu * 60, 0, 7); ctx.stroke();
     ctx.fillStyle = 'rgba(255,59,78,.25)'; ctx.beginPath(); ctx.arc(M.rx, M.ry, 60, 0, 7); ctx.fill();
     ctx.font = '40px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(M.c.who, M.px, M.py);
@@ -594,7 +598,7 @@ function drawPointer() { let tx, ty; if (M.state === 'toPatient') { tx = M.rx; t
 
 // ================= Cikls =================
 let last = performance.now(), T = 0;
-function frame(now) { const dt = Math.min(.05, (now - last) / 1000); last = now; T += dt;
+function frame(now) { const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now; T += dt;
   updateCars(dt, T); updateAmb(dt);
   if (M.state === 'toPatient') M.t += dt; if (M.state === 'toHospital') { M.t2 += dt; M.cond = Math.max(5, M.cond - dt * (M.c.cpr ? .8 : .35)); }
   if ((M.state === 'toPatient' || M.state === 'toHospital') && (M.rt -= dt) <= 0) { M.rt = .6; M.route = M.state === 'toPatient' ? route(amb.x, amb.y, M.rx, M.ry) : route(amb.x, amb.y, HOSP_BAY.x, HOSP_BAY.y); }

@@ -68,6 +68,8 @@ body.kb #stick{display:none}
 .main.red{background:linear-gradient(160deg,#ff5a6a,#d81b33);color:#fff}
 .main.green{background:linear-gradient(160deg,#4cd97b,#1e9e50);color:#fff}
 .main:disabled{opacity:.4}
+.xBtn ~ .step,.xBtn ~ h2{padding-right:46px}
+.ans em{display:block;font-style:normal;font-size:12.5px;font-weight:800;margin-top:3px}.ans em.qg{color:#4cd97b}.ans em.qb{color:#ffb020}
 .xBtn{position:absolute;top:10px;right:10px;z-index:5;width:40px;height:40px;border-radius:50%;border:1px solid #ffffff33;background:#00000055;color:#fff;font-size:18px;font-weight:900;line-height:1}
 .main.ghostB{background:#ffffff14;color:#dfe6ff;border:1px solid #ffffff33;font-size:15px;min-height:46px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
