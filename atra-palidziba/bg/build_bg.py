@@ -387,3 +387,151 @@ def setup():
     sc.view_settings.view_transform = 'Standard'; r.use_freestyle = True; r.line_thickness_mode = 'ABSOLUTE'
     ls = sc.view_layers[0].freestyle_settings.linesets[0]; ls.linestyle.color = (0.1, 0.09, 0.12); ls.linestyle.thickness = 2.2
     w = sc.world or bpy.data.worlds.new('W'); sc.world = w; w.use_nodes = True
+
+# ---- tēli ----
+TWV = {'sit_def': {'head': [236, 173], 'neck': [236, 196], 'shL': [213, 202], 'shR': [259, 202], 'hipL': [220, 264], 'hipR': [252, 266], 'armL': [[216, 208], [204, 232], [206, 260]], 'armR': [[256, 208], [266, 230], [270, 256]], 'legL': [[236, 262], [276, 250], [312, 266]], 'legR': [[246, 268], [284, 262], [322, 272]], 'hr': 21, 'lie': False, 'shoeA': -1.3}, 'lie': {'head': [123, 252], 'neck': [144, 252], 'shL': [150, 275], 'shR': [150, 229], 'hipL': [208, 270], 'hipR': [208, 234], 'armL': [[156, 276], [184, 283], [210, 285]], 'armR': [[156, 228], [184, 221], [210, 219]], 'legL': [[208, 262], [254, 263], [292, 263]], 'legR': [[208, 242], [254, 241], [292, 241]], 'hr': 19, 'lie': True}, 'bench': {'head': [240, 138.5], 'neck': [240, 160], 'shL': [217, 166], 'shR': [263, 166], 'hipL': [226, 226], 'hipR': [254, 226], 'armL': [[219, 172], [209, 200], [227, 232]], 'armR': [[261, 172], [271, 200], [253, 232]], 'legL': [[228, 240], [227, 252], [226, 278]], 'legR': [[252, 240], [253, 252], [254, 278]], 'thighs': [[228, 226], [252, 226]], 'hr': 19.5, 'lie': False, 'bench': True, 'shoeA': 0}, 'sit_fr': {'head': [236, 173], 'neck': [236, 196], 'shL': [213, 202], 'shR': [259, 202], 'hipL': [220, 264], 'hipR': [252, 266], 'armL': [[216, 208], [204, 232], [206, 260]], 'armR': [[256, 208], [262, 232], [238, 242]], 'legL': [[236, 262], [276, 250], [312, 266]], 'legR': [[246, 268], [284, 262], [322, 272]], 'hr': 21, 'lie': False, 'shoeA': -1.3}, 'sit_burn': {'head': [236, 173], 'neck': [236, 196], 'shL': [213, 202], 'shR': [259, 202], 'hipL': [220, 264], 'hipR': [252, 266], 'armL': [[216, 208], [204, 232], [206, 260]], 'armR': [[256, 208], [276, 226], [298, 232]], 'legL': [[236, 262], [276, 250], [312, 266]], 'legR': [[246, 268], [284, 262], [322, 272]], 'hr': 21, 'lie': False, 'shoeA': -1.3}, 'slump_def': {'head': [248, 187], 'neck': [244, 206], 'shL': [221, 212], 'shR': [267, 212], 'hipL': [220, 264], 'hipR': [252, 266], 'armL': [[224, 218], [204, 242], [206, 260]], 'armR': [[264, 218], [274, 240], [270, 256]], 'legL': [[236, 262], [276, 250], [312, 266]], 'legR': [[246, 268], [284, 262], [322, 272]], 'hr': 21, 'lie': False, 'shoeA': -1.3}, 'sit_bee': {'head': [236, 175], 'neck': [236, 196], 'shL': [213, 202], 'shR': [259, 202], 'hipL': [220, 264], 'hipR': [252, 266], 'armL': [[216, 208], [198, 222], [180, 232]], 'armR': [[256, 208], [266, 230], [270, 256]], 'legL': [[236, 262], [276, 250], [312, 266]], 'legR': [[246, 268], [284, 262], [322, 272]], 'hr': 19, 'lie': False, 'shoeA': -1.3}}
+D0 = 4.0; PX = 0.6857 * D0 / 240
+def U(p, dy=0.0):
+    sx, sy = p; return Vector(((sx - 240) * PX, D0 + dy, 1.6 - (sy - 150) * PX))
+_LM = {}
+def lmat(layer, color=None):
+    key = layer + (color or '')
+    if key in _LM and _LM[key].name in bpy.data.materials: return _LM[key]
+    m = mat(color or '#ffffff'); m = m.copy(); m.name = 'L_' + key; m['layer'] = layer; m['orig'] = color or '#ffffff'; _LM[key] = m; return m
+def tag(o, layer, color=None):
+    o['layer'] = layer; o.data.materials.clear(); o.data.materials.append(lmat(layer, color)); return o
+def ball(name, p, r, layer, c, color=None, sc=(1, 1, 1)):
+    me = bpy.data.meshes.new(name); bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=12, radius=r)
+    for v in bm.verts: v.co = Vector((v.co.x * sc[0], v.co.y * sc[1], v.co.z * sc[2]))
+    bm.to_mesh(me); bm.free(); o = bpy.data.objects.new(name, me); o.location = p; c.objects.link(o)
+    for f in o.data.polygons: f.use_smooth = True
+    return tag(o, layer, color)
+def capsule(name, a, b, r, layer, c, color=None, r2=None):
+    r2 = r2 or r; d = b - a; L = d.length
+    me = bpy.data.meshes.new(name); bm = bmesh.new(); bmesh.ops.create_cone(bm, cap_ends=False, segments=16, radius1=r, radius2=r2, depth=L)
+    for v in bm.verts: v.co.z += L / 2
+    bm.to_mesh(me); bm.free(); o = bpy.data.objects.new(name, me); c.objects.link(o)
+    for f in o.data.polygons: f.use_smooth = True
+    o.location = a; o.rotation_mode = 'QUATERNION'; o.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(d.normalized())
+    tag(o, layer, color); ball(name + 'j', a, r, layer, c, color); ball(name + 'k', b, r2, layer, c, color); return o
+def torso3d(name, sl, sr, hl, hr_, layer, c, color=None, depth=0.24, dy=0.0):
+    top = (U(sl, dy) + U(sr, dy)) / 2; bot = (U(hl, dy) + U(hr_, dy)) / 2; up = (top - bot); L = up.length; up.normalize()
+    wt = (U(sl) - U(sr)).length + 0.07; wb = (U(hl) - U(hr_)).length + 0.06
+    me = bpy.data.meshes.new(name); bm = bmesh.new(); bmesh.ops.create_cube(bm, size=1.0)
+    for v in bm.verts:
+        t = v.co.z + 0.5; w = wb + (wt - wb) * t; v.co = Vector((v.co.x * w, v.co.y * depth, t * L))
+    bm.to_mesh(me); bm.free(); o = bpy.data.objects.new(name, me); c.objects.link(o)
+    o.rotation_mode = 'QUATERNION'; side = Vector((up.z, 0, -up.x))  # perpendicular in XZ plane
+    import mathutils
+    m = mathutils.Matrix((side, Vector((0, 1, 0)), up)).transposed(); o.rotation_quaternion = m.to_quaternion(); o.location = bot
+    md = o.modifiers.new('bev', 'BEVEL'); md.width = 0.07; md.segments = 4; md.limit_method = 'NONE'
+    o.modifiers.new('sub', 'SUBSURF').levels = 1
+    for f in o.data.polygons: f.use_smooth = True
+    return tag(o, layer, color)
+def headset(P, c, hr_px, dyh=-0.03, hats=('hairS', 'hairL', 'hairO')):
+    hc = U(P['head'], dyh); nk = U(P['neck'], 0.0); r = hr_px * PX
+    up = (hc - nk); up.normalize(); fwd = Vector((0, -1, 0)); side = up.cross(fwd).normalized()
+    ball('head', hc, r, 'skin', c, sc=(0.9, 0.95, 1.0) if not P.get('lie') else (1.0, 0.95, 0.9))
+    for s in (-1, 1): ball('ear', hc + side * (r * 0.9) + up * (r * 0.05), r * 0.24, 'skin', c)
+    capsule('neck', nk + up * 0.0, hc - up * (r * 0.5), r * 0.32, 'skin', c)
+    if 'hairS' in hats or 'hairL' in hats:
+        for nm in [h for h in hats if h in ('hairS', 'hairL')]:
+            ball(nm + '_cap', hc + up * (r * 0.42) + Vector((0, r * 0.28, 0)), r * 1.07, nm, c, sc=(1, 1, 0.8) if not P.get('lie') else (0.8, 1, 1))
+            if nm == 'hairL': ball('hairL_back', hc - up * (r * 0.55) + Vector((0, r * 0.55, 0)), r * 1.12, nm, c, sc=(1.05, 0.6, 1.25) if not P.get('lie') else (1.25, 0.6, 1.05))
+    if 'hairO' in hats:
+        for s in (-1, 1): ball('hairO_t', hc + side * (r * 0.82) + up * (r * 0.05), r * 0.3, 'hairO', c, sc=(0.7, 1, 1.3) if not P.get('lie') else (1.3, 1, 0.7))
+    return hc, up, side, r
+def build_patient(key):
+    clear(); c = coll('TW_CHAR'); P = bpy.app.driver_namespace['TWV'][key]; lie = P.get('lie')
+    hr = 20.0; dl = -0.10 if not lie else 0.0; da = -0.14 if not lie else 0.0
+    # kājas (bikses) + kurpes
+    for k, leg in (('L', P['legL']), ('R', P['legR'])):
+        pts = [U(p, dl - (0.04 if k == 'L' else 0)) for p in leg]
+        for i in range(len(pts) - 1): capsule('leg' + k + str(i), pts[i], pts[i + 1], 0.085, 'pants', c)
+        cuff = pts[-2].lerp(pts[-1], 0.8); capsule('cuff' + k, cuff, pts[-1], 0.095, 'pants', c)
+        f = pts[-1]; d = (pts[-1] - pts[-2]).normalized()
+        if lie: sp = f + Vector((0, -0.02, 0)) + Vector((-0.0, 0, 0)); toe = Vector((0, -1, 0))
+        elif P.get('bench'): toe = Vector((0, -1, 0))
+        else: toe = Vector((0, 0, 1)) * 0.6 + d * 0.4
+        ball('shoe' + k, f + toe.normalized() * 0.05, 0.075, 'fixed', c, '#26242c', sc=(1, 1.6, 0.75) if not lie else (1.6, 1, 0.75))
+    if P.get('thighs'):
+        for k, t in enumerate(P['thighs']):
+            a = U(t, -0.02); b = U((t[0], t[1] + 10), -0.32); capsule('thigh' + str(k), a, b, 0.095, 'pants', c)
+    torso3d('torso', P['shL'], P['shR'], P['hipL'], P['hipR'], 'shirt', c)
+    for k, arm in (('L', P['armL']), ('R', P['armR'])):
+        pts = [U(p, da) for p in arm]
+        sl = pts[0].lerp(pts[1], 0.7); capsule('slv' + k, pts[0], sl, 0.082, 'shirt', c, r2=0.075)
+        capsule('ua' + k, pts[0], pts[1], 0.06, 'skin', c); capsule('fa' + k, pts[1], pts[2], 0.055, 'skin', c)
+        ball('hand' + k, pts[2], 0.068, 'skin', c)
+    headset(P, c, hr)
+    return c
+
+COL = {'skin': '#f2c9a0', 'shirt': '#16a085', 'pants': '#2c3e50', 'hairS': '#3b2a1a', 'hairL': '#3b2a1a', 'hairO': '#bbbbbb'}
+def preview(path, hair='hairS'):
+    sc = bpy.context.scene
+    for o in bpy.data.collections['TW_CHAR'].objects:
+        L = o.get('layer'); o.hide_render = L in ('hairS', 'hairL', 'hairO') and L != hair
+        if L in COL:
+            m = o.data.materials[0]; b = next(n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'); b.inputs['Base Color'].default_value = hexc(COL[L])
+    sc.render.use_freestyle = True; lights(False); render(path)
+
+def _hold():
+    m = bpy.data.materials.get('TW_HOLD')
+    if not m:
+        m = bpy.data.materials.new('TW_HOLD'); m.use_nodes = True; nt = m.node_tree
+        for n in list(nt.nodes): nt.nodes.remove(n)
+        h = nt.nodes.new('ShaderNodeHoldout'); o = nt.nodes.new('ShaderNodeOutputMaterial'); nt.links.new(h.outputs[0], o.inputs['Surface'])
+    return m
+def _white():
+    m = bpy.data.materials.get('TW_WHITE')
+    if not m:
+        m = bpy.data.materials.new('TW_WHITE'); m.use_nodes = True; b = next(n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'); b.inputs['Base Color'].default_value = (1, 1, 1, 1); b.inputs['Roughness'].default_value = 0.75
+    return m
+def render_layers(prefix, layers, hairs, outdir):
+    sc = bpy.context.scene; objs = list(bpy.data.collections['TW_CHAR'].objects); H, W = _hold(), _white()
+    orig = {o.name: o.data.materials[0] for o in objs}
+    def setm(o, m): o.data.materials[0] = m
+    out = []
+    for L in layers:
+        for o in objs:
+            ol = o.get('layer'); o.hide_render = False
+            setm(o, W if ol == L and L != 'fixed' else (orig[o.name] if ol == L == 'fixed' else H))
+        sc.render.use_freestyle = False; render(outdir + prefix + '_' + L + '.webp'); out.append(L)
+    for hv in hairs:
+        for o in objs:
+            ol = o.get('layer'); o.hide_render = ol in ('hairS', 'hairL', 'hairO', 'hatCap', 'hatBeanie') and ol != hv; setm(o, H)
+        sc.render.use_freestyle = True; render(outdir + prefix + '_line_' + hv + '.webp'); out.append('line_' + hv)
+    for o in objs: setm(o, orig[o.name]); o.hide_render = False
+    return out
+
+def build_medic():
+    clear(); c = coll('TW_CHAR'); O = (240, 290)
+    q = lambda p: (O[0] + p[0], O[1] + p[1])
+    B = {'head': (0, -130), 'neck': (0, -106), 'shL': (-17, -102), 'shR': (17, -102), 'hipL': (-14, -56), 'hipR': (14, -56),
+         'armL': [(-18, -96), (-23, -76), (-22, -56)], 'armR': [(18, -96), (25, -76), (27, -58)], 'legL': [(-7, -56), (-8, -30), (-8, -8)], 'legR': [(7, -56), (8, -30), (8, -8)]}
+    for k in ('legL', 'legR'):
+        pts = [U(q(p), -0.02) for p in B[k]]
+        for i in range(2): capsule('ml' + k + str(i), pts[i], pts[i + 1], 0.085, 'fixed', c, '#1f3a5f')
+        ball('mshoe' + k, pts[-1] + Vector((0, -0.05, -0.04)), 0.075, 'fixed', c, '#26242c', sc=(1, 1.6, 0.75))
+    torso3d('mtorso', q(B['shL']), q(B['shR']), q(B['hipL']), q(B['hipR']), 'fixed', c, '#2e8b57')
+    for yy in (-84, -70):
+        torso3d('stripe', q((-16.5, yy)), q((16.5, yy)), q((-16, yy + 5)), q((16, yy + 5)), 'fixed', c, '#f4d03f', depth=0.255)
+    for k in ('armL', 'armR'):
+        pts = [U(q(p), -0.1) for p in B[k]]
+        capsule('ma' + k + '0', pts[0], pts[1], 0.068, 'fixed', c, '#2e8b57'); capsule('ma' + k + '1', pts[1], pts[2], 0.062, 'fixed', c, '#2e8b57')
+        ball('mhand' + k, pts[2], 0.065, 'skin', c)
+    bag = box('bag', U(q((31, -54)))[0], D0 - 0.16, U(q((31, -54)))[2] - 0.1, 0.26, 0.12, 0.19, '#d63031', c); tag(bag, 'fixed', '#d63031')
+    wx = U(q((31, -54))); w1 = box('bx', wx.x, D0 - 0.23, wx.z - 0.06, 0.05, 0.01, 0.12, '#ffffff', c); tag(w1, 'fixed', '#ffffff'); w2 = box('by', wx.x, D0 - 0.23, wx.z - 0.025, 0.12, 0.01, 0.05, '#ffffff', c); tag(w2, 'fixed', '#ffffff')
+    hc, up, side, r = headset({'head': q(B['head']), 'neck': q(B['neck'])}, c, 16, hats=('hairS',))
+    ball('cap_dome', hc + up * (r * 0.35) + Vector((0, r * 0.1, 0)), r * 1.06, 'hatCap', c, sc=(1, 1, 0.78))
+    br = box('cap_brim', hc.x, hc.y - r * 0.85, hc.z + r * 0.38, r * 1.5, r * 1.1, r * 0.14, '#ffffff', c); tag(br, 'hatCap')
+    ball('beanie', hc + up * (r * 0.38), r * 1.1, 'hatBeanie', c, sc=(1, 1, 0.92)); ball('pom', hc + up * (r * 1.38), r * 0.26, 'hatBeanie', c)
+    return c
+
+def charlights():
+    lights(False); sc = bpy.context.scene; w = sc.world; bgn = next(n for n in w.node_tree.nodes if n.type == 'BACKGROUND')
+    bgn.inputs['Color'].default_value = (1, 1, 1, 1); bgn.inputs['Strength'].default_value = 0.45
+    so = bpy.data.objects['TWL_sun']; so.data.energy = 2.0; so.data.angle = math.radians(20); so.rotation_euler = (math.radians(40), math.radians(-30), math.radians(15))
+def lum(path):
+    im = bpy.data.images.load(path, check_existing=False); px = im.pixels[:]; vals = [px[i] for i in range(0, len(px), 4) if px[i + 3] > 0.9]
+    bpy.data.images.remove(im); vals.sort(); n = len(vals); return (round(vals[n // 10], 2), round(vals[n // 2], 2), round(vals[-1], 2), n)

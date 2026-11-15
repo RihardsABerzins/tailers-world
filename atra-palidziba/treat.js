@@ -55,6 +55,7 @@
   function head(g, x, y, r, o) {
     const skin = o.skin, hair = o.hair; g.save(); g.translate(x, y); if (o.tilt) g.rotate(o.tilt);
     g.strokeStyle = OL; g.lineWidth = LW; g.lineJoin = 'round'; g.lineCap = 'round';
+    if (!o.faceOnly) {
     if (o.long) { g.fillStyle = hair; g.beginPath(); g.moveTo(-r * .98, -r * .2); g.quadraticCurveTo(-r * 1.25, r * .9, -r * .8, r * 1.3); g.lineTo(r * .8, r * 1.3); g.quadraticCurveTo(r * 1.25, r * .9, r * .98, -r * .2); g.closePath(); g.fill(); g.stroke(); }
     g.fillStyle = skin; [-1, 1].forEach(s => { g.beginPath(); g.ellipse(s * r * .88, r * .12, r * .2, r * .26, 0, 0, 7); g.fill(); g.stroke(); });
     g.beginPath(); g.ellipse(0, 0, r * .86, r, 0, 0, 7); g.fill(); g.stroke();
@@ -63,7 +64,7 @@
     else { g.beginPath(); g.moveTo(-r * .88, r * .1); g.bezierCurveTo(-r * 1.05, -r * .95, -r * .4, -r * 1.25, 0, -r * 1.12); g.bezierCurveTo(r * .5, -r * 1.25, r * 1.05, -r * .95, r * .88, r * .1);
       if (o.long) { g.quadraticCurveTo(r * .7, -r * .55, r * .05, -r * .5); g.quadraticCurveTo(-r * .6, -r * .5, -r * .88, r * .1); }
       else { [[.8, -.3], [.6, -.44], [.4, -.32], [.18, -.5], [-.06, -.36], [-.3, -.52], [-.52, -.36], [-.72, -.42], [-.84, -.2]].forEach(([a, b]) => g.lineTo(r * a, r * b)); }
-      g.closePath(); g.fill(); g.stroke(); }
+      g.closePath(); g.fill(); g.stroke(); } }
     // seja
     const m = o.mood, ey = -r * .02, ex = r * .34; g.lineWidth = 2.2;
     g.fillStyle = 'rgba(255,110,110,.25)'; [-1, 1].forEach(s => { g.beginPath(); g.ellipse(s * r * .52, r * .34, r * .15, r * .09, 0, 0, 7); g.fill(); });
@@ -91,8 +92,23 @@
     [[B.armL, o.shirt], [B.armR, o.armCol || o.shirt]].forEach(([a, col]) => { if (o.sleeve === 'long') cap(g, a, 10, col); else { cap(g, a, 9, skin); cap(g, [a[0], along(a[0], a[1], .7)], 13, col); } });
     hand(g, B.armL[B.armL.length - 1], skin); hand(g, B.armR[B.armR.length - 1], skin);
     head(g, B.head[0], B.head[1], B.hr, o); }
+  // ---- Blenderī uzrenderētie tēli: balti slāņi (āda, krekls, bikses, mati) tiek iekrāsoti, kontūras un fiksētās daļas – kā ir ----
+  const CHBASE = new URL('bg/char/', document.currentScript ? document.currentScript.src : location.href).href, CHV = 3, CHI = {}, CHT = {};
+  const CHKEYS = new Set(['sit_def', 'sit_fr', 'sit_burn', 'sit_bee', 'slump_def', 'bench', 'lie']), CHR = 20;
+  function chImg(n) { if (!(n in CHI)) { const im = CHI[n] = new Image(); im.onerror = () => { CHI[n] = null; }; im.src = CHBASE + n + '.webp?v=' + CHV; } const im = CHI[n]; return im && im.complete && im.naturalWidth ? im : null; }
+  function chTint(n, col) { const k = n + col; if (CHT[k]) return CHT[k]; const im = chImg(n); if (!im) return null; if (col === '#ffffff') return im;
+    const cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; const x = cv.getContext('2d'); x.drawImage(im, 0, 0);
+    x.globalCompositeOperation = 'multiply'; x.fillStyle = col; x.fillRect(0, 0, cv.width, cv.height); x.globalCompositeOperation = 'destination-in'; x.drawImage(im, 0, 0); return CHT[k] = cv; }
+  const nightK = (col, night) => night ? mixc(col, '#2a2f60', .38) : col;
+  // [slānis, krāsa] → zīmē visus vai neko (kamēr kāds nav ielādēts – false, tad zīmē vektoru tēlu)
+  function chDraw(g, key, parts) { const ims = parts.map(([n, col]) => chTint(key + '_' + n, col)); if (!ims.every(Boolean)) return false; ims.forEach(im => g.drawImage(im, 0, 0, SW, SH)); return true; }
   // mediķis (spēlētāja tēls ātrās palīdzības formā; izskats no frizētavas – LOOK)
   function medic(g, x, ground, s) { const L = (typeof LOOK !== 'undefined' && LOOK) || {}, skin = L.skin || '#f2c9a0', uni = '#2e8b57'; g.save(); g.translate(x, ground); g.scale(s, s);
+    { const hat = L.hat || 'cap', hv = hat === 'cap' ? 'hatCap' : hat === 'beanie' ? 'hatBeanie' : 'hairS', hc = L.cap || '#1b1b1f', N = medic.night;
+      g.save(); g.translate(-240, -290);
+      const ok = chDraw(g, 'medic', [['skin', nightK(skin, N)], ['fixed', nightK('#ffffff', N)], [hv, nightK(hc, N)], ['line_' + hv, '#ffffff']]);
+      if (ok) { g.fillStyle = '#fff'; g.font = 'bold 8px system-ui'; g.textAlign = 'center'; g.fillText('112', 240, 200); head(g, 240, 160, 16, { skin, hair: hc, age: 'adult', mood: 'ok', faceOnly: true }); g.restore(); g.restore(); return; }
+      g.restore(); }
     g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(0, 2, 30, 6, 0, 0, 7); g.fill();
     const B = { hr: 16, shoeA: 0, head: [0, -130], neck: [0, -106], shL: [-17, -102], shR: [17, -102], hipL: [-14, -56], hipR: [14, -56],
       armL: [[-18, -96], [-23, -76], [-22, -56]], armR: [[18, -96], [25, -76], [27, -58]], legL: [[-7, -56], [-8, -30], [-8, -8]], legR: [[7, -56], [8, -30], [8, -8]] };
@@ -264,7 +280,7 @@
     if (p === 'bike') { g.save(); g.translate(412, 262); g.rotate(-.15); g.strokeStyle = '#e74c3c'; g.lineWidth = 5; g.beginPath(); g.arc(-40, 0, 22, 0, 7); g.arc(40, 0, 22, 0, 7); g.stroke(); g.beginPath(); g.moveTo(-40, 0); g.lineTo(-5, -30); g.lineTo(30, -30); g.lineTo(40, 0); g.moveTo(-5, -30); g.lineTo(5, 0); g.lineTo(-40, 0); g.stroke(); g.restore();
       g.fillStyle = '#2c3e50'; g.beginPath(); g.ellipse(330, 286, 18, 10, 0, 0, 7); g.fill(); g.fillStyle = '#e74c3c'; g.beginPath(); g.arc(330, 280, 14, Math.PI, 0); g.fill(); } // ķivere
     else if (p === 'ball') { g.fillStyle = '#ff8a3d'; g.beginPath(); g.arc(400, 270, 18, 0, 7); g.fill(); g.strokeStyle = '#7a3a10'; g.lineWidth = 2; g.beginPath(); g.arc(400, 270, 18, 0, 7); g.moveTo(382, 270); g.lineTo(418, 270); g.stroke(); }
-    else if (p === 'benchP') { g.fillStyle = '#8e6b47'; g.fillRect(310, 196, 150, 10); g.fillRect(310, 176, 150, 8); g.fillStyle = '#555'; g.fillRect(320, 206, 6, 30); g.fillRect(444, 206, 6, 30); }
+    else if (p === 'benchP' && !bgImg(c.place, c.night)) { g.fillStyle = '#8e6b47'; g.fillRect(310, 196, 150, 10); g.fillRect(310, 176, 150, 8); g.fillStyle = '#555'; g.fillRect(320, 206, 6, 30); g.fillRect(444, 206, 6, 30); }
     else if (p === 'swing') { g.strokeStyle = '#555'; g.lineWidth = 6; g.beginPath(); g.moveTo(320, 260); g.lineTo(350, 70); g.lineTo(450, 70); g.lineTo(470, 260); g.stroke(); g.lineWidth = 2; const a = Math.sin(T.now * 1.5) * .15; g.save(); g.translate(400, 72); g.rotate(a); g.beginPath(); g.moveTo(-15, 0); g.lineTo(-15, 120); g.moveTo(15, 0); g.lineTo(15, 120); g.stroke(); g.fillStyle = '#e74c3c'; g.fillRect(-20, 118, 40, 8); g.restore(); }
     else if (p === 'tea') { g.save(); if (bgImg('kitchen', c.night)) g.translate(-20, 40); g.fillStyle = 'rgba(160,90,40,.6)'; g.beginPath(); g.ellipse(372, 160, 26, 5, 0, 0, 7); g.fill(); g.fillRect(392, 160, 3, 14 + (T.now * 10 % 8)); g.save(); g.translate(356, 152); g.rotate(1.35); g.fillStyle = '#fff'; g.strokeStyle = OL; g.lineWidth = 2; g.beginPath(); g.roundRect(-8, -11, 16, 20, 3); g.fill(); g.stroke(); g.restore();
       g.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(362 + i * 8, 146 - ((T.now * 20 + i * 7) % 20), 3, 0, 7); g.fill(); } g.restore(); }
@@ -286,7 +302,11 @@
       if (swollen) { g.fillStyle = 'rgba(230,80,80,.28)'; g.beginPath(); g.ellipse(0, rr * .1, rr * .9, rr * .95, 0, 0, 7); g.fill(); g.fillStyle = '#d0505a'; g.beginPath(); g.ellipse(0, rr * .5, rr * .3, rr * .14, 0, 0, 7); g.fill(); }
       if (sweat) { g.fillStyle = '#8fd3ff'; g.strokeStyle = '#3b8fd0'; g.lineWidth = 1; [[-.92, -.25, 0], [.95, -.1, 2], [-.7, -.62, 4]].forEach(([dx, dy, ph]) => { const x = dx * rr, y = dy * rr + ((T.now * 9 + ph) % 6); g.beginPath(); g.moveTo(x, y - 5); g.quadraticCurveTo(x + 3.4, y + 1, x, y + 3); g.quadraticCurveTo(x - 3.4, y + 1, x, y - 5); g.fill(); g.stroke(); }); }
       if (nb) { g.fillStyle = '#c0182b'; g.fillRect(-1.5, rr * .26, 3, rr * .2); for (let i = 0; i < 2; i++) { const yy = rr * .46 + ((T.now * 34 + i * 10) % (rr * .9)); g.beginPath(); g.arc(A.has('back') ? 0 : .5, yy, 2, 0, 7); g.fill(); } } } };
-    if (P.lie) { g.save(); g.translate(P.xf[0], P.xf[1]); g.rotate(-Math.PI / 2); body(g, P.L, o); g.restore(); } else body(g, P, o);
+    const arm = c.inj.k === 'fracture' ? 'fr' : c.inj.k === 'burn' ? 'burn' : c.id === 'bee' ? 'bee' : 'def', ck = P.lie ? 'lie' : P.bench ? 'bench' : (st.pose === 'slump' ? 'slump_' : 'sit_') + arm;
+    const hv = p.age === 'old' ? 'hairO' : p.long ? 'hairL' : 'hairS', N = c.night;
+    if (CHKEYS.has(ck) && chDraw(g, ck, [['skin', nightK(skin, N)], ['shirt', nightK(o.armCol === shirt ? shirt : shirt, N)], ['pants', nightK(pants, N)], ['fixed', nightK('#ffffff', N)], [hv, nightK(hair, N)], ['line_' + hv, '#ffffff']]))
+      { const H0 = geo(c, { pose: st.pose, applied: new Set() }).head; head(g, H0[0], H0[1], CHR, Object.assign({}, o, { faceOnly: true, tilt: 0 })); }
+    else if (P.lie) { g.save(); g.translate(P.xf[0], P.xf[1]); g.rotate(-Math.PI / 2); body(g, P.L, o); g.restore(); } else body(g, P, o);
     // traumas
     const Z = P.Z;
     if (c.inj.k === 'scrape' && !st.applied.has('plaster')) { const [x, y] = Z.knee; g.fillStyle = st.applied.has('wash') ? '#f0a0a0' : '#c0392b'; g.beginPath(); g.ellipse(x, y, 8, 6, .3, 0, 7); g.fill(); if (!st.applied.has('wash')) { g.fillStyle = '#7a1a10'; for (let i = 0; i < 5; i++) g.fillRect(x - 6 + (i * 5) % 12, y - 4 + (i * 7) % 8, 1.6, 1.6); } }
@@ -336,7 +356,7 @@
 
   // ================= montēšana =================
   const ageK = c => c.p.age === 'kid' ? .8 : c.p.age === 'teen' ? .92 : 1, piv = P => P.lie ? [250, 262] : [240, 268];
-  window.Treat = { mount(el, c, opt = {}) {
+  window.Treat = { geo, mount(el, c, opt = {}) {
     const st = { pose: c.pose, applied: new Set(), wrong: new Set(), mood: c.inj.k === 'out' ? 'out' : c.p.age === 'kid' ? 'cry' : 'pain', sweat: c.inj.k === 'sweat', pale: c.id === 'faint' || c.id === 'sugar', cond: c.cond || 50, fx: { cool: 0, wash: 0, inhaler: 0, calm: 0 }, fxs: [], hover: null, shocked: false };
     el.innerHTML = `<div class="stageWrap"><canvas class="stage" width="${SW * 2}" height="${SH * 2}"></canvas><div class="cond"><span>🫀 Stāvoklis</span><div class="cb"><i></i></div></div><div class="hint"></div><button class="shockBtn" style="display:none">⚡ Visi atkāpjas – ŠOKS!</button></div>`
       + (opt.interactive ? `<div class="tray">${c.tools.slice().sort(() => Math.random() - .5).map(id => `<div class="tile" data-t="${id}"><i>${TOOLS[id].i}</i><span>${TOOLS[id].n}</span></div>`).join('')}</div>` : '');
@@ -349,7 +369,7 @@
       g.save(); g.translate(px, py); g.scale(ks, ks); g.translate(-px, -py); patient(g, c, st, P); applied(g, c, st, P);
       if (st.hover) { const z = P.Z[st.hover.z] || P.Z.body; g.strokeStyle = st.hover.ok ? 'rgba(46,204,113,.95)' : 'rgba(255,211,77,.9)'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.arc(z[0], z[1], z[2] + 8 + Math.sin(now / 120) * 3, 0, 7); g.stroke(); g.setLineDash([]); }
       effects(g, st, dt); g.restore();
-      medic(g, P.lie ? 440 : 96, 290, P.lie ? .95 : 1.05);
+      medic.night = c.night; medic(g, P.lie ? 440 : 96, 290, P.lie ? .95 : 1.05);
       cb.style.width = st.cond + '%'; cb.style.background = st.cond > 60 ? '#2ecc71' : st.cond > 30 ? '#ffb020' : '#ff3b4e';
       raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
