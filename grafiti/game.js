@@ -583,7 +583,7 @@ function eatSnack(id){ save.snacks=save.snacks||{}; if(!(save.snacks[id]>0)) ret
   save.snacks[id]--; save.food=Math.min(100,(save.food||0)+SNACKS[id].f); foodBand=3; stat('eat'); persist(); sfx('buy'); floatText(player.x,GROUND-110,`+${SNACKS[id].f}% ${SNACKS[id].i}`,'#7cff8a'); toast(`${SNACKS[id].i} Yum! Food ${Math.round(save.food)}%`); renderInv(); }
 
 // Notverts: neliels sods (10% + 2% par zvaigzni) un aizved uz tuvāko metro tajā pašā pilsētā (ne uz 1. pilsētu)
-function bust(){ const st=starsOf(heat), pct=.1+.02*st, fine=Math.round(save.money*pct); save.money-=fine; stat('busted'); chaseMax=0; persist();
+function bust(){ const st=starsOf(heat), pct=.1+.02*st, fine=Math.max(0,Math.round(save.money*pct)); save.money-=fine; stat('busted'); chaseMax=0; persist();
   const city=inMetro&&metroFrom?metroFrom.city:curCity; let back=null,bd=1e12; stations.forEach(s_=>{ if(Math.floor(s_.dist/10)!==city) return; const d=Math.abs(s_.cx-player.x); if(d<bd){ bd=d; back=s_; } });
   if(mode!=='world'){ dOv.classList.remove('on'); shopOv.classList.remove('on'); stopPaint(); mode='world'; cam.zoom=baseZoom(); cam.y=camY0(); tr=null; }
   police.active=false; police.car=null; police.extra=[]; police.off=null; police.offs=[]; police.heli=null; heat=0; prevStars=0; hidden=false; inMetro=false; curCity=city; shownMoney=-1; player.x=back?back.cx:cityRange[city][0]+300; player.vx=0; player.h=0; cam.x=player.x; cam.flash=1; cam.shake=14; sfx('bust'); ding([220,165,110]);
@@ -1571,7 +1571,7 @@ async function loadSave(uid){
   try{ const lk=(await NET.db.ref('users/'+uid+'/look').get()).val(); if(lk&&typeof lk==='object') save.look=lk; else if(save.look) NET.db.ref('users/'+uid+'/look').set(save.look).catch(()=>{}); }catch(e){}
   // nauda – kopīgajā maciņā (visām spēlēm); pirmo reizi tur ieliek šīs spēles naudu
   try{ const w=await TW.wallet.get(uid); if(w==null) await TW.wallet.set(uid,save.money||0); else save.money=w; }catch(e){}
-  walletBase=save.money; TW.wallet.watch(uid,v=>{ if(v==null||walletBusy) return; save.money=Math.max(0,v+(save.money-walletBase)); walletBase=v; dispMoney=save.money; shownMoney=-1; });
+  walletBase=save.money; TW.wallet.watch(uid,v=>{ if(v==null||walletBusy) return; save.money=v+(save.money-walletBase); walletBase=v; dispMoney=save.money; shownMoney=-1; });
   saveUid=uid; saveOk=true; _lx=-1; dispMoney=save.money; shownMoney=-1; foodBand=3;
   metroObjs.forEach(o=>{ if(o.kind==='mwall'){ o.tier=Math.max(0,level()-1-Math.floor(Math.random()*4)); o.shape=pickShape(o.tier); } });
   renderInv(); updateHud(); setTimeout(dailyGift,2500);
@@ -1583,7 +1583,7 @@ function dailyGift(){ if(!saveOk) return; const d=new Date(Date.now()+(NET.off||
 setInterval(dailyGift,60000);
 let walletBase=0, walletBusy=false;
 function walletSync(){ if(!saveUid||walletBusy||!NET.on) return; const d=Math.round(save.money-walletBase); if(!d) return; walletBusy=true; const sent=save.money;
-  TW.wallet.add(saveUid,d).then(v=>{ save.money=Math.max(0,v+(save.money-sent)); walletBase=v; walletBusy=false; shownMoney=-1; }).catch(()=>{ walletBusy=false; }); }
+  TW.wallet.add(saveUid,d).then(v=>{ save.money=v+(save.money-sent); walletBase=v; walletBusy=false; shownMoney=-1; }).catch(()=>{ walletBusy=false; }); }
 function cloudSave(){ walletSync(); if(NET.on&&saveOk&&saveUid) NET.db.ref(DBP+'saves/'+saveUid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') cloudSave(); });
 function netTick(){ if(!NET.on) return;

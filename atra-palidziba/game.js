@@ -182,7 +182,7 @@ function updateAmb(dt) {
 function skid() { if (skids.length > 500) skids.splice(0, 40); const bx = Math.cos(amb.a), by = Math.sin(amb.a), px = -by, py = bx;
   skids.push({ x: amb.x - bx * 22 + px * 13, y: amb.y - by * 22 + py * 13, a: amb.a }, { x: amb.x - bx * 22 - px * 13, y: amb.y - by * 22 - py * 13, a: amb.a }); }
 function bump(hard, car) { if (amb.bumpT > 0) return; amb.bumpT = .7; if (!hard) return; cam.shake = 9; sfx('bump'); buzz(40); walletAdd(-3); repairs += 3;
-  if (M.state === 'toPatient' || M.state === 'toHospital') { M.bumps++; if (M.state === 'toHospital') M.cond = Math.max(5, M.cond - 6); toast(car ? '💥 Avārija! Remonts −€3' : '💥 Uzmanīgi! Remonts −€3'); } else toast('💥 Remonts −€3'); }
+  if (M.state === 'toPatient' || M.state === 'toHospital') { M.bumps++; if (M.state === 'toHospital') M.cond = Math.max(5, M.cond - 6); toast((car ? '💥 Avārija! Remonts −€3' : '💥 Uzmanīgi! Remonts −€3') + (wallet < 0 ? '<br><small>Tu esi mīnusos – nopelni ar izsaukumiem!</small>' : '')); } else toast('💥 Remonts −€3'); }
 
 // ================= Maršruts (īsākais pa ielām, sastrēgumus apiet) =================
 function attach(px, py) { // tuvākā iela → divi krustojumi un attālumi līdz tiem
@@ -509,7 +509,7 @@ function hud() {
   else if (M.state === 'scene') task = '🩺 Palīdzi pacientam'; else task = '📻 Gaidi izsaukumu…';
   if (nearFuel() && Math.abs(amb.v) < 70 && M.state !== 'scene' && amb.fuel < 99) { actOn = true; actI = '⛽'; actT = `€${fuelCost()}`; go = true; }
   const key = [L.l, L.cur, wallet, task, dist, actOn, actI, actT, Math.round(M.cond), Math.round(amb.fuel)].join('|'); if (key === hudKey) return; hudKey = key;
-  $('sLv').textContent = `🚑 ${L.l}. līmenis`; $('sXp').style.width = (L.cur / L.need * 100) + '%'; $('sMoney').innerHTML = `💰 €${wallet} <span style="color:${amb.fuel < 20 ? '#ff5a6a' : '#cfe'}">⛽ ${Math.round(amb.fuel)}%</span>`;
+  $('sLv').textContent = `🚑 ${L.l}. līmenis`; $('sXp').style.width = (L.cur / L.need * 100) + '%'; $('sMoney').innerHTML = `<b style="color:${wallet < 0 ? '#ff5a6a' : '#ffd34d'};font-size:14px;display:inline">💰 €${wallet}</b> <span style="color:${amb.fuel < 20 ? '#ff5a6a' : '#cfe'}">⛽ ${Math.round(amb.fuel)}%</span>`;
   $('task').innerHTML = (dist ? `<span class="dist">${dist} m</span>` : '') + task;
   const b = $('bAct'); b.classList.toggle('off', !actOn); b.classList.toggle('go', go); $('bActI').textContent = actI; $('bActT').textContent = actT;
   const pb = $('pBar'); pb.classList.toggle('on', M.state === 'toHospital'); if (M.state === 'toHospital') { const c = Math.round(M.cond); $('pFill').style.width = c + '%'; $('pFill').style.background = c > 60 ? '#2ecc71' : c > 30 ? '#ffb020' : '#ff3b4e'; $('pTxt').textContent = `🫀 Pacienta stāvoklis ${c}% – brauc uzmanīgi!`; }
@@ -536,7 +536,7 @@ function sfx(k) { if (!AC) return;
 const ONLINE = location.protocol === 'https:'; let UID = null, NAME = '', NICK = '', wallet = 0;
 const LKEY = () => 'apSave' + (UID ? ':' + UID : '');
 function persist() { save.fuel = Math.round(amb.fuel); try { localStorage.setItem(LKEY(), JSON.stringify(save)); } catch (e) {} if (UID) firebase.database().ref('ap/saves/' + UID).set(save).catch(() => {}); }
-function walletAdd(m) { wallet = Math.max(0, wallet + m); if (UID) TW.wallet.add(UID, m).then(v => { wallet = v; }).catch(() => {}); }
+function walletAdd(m) { wallet = wallet + m; if (UID) TW.wallet.add(UID, m).then(v => { wallet = v; }).catch(() => {}); }
 function medals() { if (!UID || !window.TWA) return; const L = levelOf(save.xp).l;
   TWA.sync(UID, { apCalls: save.calls, apSaved: save.saved, apCpr: save.cpr || 0, apPerfect: save.perfect || 0, apLevel: L }).then(n => n.forEach((m, i) => setTimeout(() => toast(`🏅 Jauna medaļa!<br><span style="font-size:28px">${m.i}</span> ${TWA.title ? TWA.title(m) : m.t}`), 3600 * i + 1500))).catch(() => {}); }
 try { const s = JSON.parse(localStorage.getItem('apSave')); if (s && !ONLINE) save = Object.assign(save, s); } catch (e) {}

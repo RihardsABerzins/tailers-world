@@ -48,8 +48,9 @@
   // lai divas spēles (vai divas ierīces) viena otru nepārraksta. Katrā spēlē naudu var nopelnīt un iztērēt.
   TW.wallet = {
     get: async uid => (await db.ref('wallet/' + uid).get()).val(),
-    set: (uid, v) => db.ref('wallet/' + uid).set(Math.max(0, Math.round(v || 0))),
-    add: (uid, d) => db.ref('wallet/' + uid).transaction(v => Math.max(0, Math.round((v || 0) + d))).then(r => r.snapshot.val()),
+    // nauda var iet mīnusā (piem. remonts pēc avārijas) – nopelnot parāds nosedzas; pirkumiem spēles pašas prasa pietiekamu naudu
+    set: (uid, v) => db.ref('wallet/' + uid).set(Math.round(v || 0)),
+    add: (uid, d) => db.ref('wallet/' + uid).transaction(v => Math.round((v || 0) + d)).then(r => r.snapshot.val()),
     watch: (uid, cb) => db.ref('wallet/' + uid).on('value', s => cb(s.val()), () => {}),
   };
   // Tiešsaiste visās spēlēs (redz admins un moderatori)
