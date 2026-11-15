@@ -13,7 +13,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - **Radio ir kopīgs visām spēlēm**: `tw-radio.js` (`TWRadio`) – Radio TEV, SWH, Latvijas Radio 5 un **ik pēc ~8 minūtēm Papīra Lidmašīnu dziesma**. Dziesmas – kopīgajā mapē `/music/` (128 kbps MP3). Iestatījumi `localStorage twMusic` – vienādi visās spēlēs.
 - Publiskajā repo drīkst būt **tikai izdotās** Papīra Lidmašīnu dziesmas (Spotify singli + albums "Turbulence"). Neizdotās glabājas `~/Documents/Tclaude/music-archive/`.
 - **Katrā spēlē ir ⚙ iestatījumi**: radio vadība (`TWRadio.controlsHTML()` + `TWRadio.wire(el)`), mūzikas skaļums un efektu skaļums (+ Graffiti: gaišums, valoda). Jaunai spēlei tie jāpievieno.
-- Graffiti pagaidām izmanto savu radio kodu (tas pats saraksts, ceļš `../music/`) – vēlāk pāriet uz `tw-radio.js`.
+- Graffiti arī izmanto `tw-radio.js` (atskaņotāja josla un pauzes iestatījumi vada `TWRadio`).
 
 ## Struktūra
 - **Katrai spēlei sava mape** (`/grafiti/`, nākamā – `/<spēle>/`): `index.html` (iezīmējums), `style.css`, `game.js`, `lang.js` (tulkojumi), mūzika/attēli tajā pašā mapē. Kopīgi tikai `tw-*.js`, `firebase-config.js` un sākumlapa.
@@ -85,6 +85,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Pilsēta 14×14 ielas. **3D mājas** (`drawBuilding`): sienas ar logiem un jumts ar perspektīvu no ekrāna centra (`PK`), zīmē pēc mašīnām, tālākās vispirms; slimnīca un benzīntanki arī 3D.
 - **🛞 Stūres skats** (`fp.js`, pirmā persona, three.js r128 no cdnjs, ielādējas tikai ieslēdzot; poga blakus sirēnai vai V): tā pati pilsēta 3D (instanced mājas ar logiem, koki, mašīnas, luksofori, mērķa bāka), panelis ar stūri un spidometru, bultiņa uz nākamo pagriezienu. Vadība: velk pa kreisi/labi – stūrē, augšup – gāze, lejup – bremze.
 - Stūres skatā: mašīnas ar sedana profilu, stikliem, riteņiem, lukturiem (bremžu – spožāki); maršruts – spīdošas bultiņas uz ceļa.
+- 3D modeļi stūres skatā: Kenney CC0 (`atra-palidziba/models/`: cars, nature, roads + LICENSE faili), ielādē ar three.js GLTFLoader (jsdelivr r128), katra modeļa daļa – InstancedMesh.
 - Karte (minikarte 150 px) – uzspiežot atveras liela pa vidu ekrāna.
 - Nakts stils: maigas ielu lampas, krāsaini logi, neona kontūras uz ~1/4 māju jumtiem (`NEON`), nevis spožs dzeltenums. Parki: dzīvžogs, zāles laukumi, līkumoti celiņi ar strūklaku centrā, dīķis ar krastu/niedrēm/ūdensrozēm, puķu dobes, soliņi, lapu koki un egles.
 - **Diena un nakts** (`DAYLEN` 6 min, `hourNow`, `isNight` 21–6): naktī tumsa + ielu lampas, logi, lukturi; ~60% mašīnu nav; luksofori mirgo dzelteni ('f'); izsaukumi grūtāki (līmenis +2) un ×1.5 XP/nauda.
