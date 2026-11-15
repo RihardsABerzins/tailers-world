@@ -195,7 +195,7 @@ function updateAmb(dt) {
   if (ta !== null) { const d = wrapA(ta - amb.a);
     if (Math.abs(d) > 2.3 && amb.v < 80) { target = -170 * thr; amb.a += clamp(wrapA(ta + Math.PI - amb.a), -2.2 * dt, 2.2 * dt) * turnK; } // atpakaļgaitā
     else { target = MAX * thr * (Math.abs(d) > 1.1 ? .45 : 1); amb.a += clamp(d, -2.9 * dt * turnK, 2.9 * dt * turnK); if (Math.abs(d) > .55 && amb.v > 250) skid(); } }
-  else { if (window.FP) FP.steer = steer; target = thr > 0 ? MAX * thr : thr < 0 ? (amb.v > 10 ? 0 : -170) : 0; amb.a += steer * 2.7 * dt * turnK * (amb.v < 0 ? -1 : 1); if (Math.abs(steer) && amb.v > 300) skid(); }
+  else { if (window.FP) FP.steer = steer; target = thr > 0 ? MAX * thr : thr < 0 ? (amb.v > 10 ? 0 : -170) : 0; amb.a += steer * 2.7 * dt * turnK * (thr < 0 && amb.v < -15 ? -1 : 1); if (Math.abs(steer) && amb.v > 300) skid(); }
   const acc = target > amb.v ? (amb.v < 0 ? 900 : 360) : (target === 0 ? 420 : 820);
   amb.v += clamp(target - amb.v, -acc * dt, acc * dt);
   amb.x += Math.cos(amb.a) * amb.v * dt; amb.y += Math.sin(amb.a) * amb.v * dt;
@@ -208,7 +208,7 @@ function updateAmb(dt) {
     if (d < R) { const nx = d ? dx / d : 0, ny = d ? dy / d : -1; amb.x = ix + nx * R; amb.y = iy + ny * R;
       // slīd gar sienu: ja brauc tieši virsū – atsitas, ja slīpi – pagriežas gar to un turpina
       const hx = Math.cos(amb.a) * Math.sign(amb.v || 1), hy = Math.sin(amb.a) * Math.sign(amb.v || 1), into = -(hx * nx + hy * ny);
-      if (into > 0) { bump(Math.abs(amb.v) * into > 170); if (into > .85) amb.v *= -.3; else { const tx = -ny, ty = nx, sg = (hx * tx + hy * ty) >= 0 ? 1 : -1, ta = Math.atan2(ty * sg, tx * sg) + (amb.v < 0 ? Math.PI : 0); amb.a += wrapA(ta - amb.a) * .25; amb.v *= .9; } } } }
+      if (into > 0) { bump(Math.abs(amb.v) * into > 170); if (into > .85) amb.v = -Math.min(40, Math.abs(amb.v) * .15); else if (steer || ta !== null) amb.v *= .85; else { const tx = -ny, ty = nx, sg = (hx * tx + hy * ty) >= 0 ? 1 : -1, ta = Math.atan2(ty * sg, tx * sg) + (amb.v < 0 ? Math.PI : 0); amb.a += wrapA(ta - amb.a) * .25; amb.v *= .9; } } } }
   amb.x = clamp(amb.x, -RW / 2 + R, S + RW / 2 - R); amb.y = clamp(amb.y, -RW / 2 + R, S + RW / 2 - R);
   // sadursmes ar mašīnām
   for (const c of cars) { const dx = amb.x - c.x, dy = amb.y - c.y, d = Math.hypot(dx, dy);
