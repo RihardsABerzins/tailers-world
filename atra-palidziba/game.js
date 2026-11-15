@@ -151,7 +151,7 @@ function updateCars(dt, t) {
 
 // ================= Vadība =================
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); keys[k] = true; if (k.startsWith('arrow') || k === ' ') e.preventDefault();
-  if (k === 's' && !e.repeat && !document.activeElement.matches('input')) toggleSiren(); if ((k === 'e' || k === 'enter') && !e.repeat && !$('ov').classList.contains('on')) act(); });
+  if (k === 's' && !e.repeat && !document.activeElement.matches('input')) toggleSiren(); if ((k === 'e' || k === 'enter') && !e.repeat && !$('ov').classList.contains('on')) act(); if (k === 'v' && !e.repeat) FP.toggle(); });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 // kursorsvira: pieskaries jebkur uz kartes – tur parādās kursorsvira, un no tā punkta velc uz braukšanas pusi
@@ -173,6 +173,10 @@ $('gear').onclick = e => { e.stopPropagation(); audioInit(); if ($('ov').classLi
   $('fxV').oninput = () => { FXV = $('fxV').value / 100; try { localStorage.setItem('apFx', FXV); } catch (e) {} sfx('tick'); };
   $('setOk').onclick = closeSheet; };
 $('bSiren').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); toggleSiren(); });
+// karte: uzspied – lielā karte pa vidu ekrāna, vēlreiz (vai blakus) – atpakaļ
+{ const sh = document.createElement('div'); sh.id = 'mapShade'; document.body.appendChild(sh); const tg = () => { const b = !mini.classList.contains('big'); mini.classList.toggle('big', b); sh.classList.toggle('on', b); };
+  mini.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); tg(); }); sh.addEventListener('pointerdown', e => { e.preventDefault(); tg(); }); }
+$('bView').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); FP.toggle(); setTimeout(() => $('bView').classList.toggle('on', FP.on), 50); });
 $('bAct').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); act(); });
 function toggleSiren() { amb.siren = !amb.siren; $('bSiren').classList.toggle('on', amb.siren); buzz(15); }
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
@@ -181,16 +185,17 @@ function updateAmb(dt) {
   const ov = $('ov').classList.contains('on');
   let thr = 0, ta = null, steer = 0;
   if (!ov) {
-    if (stick.on && Math.hypot(stick.x, stick.y) > .18) { thr = Math.min(1, Math.hypot(stick.x, stick.y)); ta = Math.atan2(stick.y, stick.x); }
+    if (window.FP && FP.on) { if (stick.on) { thr = Math.abs(stick.y) > .15 ? -stick.y : 0; steer = Math.abs(stick.x) > .12 ? stick.x : 0; } } // stūres skats: pa kreisi/labi – stūrē, augšup – gāze
+    else if (stick.on && Math.hypot(stick.x, stick.y) > .18) { thr = Math.min(1, Math.hypot(stick.x, stick.y)); ta = Math.atan2(stick.y, stick.x); }
     const up = keys.arrowup || keys.w, dn = keys.arrowdown, lf = keys.arrowleft || keys.a, rt = keys.arrowright || keys.d;
-    if (up) thr = 1; if (dn) thr = -1; steer = (rt ? 1 : 0) - (lf ? 1 : 0);
+    if (up) thr = 1; if (dn) thr = -1; if (lf || rt) steer = (rt ? 1 : 0) - (lf ? 1 : 0);
   }
   const MAX = amb.fuel > 0 ? 430 : 90, turnK = Math.min(1, (Math.abs(amb.v) + 110) / 220);
   let target = 0;
   if (ta !== null) { const d = wrapA(ta - amb.a);
     if (Math.abs(d) > 2.3 && amb.v < 80) { target = -170 * thr; amb.a += clamp(wrapA(ta + Math.PI - amb.a), -2.2 * dt, 2.2 * dt) * turnK; } // atpakaļgaitā
     else { target = MAX * thr * (Math.abs(d) > 1.1 ? .45 : 1); amb.a += clamp(d, -2.9 * dt * turnK, 2.9 * dt * turnK); if (Math.abs(d) > .55 && amb.v > 250) skid(); } }
-  else { target = thr > 0 ? MAX : thr < 0 ? (amb.v > 10 ? 0 : -170) : 0; amb.a += steer * 2.7 * dt * turnK * (amb.v < 0 ? -1 : 1); if (Math.abs(steer) && amb.v > 300) skid(); }
+  else { if (window.FP) FP.steer = steer; target = thr > 0 ? MAX * thr : thr < 0 ? (amb.v > 10 ? 0 : -170) : 0; amb.a += steer * 2.7 * dt * turnK * (amb.v < 0 ? -1 : 1); if (Math.abs(steer) && amb.v > 300) skid(); }
   const acc = target > amb.v ? (amb.v < 0 ? 900 : 360) : (target === 0 ? 420 : 820);
   amb.v += clamp(target - amb.v, -acc * dt, acc * dt);
   amb.x += Math.cos(amb.a) * amb.v * dt; amb.y += Math.sin(amb.a) * amb.v * dt;
@@ -562,7 +567,7 @@ function drawCar(x, y, a, L, Wd, col, isAmb, t, c) {
   ctx.restore();
 }
 function drawMini(t) {
-  const k = 240 / (S + RW), g = mctx; g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#4f7d43'; g.fillRect(0, 0, 240, 240); g.save(); g.translate(RW / 2 * k, RW / 2 * k); g.scale(k, k);
+  const MW = mini.width, k = MW / (S + RW), g = mctx; g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#4f7d43'; g.fillRect(0, 0, MW, MW); g.save(); g.translate(RW / 2 * k, RW / 2 * k); g.scale(k, k);
   g.strokeStyle = '#2b2f3a'; g.lineWidth = RW * .7; for (let i = 0; i < N; i++) { g.beginPath(); g.moveTo(i * G, 0); g.lineTo(i * G, S); g.moveTo(0, i * G); g.lineTo(S, i * G); g.stroke(); }
   g.strokeStyle = '#ff4d4d'; jams.forEach(key => { const ax = key[0], idx = +key.slice(1, key.indexOf('_')), seg = +key.slice(key.indexOf('_') + 1); g.beginPath(); if (ax === 'h') { g.moveTo(seg * G, idx * G); g.lineTo((seg + 1) * G, idx * G); } else { g.moveTo(idx * G, seg * G); g.lineTo(idx * G, (seg + 1) * G); } g.stroke(); });
   if (M.route && (M.state === 'toPatient' || M.state === 'toHospital')) { g.strokeStyle = '#ffd34d'; g.lineWidth = 60; g.lineJoin = 'round'; g.beginPath(); M.route.pts.forEach((p, n) => n ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.stroke(); }
@@ -591,8 +596,9 @@ function frame(now) { const dt = Math.min(.05, (now - last) / 1000); last = now;
   cam.x = lerp(cam.x, lx, Math.min(1, dt * 4)); cam.y = lerp(cam.y, ly, Math.min(1, dt * 4)); cam.shake *= Math.pow(.01, dt);
   const sh = cam.shake > .3 ? (Math.random() - .5) * cam.shake : 0;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = '#7dbb63'; ctx.fillRect(0, 0, W, H);
-  ctx.setTransform(DPR * cam.z, 0, 0, DPR * cam.z, DPR * (W / 2 - cam.x * cam.z + sh), DPR * (H / 2 - cam.y * cam.z + sh)); drawWorld(T);
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); drawPointer();
+  if (window.FP && FP.on && FP.ready) FP.render(T);
+  else { ctx.setTransform(DPR * cam.z, 0, 0, DPR * cam.z, DPR * (W / 2 - cam.x * cam.z + sh), DPR * (H / 2 - cam.y * cam.z + sh)); drawWorld(T);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); drawPointer(); }
   const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .45, W / 2, H / 2, Math.max(W, H) * .75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.28)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   drawMini(T); hud(); updateAudio();
   requestAnimationFrame(frame); }
@@ -621,7 +627,7 @@ function updateAudio() { if (!AC) return; const T0 = AC.currentTime;
   // Eiropas divu toņu sirēna (ī-ā)
   sirO.frequency.setTargetAtTime(Math.floor(T * 1.6) % 2 ? 640 : 880, T0, .01); sirG.gain.setTargetAtTime(amb.siren && !$('ov').classList.contains('on') ? .045 * FXV : 0, T0, .05);
   engO.frequency.setTargetAtTime(48 + Math.abs(amb.v) * .22, T0, .05); engG.gain.setTargetAtTime((.02 + Math.abs(amb.v) / 430 * .05) * FXV, T0, .1);
-  if (window.TWRadio) TWRadio.duck($('ov').classList.contains('on') ? .5 : amb.siren ? .7 : 1); }
+  if (window.TWRadio) TWRadio.duck(M.state === 'scene' ? .55 : amb.siren ? .75 : 1); }
 function tone(f0, f1, d, type = 'sine', vol = .12, delay = 0) { if (!AC) return; const t0 = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + d);
   g.gain.setValueAtTime(Math.max(.0011, vol * FXV), t0); g.gain.exponentialRampToValueAtTime(.001, t0 + d); o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0 + d + .05); }
 function sfx(k) { if (!AC) return;

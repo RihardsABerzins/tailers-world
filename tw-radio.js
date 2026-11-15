@@ -39,7 +39,7 @@
   R.start = () => { if (R.started) return; R.started = true; R.playRadio(R.radio); };
   setInterval(() => { if (R.started && !R.pl && R.playing() && now() > R.nextPL) R.playPL(); }, 2000);
   // ---- vadība iestatījumu logā ----
-  R.controlsHTML = () => `<div class="twr"><div class="twrT"></div><div class="twrB"><button data-r="prev">⏮</button><button data-r="toggle">▶</button><button data-r="next">⏭</button><button data-r="song" title="Papīra Lidmašīnu dziesma">✈</button><button data-r="mute">🔇</button></div>
+  R.controlsHTML = () => `<div class="twr"><div class="twrT"></div><div class="twrB"><button data-r="prev">⏮</button><button data-r="toggle">▶</button><button data-r="next">⏭</button><button data-r="mute">🔇</button></div>
     <label class="twrV">🎵 Mūzika <input type="range" min="0" max="100"></label></div>`;
   R.wire = el => { const t = el.querySelector('.twrT'), tg = el.querySelector('[data-r="toggle"]'), mu = el.querySelector('[data-r="mute"]'), vol = el.querySelector('.twrV input');
     el.querySelectorAll('[data-r]').forEach(b => b.onclick = () => R[b.dataset.r]());
