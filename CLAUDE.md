@@ -31,6 +31,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 ## Mobilā vadība (principi)
 - **Spied uz objekta pasaulē**: durvis, siena, miskaste, metro, vilciens → tēls pats aiziet un izdara darbību. Staigāšana un lēkšana – tikai ar bultiņām (spiediens uz tukšas vietas neko nedara).
 - **Viena kontekstuālā poga** labajā apakšā (īkšķa zonā) rāda, ko tieši var izdarīt (🎨 Zīmēt, 🛒 Veikals, 🍔 Ēst, 🚇 Metro…); paslēpta, ja nav ko darīt. 🫣 poga parādās tikai pie slēptuves.
+- Ēdiens: kafejnīcā/picērijā pērk līdzņemšanai (`SNACKS`: kruasāns +15%, hotdogs +30%, burgers +50%, pica +100%; cena × pilsēta), tas ieiet `save.snacks` somā, ēd no somas.
 - Zem līmeņa lodziņa (ārpus tā) – 🎒 soma un 🍔 ēdiens % (+ aktīvie efekti); spiežot – logs ar paskaidrojumu un pogu „Lietot”.
 - **Tīrs ekrāns**: HUD sakļauts (nauda + līmenis; aizdomas un ēdiens parādās tikai, kad svarīgi; spied, lai izvērstu), radio sakļauts līdz 🎵, priekšmeti sakļauti līdz 🎒.
 - Ikonas virs objektiem ar ko var darboties; tuvumā tās pulsē.
@@ -59,6 +60,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
 - Graffiti progress glabājas kontā `grafiti/saves/{uid}` (vecais `saves/{uid}` tiek nolasīts vienreiz) (+ kešs `grafitiRPG:{uid}` ierīcē); vecais `grafitiRPG` tiek piešķirts tikai kontam, kura `stats` XP sakrīt.
 - Frizētava (💈, `openBarber`): bez maksas maina izskatu `save.look` (āda, jaka/„auto” = krāsas tonis, cepure/adīta/mati, maska vai smaids, bikses); citi to redz (`presence.l`, `lookFrom`). Arkāde, ziedi, velo – tikai dekorācija.
+- Tulkojumi: jaunus kešatmiņas numurus (`?v=`) palielina grafiti/index.html, mainot game.js/style.css/lang.js.
 - Tulkojumi: PHRASES ir apakšvirknes – tulkojums nedrīkst saturēt pašu avotu (piem. Mask→Maska), citādi bezgalīgs cikls; tādus liek WORDS.
 - Apavu veikals (`SHOES`, `save.shoes/shoe`): ātrums kājām līdz ×1,5. Kafejnīca arī pie paša sākuma; norāde „🍔 Kafejnīca”, kad ēdiens < 50 %.
 - Vertikālā telefonā iela ~63 % augstumā (`camY0`), zem ceļa pretējā ietve. Ceļa svītras piesaistītas pasaulei.

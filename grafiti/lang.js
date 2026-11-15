@@ -9,6 +9,13 @@
 
   // Garākās frāzes vispirms. [angliski, latviski]
   const PHRASES=[
+    ['Whole pizza','Vesela pica'],['Croissant','Kruasāns'],['Hot dog','Hotdogs'],['🍕 Pizzeria','🍕 Picērija'],['🍔 Café','🍔 Kafejnīca'],
+    ['Takeaway – the food goes into your backpack 🎒. Eat it whenever you are hungry!','Līdzņemšanai – ēdiens ieiet mugursomā 🎒. Ēd, kad sagribas!'],
+    ['% food','% ēdiena'],['In bag:','Somā:'],['You are full!','Tu esi paēdis!'],['Yum! Food','Ņam! Ēdiens'],
+    ['E – buy food to take away','E – pirkt ēdienu līdzņemšanai'],
+    ['Food: buy takeaway at a café 🍔 or pizzeria 🍕.','Ēdiens: pērc līdzņemšanai kafejnīcā 🍔 vai picērijā 🍕.'],
+    ['Buy takeaway food at a café 🍔 or a pizzeria 🍕 – it goes into your backpack 🎒, eat it from there.','Pērc ēdienu līdzņemšanai kafejnīcā 🍔 vai picērijā 🍕 – tas ieiet mugursomā 🎒, ēd no turienes.'],
+    ['Eat from backpack','Ēst no somas'],['Items','Priekšmeti'],
     ['Use it when the police are chasing you – they lose sight of you and suspicion drops.','Izmanto, kad policija dzenas pakaļ – viņi tevi pazaudē, un aizdomas samazinās.'],
     ['You run 40% faster for 40 seconds. Great for escaping!','40 sekundes skrien par 40% ātrāk. Lieliski, lai aizbēgtu!'],
     ['For 5 minutes every wall gives double XP – level up faster.','5 minūtes katra siena dod dubultu XP – ātrāk kāp līmeņos.'],
@@ -131,7 +138,7 @@
     ['Street','iela'],['Boulevard','bulvāris'],['Quarter','kvartāls'],['Square','laukums'],['Park','parks'],['Embankment','krastmala'],['Harbor','osta'],['Bridge','tilts'],['Garden','dārzs'],
     ['STREET','IELA'],['BOULEVARD','BULVĀRIS'],['QUARTER','KVARTĀLS'],['SQUARE','LAUKUMS'],['PARK','PARKS'],['EMBANKMENT','KRASTMALA'],['HARBOR','OSTA'],['BRIDGE','TILTS'],['GARDEN','DĀRZS'],
     ['SUN','SAULES'],['MOON','MĒNESS'],['STAR','ZVAIGŽŅU'],['APPLE','ĀBEĻU'],['BIRCH','BĒRZU'],['OAK','OZOLU'],['LINDEN','LIEPU'],['ROSE','ROŽU'],['WIND','VĒJA'],['WATER','ŪDENS'],['SAND','SMILŠU'],
-    ['Press','Spied'],['Helicopter','Helikopters'],['Skin','Āda'],['Mask','Maska'],['Settings','Iestatījumi'],['Done','Gatavs'],['Undo','Atcelt'],['Clear','Notīrīt'],['Leave','Aiziet'],['Paint','Zīmēt'],['Shop','Veikals'],['Eat','Ēst'],['Travel','Braukt'],['Bonus','Bonuss'],['Hide','Slēpties'],['Out','Iznākt'],['Soon','Drīz'],['Hungry','Izsalcis'],['Exit','Izeja'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
+    ['Press','Spied'],['Burger','Burgers'],['Eat','Ēst'],['Buy','Pirkt'],['Helicopter','Helikopters'],['Skin','Āda'],['Mask','Maska'],['Settings','Iestatījumi'],['Done','Gatavs'],['Undo','Atcelt'],['Clear','Notīrīt'],['Leave','Aiziet'],['Paint','Zīmēt'],['Shop','Veikals'],['Eat','Ēst'],['Travel','Braukt'],['Bonus','Bonuss'],['Hide','Slēpties'],['Out','Iznākt'],['Soon','Drīz'],['Hungry','Izsalcis'],['Exit','Izeja'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
   ];
   const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const RULES=[...PHRASES.sort((a,b)=>b[0].length-a[0].length).map(([e,l])=>[new RegExp(esc(e),'g'),l]),

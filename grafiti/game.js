@@ -569,8 +569,19 @@ function spawnPolice(){ const side=Math.random()<.5?-1:1, x=clamp(player.x+side*
   toast(isTouch?'🚨 <b>Police on the way!</b> Hide 🫣 or run!':'🚨 <b>Police on the way!</b> Hide (↓ / S) or run!'); }
 function walkTo(o,tx,sp,dt){ const d=Math.sign(tx-o.x); o.x+=d*sp*dt; if(d) o.flip=d; o.step+=sp*dt*.05; o.face='side'; }
 const foodPrice=()=>8+4*curCity;
-function eat(){ const p=foodPrice(); if(save.food>90){ toast("🍔 You are not hungry yet."); return; } if(save.money<p){ toast(`🍔 A meal costs €${p} – paint a wall to earn money.`); return; }
-  save.money-=p; save.food=100; foodBand=3; stat('eat'); persist(); dispMoney=save.money; shownMoney=-1; sfx('buy'); floatText(player.x,GROUND-110,`-€${p}`,'#ffb347'); toast('🍔 Yum! You are full for the day.'); }
+// Ēdiens līdzņemšanai: kafejnīcā/picērijā nopērk, tas ieiet somā; ēd no somas, kad gribas. Lielāks ēdiens = vairāk % un dārgāks.
+const SNACKS={ croissant:{n:'Croissant',i:'🥐',f:15,p:3}, hotdog:{n:'Hot dog',i:'🌭',f:30,p:6}, burger:{n:'Burger',i:'🍔',f:50,p:10}, pizza:{n:'Whole pizza',i:'🍕',f:100,p:18} };
+const snackPrice=id=>Math.round(SNACKS[id].p*(1+.4*curCity));
+const snackIds=kind=>kind==='pizza'?['croissant','pizza']:['croissant','hotdog','burger'];
+function openFoodShop(kind){ mode='shop'; promptEl.style.display='none'; renderFoodShop(kind); shopOv.classList.add('on'); }
+function renderFoodShop(kind){ save.snacks=save.snacks||{};
+  const rows=snackIds(kind).map(id=>{ const x=SNACKS[id], pr=snackPrice(id); return `<div class="row bagRow"><div class="bi">${x.i}</div><div class="n"><b>${x.n}</b> <small>+${x.f}% food</small><br><small>In bag: ${save.snacks[id]||0}</small></div><button data-buy="${id}" ${save.money<pr?'disabled':''}>€ ${pr}</button></div>`; }).join('');
+  shopEl.innerHTML=`<h2>${kind==='pizza'?'🍕 Pizzeria':'🍔 Café'} <span style="float:right;color:#ffd34d">€ ${save.money}</span></h2><p style="color:#aab;margin:0 0 8px">Takeaway – the food goes into your backpack 🎒. Eat it whenever you are hungry!</p>${rows}<br><button id="shopClose">Close<span class="kh"> (E / Esc)</span></button>`;
+  shopEl.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{ const id=b.dataset.buy, pr=snackPrice(id); if(save.money<pr) return; save.money-=pr; save.snacks[id]=(save.snacks[id]||0)+1; stat('eat'); sfx('buy'); persist(); dispMoney=save.money; shownMoney=-1; renderFoodShop(kind); renderInv(); });
+  document.getElementById('shopClose').onclick=closeShop; }
+function eatSnack(id){ save.snacks=save.snacks||{}; if(!(save.snacks[id]>0)) return; if(save.food>=100){ toast('🍔 You are full!'); return; }
+  save.snacks[id]--; save.food=Math.min(100,(save.food||0)+SNACKS[id].f); foodBand=3; stat('eat'); persist(); sfx('buy'); floatText(player.x,GROUND-110,`+${SNACKS[id].f}% ${SNACKS[id].i}`,'#7cff8a'); toast(`${SNACKS[id].i} Yum! Food ${Math.round(save.food)}%`); renderInv(); }
+
 // Notverts: neliels sods (10% + 2% par zvaigzni) un aizved uz tuvāko metro tajā pašā pilsētā (ne uz 1. pilsētu)
 function bust(){ const st=starsOf(heat), pct=.1+.02*st, fine=Math.round(save.money*pct); save.money-=fine; stat('busted'); chaseMax=0; persist();
   const city=inMetro&&metroFrom?metroFrom.city:curCity; let back=null,bd=1e12; stations.forEach(s_=>{ if(Math.floor(s_.dist/10)!==city) return; const d=Math.abs(s_.cx-player.x); if(d<bd){ bd=d; back=s_; } });
@@ -728,7 +739,7 @@ function update(dt){
     updateCtx();
     if(hidden){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – leave hiding spot'; }
     else if(nearLot){ promptEl.style.display='block';
-      promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='cafe'||nearLot.kind==='pizza'?`E – eat (€${foodPrice()})`:nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):nearLot.kind==='barber'?'E – barber (change your look)':'E – shoe shop (faster running)'); }
+      promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='cafe'||nearLot.kind==='pizza'?'E – buy food to take away':nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):nearLot.kind==='barber'?'E – barber (change your look)':'E – shoe shop (faster running)'); }
     else if(nearHide){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – hide ('+(nearHide.kind==='dumpster'?'dumpster':'crates')+')'; }
     else promptEl.style.display='none';
     const zt=baseZoom()*(player.moving&&car.speed>=560?.9:1); cam.zoom=lerp(cam.zoom,zt,Math.min(1,dt*3));
@@ -1241,7 +1252,7 @@ const BOXES=[{n:'Bronze box',c:'#cd7f32',i:'📦'},{n:'Silver box',c:'#c0c8d4',i
 const buff={energy:0,xp2:0,mask:0};
 const invEl=document.getElementById('inv'); let invShown='';
 // Zem līmeņa lodziņa (ārpus tā): 🎒 soma un 🍔 ēdiens + aktīvie efekti. Spiežot – logs ar paskaidrojumu.
-function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.items[id]||0),0), f=Math.round(save.food||0);
+function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.items[id]||0),0)+Object.keys(SNACKS).reduce((a,id)=>a+((save.snacks||{})[id]||0),0), f=Math.round(save.food||0);
   const buffs=Object.keys(buff).filter(id=>buff[id]>0).map(id=>`<span class="buff">${ITEMS[id].i} ${Math.ceil(buff[id])}s</span>`).join('');
   const s_=`<button class="bag" data-bag="1">🎒 ${total}</button><button class="food${f<=0?' bad':f<25?' warn':''}" data-food="1">🍔 ${f}%</button>${buffs}`;
   const r=hudBox.getBoundingClientRect(); invEl.style.setProperty('--invTop',(r.bottom+6)+'px'); invEl.style.setProperty('--invLeft',r.left+'px');
@@ -1249,12 +1260,15 @@ function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.item
 function openBag(){ if(mode!=='world') return; mode='shop'; promptEl.style.display='none'; renderBag(); shopOv.classList.add('on'); }
 function renderBag(){ const rows=Object.keys(ITEMS).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">(${Math.ceil(buff[id])} s)</span>`:'';
     return `<div class="row bagRow"><div class="bi">${it.i}</div><div class="n"><b>${it.n}</b> ×${n}${b}<br><small>${it.L}</small></div><button data-use="${id}" ${n?'':'disabled'}>Use</button></div>`; }).join('');
-  shopEl.innerHTML=`<h2>🎒 Backpack</h2>${rows}<p style="color:#aab;font-size:14px">Items are found in loot boxes – in dumpsters 🗑️ and on bonus walls in the metro 🎁.</p><button id="shopClose">Close<span class="kh"> (Esc)</span></button>`;
+  const sn=save.snacks||{}, food=Object.keys(SNACKS).filter(id=>sn[id]>0).map(id=>{ const x=SNACKS[id]; return `<div class="row bagRow"><div class="bi">${x.i}</div><div class="n"><b>${x.n}</b> ×${sn[id]}<br><small>+${x.f}% food</small></div><button data-eat="${id}" ${save.food>=100?'disabled':''}>Eat</button></div>`; }).join('');
+  shopEl.innerHTML=`<h2>🎒 Backpack <small style="font-size:15px;color:#aab">🍔 ${Math.round(save.food)}%</small></h2>${food?`<b>Food</b>${food}<br><b>Items</b>`:''}${rows}<p style="color:#aab;font-size:14px">Food: buy takeaway at a café 🍔 or pizzeria 🍕. Items are found in loot boxes – in dumpsters 🗑️ and on bonus walls in the metro 🎁.</p><button id="shopClose">Close<span class="kh"> (Esc)</span></button>`;
   shopEl.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{ const id=b.dataset.use; closeShop(); useItem(id); renderInv(); });
+  shopEl.querySelectorAll('[data-eat]').forEach(b=>b.onclick=()=>{ eatSnack(b.dataset.eat); renderBag(); });
   document.getElementById('shopClose').onclick=closeShop; }
 function openFoodInfo(){ if(mode!=='world') return; mode='shop'; promptEl.style.display='none'; const f=Math.round(save.food||0);
   shopEl.innerHTML=`<h2>🍔 Food ${f}%</h2><div class="foodBar"><div style="width:${Math.max(0,Math.min(100,f))}%;background:${f<=0?'#ff5252':f<25?'#ffca28':'#7cff8a'}"></div></div>
-    <p>Your character gets hungry over time. When food is 0%, you walk slower and your hands shake – drawings get wobbly.</p><p>Eat at a café 🍔 or a pizzeria 🍕 (€ ${foodPrice()}). When you are hungry, an arrow shows the way to the nearest café.</p><button id="shopClose">OK</button>`;
+    <p>Your character gets hungry over time. When food is 0%, you walk slower and your hands shake – drawings get wobbly.</p><p>Buy takeaway food at a café 🍔 or a pizzeria 🍕 – it goes into your backpack 🎒, eat it from there. When you are hungry, an arrow shows the way to the nearest café.</p>${Object.keys(SNACKS).some(id=>(save.snacks||{})[id]>0)?'<button id="foodBag">🎒 Eat from backpack</button> ':''}<button id="shopClose" class="sec">OK</button>`;
+  const fb=document.getElementById('foodBag'); if(fb) fb.onclick=()=>{ renderBag(); };
   document.getElementById('shopClose').onclick=closeShop; shopOv.classList.add('on'); }
 setInterval(renderInv,400); renderInv();
 hudBox.classList.toggle('open',!isTouch); hudBox.addEventListener('pointerdown',e=>{ hudBox.classList.toggle('open'); e.stopPropagation(); setTimeout(renderInv,0); });
@@ -1456,14 +1470,14 @@ function ctxInfo(){ if(mode!=='world') return null;
   const l=nearLot; if(!l) return null;
   if(l.kind==='wall') return locked(l)?{i:'🔒',t:'Lv '+(l.tier+1)}:l.need&&!save.colors.includes(l.need)?{i:'🛒',t:colorById(l.need).name}:l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎨',t:'Paint'};
   if(l.kind==='mwall') return l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎁',t:'Bonus'};
-  return {paint:{i:'🛒',t:'Shop'},cafe:{i:'🍔',t:'Eat'},pizza:{i:'🍕',t:'Eat'},shoes:{i:'👟',t:'Shop'},barber:{i:'💈',t:'Look'},metro:{i:'🚇',t:'Metro'},mtrain:{i:'🚆',t:'Travel'},mexit:{i:'⬆️',t:'Exit'}}[l.kind]||null; }
+  return {paint:{i:'🛒',t:'Shop'},cafe:{i:'🍔',t:'Buy'},pizza:{i:'🍕',t:'Buy'},shoes:{i:'👟',t:'Shop'},barber:{i:'💈',t:'Look'},metro:{i:'🚇',t:'Metro'},mtrain:{i:'🚆',t:'Travel'},mexit:{i:'⬆️',t:'Exit'}}[l.kind]||null; }
 function updateCtx(){ if(!isTouch) return; const c=ctxInfo(), hs=hidden?'out':nearHide?'in':'';
   const key=(c?c.i+c.t:'-')+'|'+hs; if(key===ctxShown) return; ctxShown=key;
   const b=document.getElementById('tAct'); b.classList.toggle('off',!c); if(c){ document.getElementById('tActI').textContent=c.i; document.getElementById('tActL').textContent=c.t; }
   const h=document.getElementById('tS'); h.classList.toggle('off',!hs); h.innerHTML=hidden?'↩️<small>Out</small>':'🫣<small>Hide</small>'; }
 function actionE(){
   if(mode!=='world'||!nearLot||hidden) return;
-  if(nearLot.kind==='cafe'||nearLot.kind==='pizza'){ eat(); return; }
+  if(nearLot.kind==='cafe'||nearLot.kind==='pizza'){ openFoodShop(nearLot.kind); return; }
   if((nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.cool<=0||nearLot.kind==='mwall'&&nearLot.cool<=0)&&!save.colors.some(id=>paintOf(id)>0)){ toast('🪣 All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.'); return; }
   if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&save.colors.includes(nearLot.need)&&paintOf(nearLot.need)<=0){ const c=colorById(nearLot.need); toast(`🪣 This wall needs ${c.name} paint, but your can is empty – refill at the Paint Depot (€ ${refillPrice(c.id)}).`); return; }
   if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&!save.colors.includes(nearLot.need)){ const c=colorById(nearLot.need); toast(`🎨 This wall needs this paint: <b style="color:${c.hex}">${c.name}</b> – buy it at the Paint Depot (€ ${c.price}).`); return; }
@@ -1642,7 +1656,7 @@ const TUT_LV=[
   ['🧱','Līmeņi','Katrā līmenī ir 3 sienas. Sakrāj XP, un atveras nākamā līmeņa sienas – grūtākas, bet maksā vairāk.'],
   ['🚓','Policija','Grafiti ir aizliegts! Jo vairāk cilvēku redz, kā tu zīmē (👀), jo ātrāk ierodas policija. Zīmē, kad neviens neskatās, bēdz vai paslēpies miskastē 🫣.'],
   ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Krāsa zīmējot iztērējas 🪣 – uzpildi to depo (melnā lētākā, €20). Katru nakti 02:00 saņem €20 dāvanā!'],
-  ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet lēnāk, un rokas trīc – zīmējums sanāk šķībs. Ieej kafejnīcā.'],
+  ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet lēnāk, un rokas trīc. Kafejnīcā vai picērijā pērc ēdienu līdzņemšanai – tas ieiet somā 🎒, un ēd, kad gribi.'],
   ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
   ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
   ['⚙️','Iestatījumi','⚙ pogā ir skaņa, gaišums un valoda, 🎵 – radio. Šo instrukciju vari atvērt vēlreiz pauzē: ❓ Kā spēlēt.'],
@@ -1654,7 +1668,7 @@ const TUT_EN=[
   ['🧱','Levels','Every level has 3 walls. Earn XP to unlock the next level\'s walls – harder, but they pay more.'],
   ['🚓','Police','Graffiti is illegal! The more people see you paint (👀), the faster the police come. Paint when nobody is looking, run or hide in a dumpster 🫣.'],
   ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Paint runs out as you draw 🪣 – refill it there (black is cheapest, €20). Every night at 02:00 you get €20 as a gift!'],
-  ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks slower and their hands shake – drawings get wobbly. Visit a café.'],
+  ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks slower and their hands shake. Buy takeaway food at a café or pizzeria – it goes into your backpack 🎒, eat it whenever you like.'],
   ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
   ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
   ['⚙️','Settings','The ⚙ button has sound, brightness and language, 🎵 is the radio. Open this guide again from pause: ❓ How to play.'],
