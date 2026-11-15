@@ -4,7 +4,7 @@
 'use strict';
 (function () {
   const FP = window.FP = { on: false, ready: false, loading: false };
-  let R3, scene, camera, renderer, glCv, dash, dctx, carBody, carCab, lightsM, beaconP, beaconH, hemi, sun, winMat, roofMat, steerVis = 0;
+  let R3, scene, camera, renderer, glCv, dash, dctx, carBody, carCab, carGlass, carWheel, carHead, carTail, navM, lightsM, beaconP, beaconH, hemi, sun, winMat, roofMat, steerVis = 0;
   const HK = 3, EYE = 34;
   function load(cb) { if (window.THREE) return cb(); const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'; s.onload = cb; s.onerror = () => { FP.loading = false; toast('Neizdevās ielādēt 3D skatu – pārbaudi internetu'); }; document.head.appendChild(s); }
   const tex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
@@ -16,7 +16,7 @@
     renderer = new R3.WebGLRenderer({ canvas: glCv, antialias: false, powerPreference: 'high-performance' }); renderer.setPixelRatio(Math.min(1.5, devicePixelRatio || 1));
     scene = new R3.Scene(); scene.fog = new R3.Fog(0xbfe3ff, 600, 2600);
     camera = new R3.PerspectiveCamera(72, 1, 4, 4000);
-    hemi = new R3.HemisphereLight(0xdff2ff, 0x5a7a4a, .9); scene.add(hemi); sun = new R3.DirectionalLight(0xffffff, .7); sun.position.set(-1, 2, -.6); scene.add(sun);
+    hemi = new R3.HemisphereLight(0xdff2ff, 0x5a7a4a, .9); scene.add(hemi); sun = new R3.DirectionalLight(0xffffff, .8); sun.position.set(-1, 2.2, -.6); scene.add(sun);
     // zeme
     const ground = new R3.Mesh(new R3.PlaneGeometry(S + 3000, S + 3000), new R3.MeshLambertMaterial({ color: 0x7dbb63 })); ground.rotation.x = -Math.PI / 2; ground.position.set(S / 2, 0, S / 2); scene.add(ground);
     // ielas ar līnijām (tekstūra atkārtojas)
@@ -53,9 +53,25 @@
       crown.setMatrixAt(i, m4.compose(new R3.Vector3(t.x, 40 + t.r * (t.fir ? 1.2 : .8), t.y), new R3.Quaternion(), new R3.Vector3(t.r * 1.3, t.r * (t.fir ? 2.2 : 1.2), t.r * 1.3))); crown.setColorAt(i, col.set(t.fir ? 0x2f6b35 : t.tint > .66 ? 0x5d8f2f : 0x4a9a3c)); });
     scene.add(trunk); scene.add(crown);
     // mašīnas (virsbūve + salons), luksofori, mērķu bākas
-    carBody = new R3.InstancedMesh(new R3.BoxGeometry(1, 1, 1).translate(0, .5, 0), new R3.MeshLambertMaterial({ color: 0xffffff }), cars.length); carBody.instanceMatrix.setUsage(R3.DynamicDrawUsage); scene.add(carBody);
-    carCab = new R3.InstancedMesh(new R3.BoxGeometry(1, 1, 1).translate(0, .5, 0), new R3.MeshLambertMaterial({ color: 0x1f2633 }), cars.length); carCab.instanceMatrix.setUsage(R3.DynamicDrawUsage); scene.add(carCab);
-    cars.forEach((c, i) => carBody.setColorAt(i, col.set(c.col)));
+    // mašīna: sedana profils (izspiests sānskats ar noapaļojumu), tonēti stikli, riteņi ar diskiem, lukturi. Garums ~56, platums ~26 (mērogo pēc c.len)
+    const prof = new R3.Shape(); [[-28, 3], [-28, 10], [-24, 13], [-12, 14], [12, 14], [24, 12], [28, 9], [28, 3], [22, 2], [-22, 2]].forEach(([x, y], k) => k ? prof.lineTo(x, y) : prof.moveTo(x, y)); prof.closePath();
+    const bodyG = new R3.ExtrudeGeometry(prof, { depth: 22, bevelEnabled: true, bevelThickness: 2, bevelSize: 1.6, bevelSegments: 2, curveSegments: 4 }); bodyG.translate(0, 0, -11); bodyG.computeVertexNormals();
+    const cabP = new R3.Shape(); [[-17, 13], [-12, 22], [6, 22], [14, 13]].forEach(([x, y], k) => k ? cabP.lineTo(x, y) : cabP.moveTo(x, y)); cabP.closePath();
+    const glassG = new R3.ExtrudeGeometry(cabP, { depth: 19, bevelEnabled: true, bevelThickness: 1, bevelSize: .8, bevelSegments: 1 }); glassG.translate(0, 0, -9.5);
+    const roofG = new R3.BoxGeometry(17, 1.4, 19.5).translate(-3, 22.6, 0);
+    const n4 = cars.length;
+    carBody = new R3.InstancedMesh(bodyG, new R3.MeshPhongMaterial({ color: 0xffffff, shininess: 90, specular: 0x555555 }), n4);
+    carGlass = new R3.InstancedMesh(glassG, new R3.MeshPhongMaterial({ color: 0x1a2533, shininess: 120, specular: 0x8899aa }), n4);
+    carCab = new R3.InstancedMesh(roofG, new R3.MeshPhongMaterial({ color: 0xffffff, shininess: 90, specular: 0x555555 }), n4);
+    carWheel = new R3.InstancedMesh(new R3.CylinderGeometry(5.4, 5.4, 4, 12).rotateX(Math.PI / 2), new R3.MeshLambertMaterial({ color: 0x1b1b1f }), n4 * 4);
+    carHead = new R3.InstancedMesh(new R3.BoxGeometry(1.2, 2.6, 5), new R3.MeshBasicMaterial({ color: 0xfff6d0 }), n4 * 2);
+    carTail = new R3.InstancedMesh(new R3.BoxGeometry(1.2, 2.4, 5), new R3.MeshBasicMaterial({ color: 0xffffff }), n4 * 2);
+    [carBody, carGlass, carCab, carWheel, carHead, carTail].forEach(m => { m.instanceMatrix.setUsage(R3.DynamicDrawUsage); scene.add(m); });
+    cars.forEach((c, i) => { carBody.setColorAt(i, col.set(c.col)); carCab.setColorAt(i, col.set(c.col)); });
+    FP.wheelOff = [[-17, 5.4, 12.6], [17, 5.4, 12.6], [-17, 5.4, -12.6], [17, 5.4, -12.6]];
+    // navigācija uz ceļa: spīdošas bultiņas pa maršrutu
+    const chev = new R3.Shape(); chev.moveTo(-6, -9); chev.lineTo(8, 0); chev.lineTo(-6, 9); chev.lineTo(-2, 0); chev.closePath();
+    navM = new R3.InstancedMesh(new R3.ShapeGeometry(chev).rotateX(-Math.PI / 2), new R3.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: .9, depthWrite: false }), 60); navM.instanceMatrix.setUsage(R3.DynamicDrawUsage); navM.count = 0; scene.add(navM);
     const nL = (N - 2) * (N - 2) * 4; lightsM = new R3.InstancedMesh(new R3.SphereGeometry(7, 8, 6), new R3.MeshBasicMaterial({ color: 0xffffff }), nL); scene.add(lightsM);
     const poles = new R3.InstancedMesh(new R3.CylinderGeometry(2, 2, 60, 5).translate(0, 30, 0), new R3.MeshLambertMaterial({ color: 0x3d4250 }), nL); n = 0; const e = RW / 2 + 14;
     FP.lp = []; for (let i = 1; i < N - 1; i++) for (let j = 1; j < N - 1; j++) { const X = i * G, Y = j * G; [[X - e - 12, Y + e + 14, 'h'], [X + e + 12, Y - e - 4, 'h'], [X - e - 12, Y - e - 4, 'v'], [X + e + 12, Y + e + 14, 'v']].forEach(([x, y, ax]) => {
@@ -74,10 +90,21 @@
     scene.background = sky; scene.fog.color = sky; hemi.intensity = .25 + .65 * day; sun.intensity = .1 + .6 * day; winMat.emissive.setRGB(dk * .9, dk * .9, dk * .9);
     // mašīnas
     const m4 = new R3.Matrix4(), q = new R3.Quaternion(), up = new R3.Vector3(0, 1, 0);
-    cars.forEach((c, i) => { if (c.off) { m4.makeScale(0, 0, 0); carBody.setMatrixAt(i, m4); carCab.setMatrixAt(i, m4); return; } q.setFromAxisAngle(up, -c.ang);
-      carBody.setMatrixAt(i, m4.compose(new R3.Vector3(c.x, 3, c.y), q, new R3.Vector3(c.len, 18, 26)));
-      carCab.setMatrixAt(i, m4.compose(new R3.Vector3(c.x - Math.cos(c.ang) * 4, 21, c.y - Math.sin(c.ang) * 4), q, new R3.Vector3(c.len * .55, 12, 23))); });
-    carBody.instanceMatrix.needsUpdate = carCab.instanceMatrix.needsUpdate = true;
+    const zero = new R3.Matrix4().makeScale(0, 0, 0), cm = new R3.Matrix4(), part = new R3.Matrix4(), col2 = new R3.Color();
+    cars.forEach((c, i) => {
+      if (c.off || Math.abs(c.x - amb.x) > 2600 || Math.abs(c.y - amb.y) > 2600) { [carBody, carGlass, carCab].forEach(m => m.setMatrixAt(i, zero)); for (let k = 0; k < 4; k++) carWheel.setMatrixAt(i * 4 + k, zero); for (let k = 0; k < 2; k++) { carHead.setMatrixAt(i * 2 + k, zero); carTail.setMatrixAt(i * 2 + k, zero); } return; }
+      q.setFromAxisAngle(up, -c.ang); const sx = c.len / 56; cm.compose(new R3.Vector3(c.x, 0, c.y), q, new R3.Vector3(sx, 1, 1));
+      carBody.setMatrixAt(i, cm); carGlass.setMatrixAt(i, cm); carCab.setMatrixAt(i, cm);
+      FP.wheelOff.forEach(([x, y, z], k) => carWheel.setMatrixAt(i * 4 + k, part.multiplyMatrices(cm, new R3.Matrix4().makeTranslation(x, y, z))));
+      [-8, 8].forEach((z, k) => { carHead.setMatrixAt(i * 2 + k, part.multiplyMatrices(cm, new R3.Matrix4().makeTranslation(29.6, 8.5, z))); carTail.setMatrixAt(i * 2 + k, part.multiplyMatrices(cm, new R3.Matrix4().makeTranslation(-29.6, 9, z))); carTail.setColorAt(i * 2 + k, col2.setHex(c.brake ? 0xff1a1a : 0x8a1515)); });
+    });
+    [carBody, carGlass, carCab, carWheel, carHead, carTail].forEach(m => m.instanceMatrix.needsUpdate = true); if (carTail.instanceColor) carTail.instanceColor.needsUpdate = true;
+    // bultiņas pa maršrutu (līdz ~1600 vienībām uz priekšu)
+    let nn = 0; if (M.route && (M.state === 'toPatient' || M.state === 'toHospital')) { const pts = M.route.pts; let acc = 0, off = (t * 90) % 70;
+      for (let k = 1; k < pts.length && nn < 60 && acc < 1700; k++) { const a = pts[k - 1], b = pts[k], L = Math.hypot(b.x - a.x, b.y - a.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
+        for (let d = off; d < L && nn < 60; d += 70) { const x = a.x + (b.x - a.x) * d / L, y = a.y + (b.y - a.y) * d / L; if (Math.hypot(x - amb.x, y - amb.y) < 50) continue; q.setFromAxisAngle(up, -ang); navM.setMatrixAt(nn++, m4.compose(new R3.Vector3(x, 2.2, y), q, new R3.Vector3(1.6, 1, 1.6))); }
+        acc += L; off = 70 - ((L - off) % 70); } navM.material.color.setHex(M.state === 'toHospital' ? 0xff5a6a : 0xffd34d); }
+    navM.count = nn; navM.instanceMatrix.needsUpdate = true;
     const col = new R3.Color(); FP.lp.forEach((L, i) => { const st = lightState(L.i, L.j, L.ax, t); lightsM.setColorAt(i, col.setHex(st === 'f' ? (Math.sin(t * 6) > 0 ? 0xffc533 : 0x332a10) : LCOL[st])); }); lightsM.instanceColor.needsUpdate = true;
     beaconP.visible = M.state === 'toPatient'; beaconP.position.x = M.px; beaconP.position.z = M.py; beaconH.visible = M.state === 'toHospital'; beaconH.position.x = HOSP_BAY.x; beaconH.position.z = HOSP_BAY.y;
     // kamera vadītāja vietā
