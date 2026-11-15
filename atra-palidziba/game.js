@@ -110,7 +110,7 @@ function updateCars(dt, t) {
     // ---- pagrieziens pa līkni krustojumā ----
     if (c.turn) { const T_ = c.turn; let block = false;
       for (const o of cars) if (o !== c && !o.off && Math.hypot(o.x - c.x, o.y - c.y) < 58) { const fx = Math.cos(c.ang), fy = Math.sin(c.ang); if ((o.x - c.x) * fx + (o.y - c.y) * fy > 10) block = true; }
-      if (Math.hypot(amb.x - c.x, amb.y - c.y) < 70) block = true;
+      if (!amb.heli && Math.hypot(amb.x - c.x, amb.y - c.y) < 70) block = true;
       c.v = lerp(c.v, block ? 0 : 95, Math.min(1, dt * 3)); T_.t = Math.min(1, T_.t + c.v * dt / T_.len); const p = bez(T_.p0, T_.p1, T_.p2, T_.t), p2 = bez(T_.p0, T_.p1, T_.p2, Math.min(1, T_.t + .02));
       c.x = p.x; c.y = p.y; if (T_.t < .99) c.ang = Math.atan2(p2.y - p.y, p2.x - p.x); c.brake = block;
       if (T_.t >= 1) { c.ax = T_.ax; c.idx = T_.idx; c.dir = T_.dir; c.s = T_.s; c.turn = null; c.plan = null; c.ang = angOf(c.ax, c.dir); }
@@ -128,9 +128,9 @@ function updateCars(dt, t) {
     if (c.plan && c.plan !== 's' && d < 110) target = Math.min(target, 110);
     // ātrā palīdzība priekšā – nebrauc virsū; ar sirēnu – nobrauc malā un palaiž garām
     const fx = Math.cos(c.ang), fy = Math.sin(c.ang), dx = amb.x - c.x, dy = amb.y - c.y, dd = Math.hypot(dx, dy);
-    if (dd < 110 && (dx * fx + dy * fy) > 20) target = 0;
+    if (!amb.heli && dd < 110 && (dx * fx + dy * fy) > 20) target = 0;
     let wantPull = 0;
-    if (amb.siren && dd < 320) { const ax_ = Math.cos(amb.a), ay_ = Math.sin(amb.a); if (-(dx * ax_ + dy * ay_) > -40) { wantPull = 1; target = Math.min(target, 30); } }
+    if (amb.siren && !amb.heli && dd < 320) { const ax_ = Math.cos(amb.a), ay_ = Math.sin(amb.a); if (-(dx * ax_ + dy * ay_) > -40) { wantPull = 1; target = Math.min(target, 30); } }
     c.pull = lerp(c.pull, wantPull, Math.min(1, dt * 2.5));
     c.brake = target < c.v - 8; c.v = lerp(c.v, target, Math.min(1, dt * (target < c.v ? 3.4 : .9)));
     const ps = c.s; c.s += c.dir * c.v * dt;
@@ -151,7 +151,7 @@ function updateCars(dt, t) {
 
 // ================= Vadība =================
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); keys[k] = true; if (k.startsWith('arrow') || k === ' ') e.preventDefault();
-  if (k === 's' && !e.repeat && !document.activeElement.matches('input')) toggleSiren(); if ((k === 'e' || k === 'enter') && !e.repeat && !$('ov').classList.contains('on')) act(); if (k === 'v' && !e.repeat) FP.toggle(); });
+  if (k === 's' && !e.repeat && !document.activeElement.matches('input')) toggleSiren(); if ((k === 'e' || k === 'enter') && !e.repeat && !$('ov').classList.contains('on')) act(); if (k === 'v' && !e.repeat && !amb.heli) FP.toggle(); if (k === 'h' && !e.repeat && !$('ov').classList.contains('on')) { if (!save.heli) heliShop(); else toggleHeli(); } });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 // kursorsvira: pieskaries jebkur uz kartes – tur parādās kursorsvira, un no tā punkta velc uz braukšanas pusi
@@ -176,7 +176,7 @@ $('bSiren').addEventListener('pointerdown', e => { e.preventDefault(); audioInit
 // karte: uzspied – lielā karte pa vidu ekrāna, vēlreiz (vai blakus) – atpakaļ
 { const sh = document.createElement('div'); sh.id = 'mapShade'; document.body.appendChild(sh); const tg = () => { const b = !mini.classList.contains('big'); mini.classList.toggle('big', b); sh.classList.toggle('on', b); };
   mini.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); tg(); }); sh.addEventListener('pointerdown', e => { e.preventDefault(); tg(); }); }
-$('bView').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); FP.toggle(); setTimeout(() => $('bView').classList.toggle('on', FP.on), 50); });
+$('bView').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); if (amb.heli) { toast('🛞 Stūres skats ir tikai mašīnai'); return; } FP.toggle(); setTimeout(() => $('bView').classList.toggle('on', FP.on), 50); });
 $('bAct').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); act(); });
 function toggleSiren() { amb.siren = !amb.siren; $('bSiren').classList.toggle('on', amb.siren); buzz(15); }
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
@@ -190,6 +190,15 @@ function updateAmb(dt) {
     const up = keys.arrowup || keys.w, dn = keys.arrowdown, lf = keys.arrowleft || keys.a, rt = keys.arrowright || keys.d;
     if (up) thr = 1; if (dn) thr = -1; if (lf || rt) steer = (rt ? 1 : 0) - (lf ? 1 : 0);
   }
+  if (amb.heli) { // helikopters: lido virs mājām uz to pusi, kur rāda kursorsvira/bultiņas (ekrāna virzieni), bez sadursmēm
+    let ix = 0, iy = 0; if (!ov) { if (stick.on && Math.hypot(stick.x, stick.y) > .18) { ix = stick.x; iy = stick.y; }
+      const up = keys.arrowup || keys.w, dn = keys.arrowdown, lf = keys.arrowleft || keys.a, rt = keys.arrowright || keys.d; if (up || dn || lf || rt) { ix = (rt ? 1 : 0) - (lf ? 1 : 0); iy = (dn ? 1 : 0) - (up ? 1 : 0); } }
+    const m = Math.min(1, Math.hypot(ix, iy)), n = Math.hypot(ix, iy) || 1, HM = amb.fuel > 0 ? 620 : 120;
+    const kk = Math.min(1, dt * (m > .1 ? 1.8 : 4.5)); amb.vx = lerp(amb.vx || 0, ix / n * m * HM, kk); amb.vy = lerp(amb.vy || 0, iy / n * m * HM, kk); // atlaižot – ātri apstājas (karājas gaisā)
+    amb.v = Math.hypot(amb.vx, amb.vy); if (amb.v > 25) amb.a += wrapA(Math.atan2(amb.vy, amb.vx) - amb.a) * Math.min(1, dt * 3.5);
+    amb.x = clamp(amb.x + amb.vx * dt, -RW / 2, S + RW / 2); amb.y = clamp(amb.y + amb.vy * dt, -RW / 2, S + RW / 2);
+    const f0 = amb.fuel; amb.fuel = Math.max(0, amb.fuel - (amb.v + 40) * dt / 420); if (f0 >= 20 && amb.fuel < 20) toast('⛽ Maz degvielas! Nolaidies pie benzīntanka.');
+    amb.bumpT = Math.max(0, amb.bumpT - dt); return; }
   const MAX = amb.fuel > 0 ? 430 : 90, turnK = Math.min(1, (Math.abs(amb.v) + 110) / 220);
   let target = 0;
   if (ta !== null) { const d = wrapA(ta - amb.a);
@@ -225,6 +234,8 @@ function attach(px, py) { // tuvākā iela → divi krustojumi un attālumi līd
   const row = clamp(Math.round(py / G), 0, N - 1), col = clamp(Math.round(px / G), 0, N - 1), dh = Math.abs(py - row * G), dv = Math.abs(px - col * G);
   if (dh <= dv) { const a = clamp(Math.floor(px / G), 0, N - 2); return [{ i: a, j: row, d: Math.abs(px - a * G) }, { i: a + 1, j: row, d: Math.abs((a + 1) * G - px) }]; }
   const a = clamp(Math.floor(py / G), 0, N - 2); return [{ i: col, j: a, d: Math.abs(py - a * G) }, { i: col, j: a + 1, d: Math.abs((a + 1) * G - py) }]; }
+// helikopteram – taisna līnija, mašīnai – pa ielām
+const routeTo = (tx, ty) => amb.heli ? { pts: [{ x: amb.x, y: amb.y }, { x: tx, y: ty }], len: Math.hypot(tx - amb.x, ty - amb.y) } : route(amb.x, amb.y, tx, ty);
 function route(fx, fy, tx, ty) {
   const dist = new Float32Array(N * N).fill(1e9), prev = new Int32Array(N * N).fill(-1), done = new Uint8Array(N * N), id = (i, j) => i * N + j;
   attach(fx, fy).forEach(n => { dist[id(n.i, n.j)] = Math.min(dist[id(n.i, n.j)], n.d); });
@@ -255,7 +266,7 @@ function newCall() {
   while ((b.kind === 'hospital' || b.kind === 'fuel' || Math.hypot(px - amb.x, py - amb.y) < 800 || Math.hypot(px - amb.x, py - amb.y) > 2600) && tries < 80);
   const rx = side === 2 ? px - 44 : side === 3 ? px + 44 : px, ry = side === 0 ? py - 44 : side === 1 ? py + 44 : py; // vieta uz ielas, kur apstāties
   Object.assign(M, { state: 'call', night, c, px, py, rx, ry, t: 0, bumps: 0, cond: 100, sc: {}, asked: new Set(), picked: new Set(), cprScore: null, decision: null, hinted: false, t2: 0, bumps1: 0 });
-  M.route = route(amb.x, amb.y, rx, ry); M.expect = M.route.len / 300 + 6;
+  M.route = routeTo(rx, ry); M.expect = M.route.len / 300 + 6;
   sfx('call'); buzz([60, 80, 60]);
   sheet(`<div class="step">📞 Izsaukums${night ? ' · 🌙 Nakts – grūtāks, bet ×1.5' : ''}</div><h2>${c.who} ${c.call}</h2><p>📍 <b>${streetOf(rx, ry)}</b> · ${Math.round(M.route.len / 10)} m</p>
     <p style="color:#9fb0ff">Ieslēdz sirēnu 🚨 – mašīnas palaidīs garām. Sarkanie ceļi kartē ir sastrēgumi.</p>
@@ -270,8 +281,8 @@ function freeDrive() { M.state = 'idle'; M.route = null; if (amb.siren) toggleSi
 function act() {
   if (nearFuel() && Math.abs(amb.v) < 70 && M.state !== 'scene') { amb.v = 0; refuel(); return; }
   if (M.state === 'idle') { newCall(); return; }
-  if (M.state === 'toPatient' && near(M.rx, M.ry, 130) && Math.abs(amb.v) < 70) { amb.v = 0; startScene(); }
-  else if (M.state === 'toHospital' && near(HOSP_BAY.x, HOSP_BAY.y, 140) && Math.abs(amb.v) < 70) { amb.v = 0; arriveHospital(); }
+  if (M.state === 'toPatient' && near(M.rx, M.ry, amb.heli ? 210 : 130) && Math.abs(amb.v) < 70) { amb.v = 0; startScene(); }
+  else if (M.state === 'toHospital' && near(HOSP_BAY.x, HOSP_BAY.y, amb.heli ? 210 : 140) && Math.abs(amb.v) < 70) { amb.v = 0; arriveHospital(); }
   else if (M.state === 'toPatient' || M.state === 'toHospital') toast('Piebrauc tuvāk un apstājies pie mērķa 📍');
 }
 const near = (x, y, r) => Math.hypot(amb.x - x, amb.y - y) < r;
@@ -346,7 +357,7 @@ function stepDecide() {
   sheet(`<div class="step">4. solis · Ko tālāk?</div><h2>Vai ${M.c.name.split(',')[0]} jāved uz slimnīcu?</h2>
     <div class="row2"><button class="main red" id="dH">🏥 Vest uz slimnīcu</button><button class="main green" id="dS">🏠 Palīdzēts uz vietas</button></div>`);
   const pick = go => { M.decision = go; M.sc.decide = go === M.c.go ? 100 : 0;
-    if (go) { M.state = 'toHospital'; M.t2 = 0; M.bumps2 = M.bumps; M.cond = clamp(55 + (M.sc.help || 0) * .45, 40, 100); M.route = route(amb.x, amb.y, HOSP_BAY.x, HOSP_BAY.y); M.expect2 = M.route.len / 300 + 6;
+    if (go) { M.state = 'toHospital'; M.t2 = 0; M.bumps2 = M.bumps; M.cond = clamp(55 + (M.sc.help || 0) * .45, 40, 100); M.route = routeTo(HOSP_BAY.x, HOSP_BAY.y); M.expect2 = M.route.len / 300 + 6;
       closeSheet(); toast(M.c.go ? '🚑 Pacients mašīnā – brauc uz slimnīcu! Mediķis viņu stabilizē.' : '🚑 Labi, vedam pārbaudīt uz slimnīcu.'); if (!amb.siren && M.c.go) toggleSiren(); sfx('door'); }
     else finish(); };
   $('dH').onclick = () => pick(true); $('dS').onclick = () => pick(false);
@@ -456,12 +467,13 @@ function drawWorld(t) {
   if (M.state === 'toHospital') { const pu = (t * 1.2) % 1; ctx.strokeStyle = `rgba(255,255,255,${1 - pu})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(HOSP_BAY.x, HOSP_BAY.y, 30 + pu * 50, 0, 7); ctx.stroke(); }
   // mašīnas
   for (const c of cars) { if (c.off || c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue; drawCar(c.x, c.y, c.ang, c.len, 27, c.col, false, t, c); }
-  drawCar(amb.x, amb.y, amb.a, 72, 32, '#ffffff', true, t);
+  if (!amb.heli) drawCar(amb.x, amb.y, amb.a, 72, 32, '#ffffff', true, t);
   // 3D mājas (tālākās vispirms), koku vainagi virs tām nav vajadzīgi
   const dk = darkness(), lit = [], neon = []; const bl = [];
   for (const b of blocks) { if (b.x1 < vx0 - 200 || b.x0 > vx1 + 200 || b.y1 < vy0 - 200 || b.y0 > vy1 + 200) continue; for (const it of b.items) if (it.t === 'bld') bl.push(it); }
   bl.sort((a, b) => Math.hypot((b.x0 + b.x1) / 2 - cam.x, (b.y0 + b.y1) / 2 - cam.y) - Math.hypot((a.x0 + a.x1) / 2 - cam.x, (a.y0 + a.y1) / 2 - cam.y));
   bl.forEach(it => drawBuilding(it, t, dk, lit, neon));
+  if (amb.heli) drawHeli(t);
   // nakts: tumsa + gaismas (lampas, logi, lukturi, sirēna)
   if (dk > .02) {
     ctx.fillStyle = `rgba(14,10,44,${dk})`; ctx.fillRect(vx0 - 200, vy0 - 200, vx1 - vx0 + 400, vy1 - vy0 + 400);
@@ -473,10 +485,45 @@ function drawWorld(t) {
     ctx.lineJoin = 'round'; for (const n of neon) { ctx.strokeStyle = `rgba(${n.c},${.55 * nk})`; ctx.lineWidth = 7; ctx.strokeRect(n.x, n.y, n.w, n.h); ctx.strokeStyle = `rgba(255,255,255,${.5 * nk})`; ctx.lineWidth = 1.5; ctx.strokeRect(n.x, n.y, n.w, n.h); }
     const head = (x, y, a, r) => { const fx = Math.cos(a), fy = Math.sin(a), g = ctx.createRadialGradient(x + fx * 30, y + fy * 30, 4, x + fx * 70, y + fy * 70, r); g.addColorStop(0, `rgba(255,250,220,${.32 * nk})`); g.addColorStop(1, 'rgba(255,250,220,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x + fx * 70, y + fy * 70, r, 0, 7); ctx.fill(); };
     for (const c of cars) { if (c.off || c.x < vx0 || c.x > vx1 || c.y < vy0 || c.y > vy1) continue; head(c.x, c.y, c.ang, 70); }
-    head(amb.x, amb.y, amb.a, 95);
+    if (!amb.heli) head(amb.x, amb.y, amb.a, 95);
     if (amb.siren) { const on = Math.sin(t * 16) > 0, g = ctx.createRadialGradient(amb.x, amb.y, 4, amb.x, amb.y, 160); g.addColorStop(0, on ? `rgba(255,40,60,${.6 * nk})` : `rgba(40,110,255,${.6 * nk})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(amb.x, amb.y, 160, 0, 7); ctx.fill(); }
     ctx.restore(); }
 }
+// helikopters no augšas: ēna uz zemes (lido augstu), korpuss ar sarkano krustu, astes rotors, galvenais rotors griežas
+function drawHeli(t) { const x = amb.x, y = amb.y, a = amb.a, OLc = '#24222b';
+  ctx.save(); ctx.translate(x, y); ctx.scale(1.3, 1.3); ctx.translate(-x, -y);
+  ctx.save(); ctx.translate(x + 48, y + 64); ctx.rotate(a); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 0, 42, 20, 0, 0, 7); ctx.fill(); ctx.fillRect(-96, -5, 56, 10); ctx.beginPath(); ctx.arc(0, 0, 74, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.07)'; ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.strokeStyle = OLc; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#4a4a55'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-26, -25); ctx.lineTo(32, -25); ctx.moveTo(-26, 25); ctx.lineTo(32, 25); ctx.stroke(); // slieces
+  ctx.strokeStyle = OLc; ctx.lineWidth = 3; ctx.fillStyle = '#eef3f7'; ctx.beginPath(); ctx.roundRect(-98, -6, 66, 12, 5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#d81b33'; ctx.beginPath(); ctx.roundRect(-104, -17, 14, 34, 4); ctx.fill(); ctx.stroke();
+  ctx.save(); ctx.translate(-97, 20); ctx.rotate(t * 45); ctx.fillStyle = OLc; ctx.fillRect(-11, -1.6, 22, 3.2); ctx.restore();
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(2, 0, 44, 23, 0, 0, 7); ctx.fill();
+  ctx.save(); ctx.clip(); ctx.fillStyle = '#d81b33'; ctx.fillRect(-44, -24, 14, 48); ctx.fillStyle = '#f4d03f'; ctx.fillRect(-30, -24, 5, 48); ctx.restore(); ctx.stroke();
+  ctx.fillStyle = '#d81b33'; ctx.fillRect(-14, -3.5, 18, 7); ctx.fillRect(-8.5, -9, 7, 18);
+  ctx.fillStyle = '#5aa9e6'; ctx.beginPath(); ctx.ellipse(27, 0, 15, 17, 0, -Math.PI / 2, Math.PI / 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(31, -6, 5, 3, .4, 0, 7); ctx.fill();
+  if (amb.siren) { const on = Math.sin(t * 16) > 0; ctx.fillStyle = on ? '#ff3b4e' : '#3d7bff'; ctx.beginPath(); ctx.arc(-20, 0, 5, 0, 7); ctx.fill(); }
+  ctx.fillStyle = 'rgba(40,40,50,.16)'; ctx.beginPath(); ctx.arc(0, 0, 80, 0, 7); ctx.fill();
+  ctx.rotate(t * 24); ctx.fillStyle = 'rgba(36,34,43,.85)'; for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.roundRect(4, -3.5, 76, 7, 3); ctx.fill(); }
+  ctx.fillStyle = '#8a8f99'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.restore(); ctx.restore(); }
+// helikoptera veikals (€10000 no kopējā maciņa) un pārslēgšana mašīna ↔ helikopters
+const HELI_PRICE = 10000;
+function heliShop() { const can = wallet >= HELI_PRICE;
+  sheet(`<div class="step">🚁 Helikopters 112</div><h2>Glābšanas helikopters</h2><p>Lido pāri mājām un sastrēgumiem taisni pie pacienta un nolaižas tur, kur vajag!</p>
+    <div class="fact" style="text-align:center"><div style="font-size:54px">🚁</div><b style="font-size:24px;color:#ffd34d">€${HELI_PRICE}</b><br>Tev ir €${wallet}${can ? ' ✅' : ` – vēl jānopelna €${HELI_PRICE - wallet}`}</div>
+    <button class="main" id="hBuy" ${can ? '' : 'disabled'}>🚁 Pirkt helikopteru</button><button class="main ghostB" id="hNo">Vēlāk</button>`);
+  $('hNo').onclick = closeSheet;
+  $('hBuy').onclick = () => { if (wallet < HELI_PRICE) return; walletAdd(-HELI_PRICE); save.heli = true; persist(); closeSheet(); sfx('win'); heliBtn(); toast('🚁 Helikopters ir tavs! Spied 🚁, lai paceltos.'); }; }
+function toggleHeli() {
+  if (!amb.heli && Math.abs(amb.v) > 80) { toast('Vispirms apstājies'); return; }
+  if (amb.heli && blocks.some(b => amb.x > b.x0 && amb.x < b.x1 && amb.y > b.y0 && amb.y < b.y1)) { toast('🚁 Nolaidies uz ielas, ne uz mājas!'); return; }
+  if (window.FP && FP.on) { FP.toggle(); $('bView').classList.remove('on'); }
+  amb.heli = !amb.heli; amb.v = 0; amb.vx = amb.vy = 0; M.rt = 0; sfx('door'); buzz(30); heliBtn();
+  toast(amb.heli ? '🚁 Paceļamies! Lido pāri mājām taisni uz mērķi.' : '🚑 Nolaidāmies – atpakaļ mašīnā.'); }
+function heliBtn() { const b = $('bHeli'); b.classList.toggle('on', !!amb.heli); b.innerHTML = save.heli ? (amb.heli ? '🚑<small>Mašīna</small>' : '🚁<small>Lidot</small>') : '🚁<small>€10k</small>'; }
+$('bHeli').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); if ($('ov').classList.contains('on')) return; if (!save.heli) heliShop(); else toggleHeli(); });
 // 3D māja: sienas ar logiem pret kameru (perspektīva no ekrāna centra), jumts virsū
 const PK = .0014;
 const NEON = ['255,60,200', '40,230,255', '170,90,255', '90,255,140', '255,170,40'];
@@ -607,9 +654,9 @@ let last = performance.now(), T = 0;
 function frame(now) { const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now; T += dt;
   updateCars(dt, T); updateAmb(dt);
   if (M.state === 'toPatient') M.t += dt; if (M.state === 'toHospital') { M.t2 += dt; M.cond = Math.max(5, M.cond - dt * (M.c.cpr ? .8 : .35)); }
-  if ((M.state === 'toPatient' || M.state === 'toHospital') && (M.rt -= dt) <= 0) { M.rt = .6; M.route = M.state === 'toPatient' ? route(amb.x, amb.y, M.rx, M.ry) : route(amb.x, amb.y, HOSP_BAY.x, HOSP_BAY.y); }
+  if ((M.state === 'toPatient' || M.state === 'toHospital') && (M.rt -= dt) <= 0) { M.rt = .6; M.route = M.state === 'toPatient' ? routeTo(M.rx, M.ry) : routeTo(HOSP_BAY.x, HOSP_BAY.y); }
   // kamera: seko ar skatu uz priekšu, ātrumā nedaudz attālinās
-  const base = clamp(Math.min(W, H) / 640, .5, 1.05), zt = base * (1 - .16 * clamp(Math.abs(amb.v) / 430, 0, 1));
+  const base = clamp(Math.min(W, H) / 640, .5, 1.05), zt = base * (amb.heli ? .8 : 1) * (1 - .16 * clamp(Math.abs(amb.v) / 430, 0, 1));
   cam.z = lerp(cam.z, zt, Math.min(1, dt * 2)); const lx = amb.x + Math.cos(amb.a) * amb.v * .45, ly = amb.y + Math.sin(amb.a) * amb.v * .45;
   cam.x = lerp(cam.x, lx, Math.min(1, dt * 4)); cam.y = lerp(cam.y, ly, Math.min(1, dt * 4)); cam.shake *= Math.pow(.01, dt);
   const sh = cam.shake > .3 ? (Math.random() - .5) * cam.shake : 0;
@@ -624,8 +671,8 @@ function frame(now) { const dt = Math.max(0, Math.min(.05, (now - last) / 1000))
 let hudKey = '';
 function hud() {
   const L = levelOf(save.xp); let task = '', dist = 0, actOn = false, actI = '🩺', actT = 'Palīdzēt', go = false;
-  if (M.state === 'toPatient') { dist = Math.round(M.route.len / 10); task = `${M.c.who} ${M.c.call}<small>📍 ${streetOf(M.rx, M.ry)} · ⏱ ${Math.floor(M.t)} s</small>`; actOn = near(M.rx, M.ry, 130) && Math.abs(amb.v) < 70; }
-  else if (M.state === 'toHospital') { dist = Math.round(M.route.len / 10); task = `🏥 Ved pacientu uz slimnīcu<small>${M.c.who} ${M.c.name} · ⏱ ${Math.floor(M.t2)} s</small>`; actOn = near(HOSP_BAY.x, HOSP_BAY.y, 140) && Math.abs(amb.v) < 70; actI = '🏥'; actT = 'Nodot'; go = true; }
+  if (M.state === 'toPatient') { dist = Math.round(M.route.len / 10); task = `${M.c.who} ${M.c.call}<small>📍 ${streetOf(M.rx, M.ry)} · ⏱ ${Math.floor(M.t)} s</small>`; actOn = near(M.rx, M.ry, amb.heli ? 210 : 130) && Math.abs(amb.v) < 70; }
+  else if (M.state === 'toHospital') { dist = Math.round(M.route.len / 10); task = `🏥 Ved pacientu uz slimnīcu<small>${M.c.who} ${M.c.name} · ⏱ ${Math.floor(M.t2)} s</small>`; actOn = near(HOSP_BAY.x, HOSP_BAY.y, amb.heli ? 210 : 140) && Math.abs(amb.v) < 70; actI = '🏥'; actT = 'Nodot'; go = true; }
   else if (M.state === 'scene') task = '🩺 Palīdzi pacientam'; else { task = '🚗 Brīvs brauciens<small>Spied 📞, kad gribi izsaukumu</small>'; actOn = true; actI = '📞'; actT = 'Izsaukums'; go = true; }
   if (nearFuel() && Math.abs(amb.v) < 70 && M.state !== 'scene' && amb.fuel < 99) { actOn = true; actI = '⛽'; actT = `€${fuelCost()}`; go = true; }
   const key = [L.l, L.cur, wallet, Math.floor(hourNow() * 6), task, dist, actOn, actI, actT, Math.round(M.cond), Math.round(amb.fuel)].join('|'); if (key === hudKey) return; hudKey = key;
@@ -662,7 +709,7 @@ function walletAdd(m) { wallet = wallet + m; if (UID) TW.wallet.add(UID, m).then
 function medals() { if (!UID || !window.TWA) return; const L = levelOf(save.xp).l;
   TWA.sync(UID, { apCalls: save.calls, apSaved: save.saved, apCpr: save.cpr || 0, apPerfect: save.perfect || 0, apLevel: L }).then(n => n.forEach((m, i) => setTimeout(() => toast(`🏅 Jauna medaļa!<br><span style="font-size:28px">${m.i}</span> ${TWA.title ? TWA.title(m) : m.t}`), 3600 * i + 1500))).catch(() => {}); }
 try { const s = JSON.parse(localStorage.getItem('apSave')); if (s && !ONLINE) save = Object.assign(save, s); } catch (e) {}
-function start() { if (save.fuel != null) amb.fuel = save.fuel; requestAnimationFrame(frame); intro(); }
+function start() { heliBtn(); if (save.fuel != null) amb.fuel = save.fuel; requestAnimationFrame(frame); intro(); }
 function intro() {
   sheet(`<div class="step">Tailers World · pilsēta</div><h2>🚑 Ātrā palīdzība 112</h2>
     <p>Tu esi ātrās palīdzības brigāde. Brauc pie pacientiem, noskaidro, kas noticis, palīdzi un, ja vajag, ved uz slimnīcu.</p>

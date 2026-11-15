@@ -94,6 +94,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Satiksme nedrīkst braukt cauri citai mašīnai: konusa pārbaude priekšā (`fwd/lat`), pagriezienā gaida, ja izbrauktuve aizņemta; pret iestrēgšanu – pēc 3 s cits virziens, pēc 12 s ārpus redzesloka parādās citur.
 - Luksofori: 20 s cikls ar dzelteno (`lightState`); katrai joslai krāsaina stop līnija + luksofors labajā stūrī. Satiksme: plāno pagriezienu pirms krustojuma (rādītāji mirgo), brauc pa līkni, bremžu lukturi, apstājas uz sarkano/dzelteno.
 - Spēle pagaidām **aizslēgta** visiem, izņemot adminus/moderatorus (sākumlapā „Drīzumā” kartīte ar bildi + „Testēt (admins)”).
+- **🚁 Helikopters** (`save.heli`): pērk par €10000 no kopējā maciņa (poga 🚁 virs darbības pogas vai H). Pēc tam ar to pašu pogu pārslēdz mašīna ↔ helikopters (jāapstājas; nolaisties var tikai uz ielas). Lido virs mājām uz kursorsviras pusi (ekrāna virzieni), bez sadursmēm, maršruts – taisna līnija (`routeTo`), satiksme uz to nereaģē, nolaišanās rādiuss lielāks, degviela tērējas ātrāk; stūres skats tikai mašīnai.
 - Nauda: kopīgais maciņš; tēriņi – degviela (pilna bāka €20, benzīntankā), avārija = remonts −€3.
 - Teksti rakstīti latviski uzreiz (bez lang.js). Saglabāšana `ap/saves/{uid}`, medaļas grupa `ap` (apCalls, apSaved, apCpr, apPerfect, apLevel), mediķis zīmēts pēc `users/{uid}/look`.
 - Kešatmiņa: mainot style.css/game.js/cases.js, palielini `?v=` atra-palidziba/index.html.
