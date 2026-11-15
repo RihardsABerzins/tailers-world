@@ -77,7 +77,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 
 ## Ātrā palīdzība 112 (`/atra-palidziba/`)
 - Pilsēta no putna lidojuma (ielu režģis 10×10, kvartāli: mājas, parki, stāvvietas, laukumi, slimnīca, benzīntanki), satiksme ar luksoforiem un sastrēgumiem (`jams`), sirēna – mašīnas nobrauc malā.
-- Vadība: kursorsvira (telefons) / bultiņas (dators), S – sirēna, E – darbība. Maršruts (Dijkstra, apiet sastrēgumus) – dzeltena līnija + minikarte.
+- Vadība: kursorsvira parādās tur, kur pieskaras kartei (telefons) / bultiņas (dators), S – sirēna, E – darbība. Maršruts (Dijkstra, apiet sastrēgumus) – dzeltena līnija + minikarte.
 - Izsaukums: jautājumi (noderīgi/nevajadzīgi) → kas noticis → palīdzība no somas (`cases.js`: `TOOLS`, `CASES` ar need/bonus) → sirds masāža ritmā 100–120/min (+ defibrilators) → slimnīca vai uz vietas → rezultāts % pa daļām + „Vai zināji?” + „zvani 112”. **Matemātiku šajā spēlē neliekam.** Operācijas – nākotnes slimnīcas spēlē.
 - Aina pie pacienta (`treat.js`, `Treat.mount`): zīmēta katram gadījumam – vieta (`place`), rekvizīts (`prop`), pacients pozā (`pose`: sit/slump/lie), izskats (`p`), trauma (`inj`). Palīdzība ar **vilkšanu**: rīks no somas uz ķermeņa zonu (`TOOLS[id].z`, gadījuma `zones` pārraksta; 'wound' = trauma); secība `first` (piem. plāksteris pēc tīrīšanas); mīti ar paskaidrojumu (`why`) dod mīnusu. Sirds masāža atveras virs ainas, defibrilators – poga „ŠOKS”.
 - Luksofori: 20 s cikls ar dzelteno (`lightState`); katrai joslai krāsaina stop līnija + luksofors labajā stūrī. Satiksme: plāno pagriezienu pirms krustojuma (rādītāji mirgo), brauc pa līkni, bremžu lukturi, apstājas uz sarkano/dzelteno.

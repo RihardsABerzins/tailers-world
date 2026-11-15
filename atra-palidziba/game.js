@@ -131,13 +131,16 @@ addEventListener('keydown', e => { const k = e.key.toLowerCase(); keys[k] = true
   if (k === 's' && !e.repeat && !document.activeElement.matches('input')) toggleSiren(); if ((k === 'e' || k === 'enter') && !e.repeat && !$('ov').classList.contains('on')) act(); });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-{ const st = $('stick'), kn = $('knob'); let id = null;
-  const mv = e => { const r = st.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; let dx = e.clientX - cx, dy = e.clientY - cy; const m = Math.hypot(dx, dy), R = r.width / 2;
-    if (m > R) { dx *= R / m; dy *= R / m; } kn.style.transform = `translate(${dx}px,${dy}px)`; stick = { x: dx / R, y: dy / R, on: true }; };
-  st.addEventListener('pointerdown', e => { id = e.pointerId; st.setPointerCapture(id); audioInit(); mv(e); });
-  st.addEventListener('pointermove', e => { if (e.pointerId === id) mv(e); });
-  const up = e => { if (e.pointerId !== id) return; id = null; kn.style.transform = ''; stick = { x: 0, y: 0, on: false }; };
-  st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up); }
+// kursorsvira: pieskaries jebkur uz kartes – tur parādās kursorsvira, un no tā punkta velc uz braukšanas pusi
+{ const st = $('stick'), kn = $('knob'); let id = null, ox = 0, oy = 0; const R = 70;
+  const home = () => { st.classList.remove('live'); st.style.left = ''; st.style.top = ''; kn.style.transform = ''; };
+  const mv = e => { let dx = e.clientX - ox, dy = e.clientY - oy; const m = Math.hypot(dx, dy); if (m > R) { dx *= R / m; dy *= R / m; } kn.style.transform = `translate(${dx}px,${dy}px)`; stick = { x: dx / R, y: dy / R, on: true }; };
+  const down = e => { if (id !== null || $('ov').classList.contains('on')) return; id = e.pointerId; ox = e.clientX; oy = e.clientY; audioInit();
+    st.classList.add('live'); st.style.left = (ox - R) + 'px'; st.style.top = (oy - R) + 'px'; mv(e); };
+  cv.addEventListener('pointerdown', down); st.addEventListener('pointerdown', down);
+  addEventListener('pointermove', e => { if (e.pointerId === id) mv(e); });
+  const up = e => { if (e.pointerId !== id) return; id = null; stick = { x: 0, y: 0, on: false }; home(); };
+  addEventListener('pointerup', up); addEventListener('pointercancel', up); }
 $('bSiren').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); toggleSiren(); });
 $('bAct').addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); act(); });
 function toggleSiren() { amb.siren = !amb.siren; $('bSiren').classList.toggle('on', amb.siren); buzz(15); }
@@ -541,7 +544,7 @@ function start() { if (save.fuel != null) amb.fuel = save.fuel; requestAnimation
 function intro() {
   sheet(`<div class="step">Tailers World · pilsēta</div><h2>🚑 Ātrā palīdzība 112</h2>
     <p>Tu esi ātrās palīdzības brigāde. Brauc pie pacientiem, noskaidro, kas noticis, palīdzi un, ja vajag, ved uz slimnīcu.</p>
-    <div class="fact">${isTouch ? '🕹️ Vadi mašīnu ar <b>kursorsviru</b> kreisajā pusē – velc uz to pusi, kur jābrauc.' : '⌨️ Brauc ar <b>bultiņām</b> (vai W A D), <b>S</b> – sirēna, <b>E</b> – palīdzēt.'}<br>🚨 <b>Sirēna</b> – mašīnas palaiž tevi garām.<br>🟡 Dzeltenā līnija rāda ceļu. Kartē sarkanie ceļi – sastrēgumi.<br>⛽ Degviela maksā – uzpildi benzīntankā. 💥 Avārija = remonts −€3.</div>
+    <div class="fact">${isTouch ? '🕹️ Pieskaries <b>jebkur uz kartes</b> un velc pirkstu uz to pusi, kur jābrauc – tur parādās kursorsvira.' : '⌨️ Brauc ar <b>bultiņām</b> (vai W A D), <b>S</b> – sirēna, <b>E</b> – palīdzēt.'}<br>🚨 <b>Sirēna</b> – mašīnas palaiž tevi garām.<br>🟡 Dzeltenā līnija rāda ceļu. Kartē sarkanie ceļi – sastrēgumi.<br>⛽ Degviela maksā – uzpildi benzīntankā. 💥 Avārija = remonts −€3.</div>
     <button class="main red" id="st">Sākt maiņu</button>`);
   $('st').onclick = () => { audioInit(); closeSheet(); setTimeout(newCall, 800); };
 }
