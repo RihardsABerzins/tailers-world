@@ -1,0 +1,180 @@
+  html,body{margin:0;height:100%;background:#0b0c12;overflow:hidden;font-family:system-ui,sans-serif;color:#eee;-webkit-user-select:none;user-select:none}
+  canvas.full{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block}
+  #fx{pointer-events:none;z-index:30}
+  #hud{position:fixed;left:12px;top:12px;background:#000a;padding:10px 14px;border-radius:12px;line-height:1.5;pointer-events:none;z-index:10;backdrop-filter:blur(4px);border:1px solid #fff2}
+  #hud b{color:#ffd34d;font-size:22px;text-shadow:0 0 10px #ffd34d88}
+  #help{position:fixed;right:12px;top:12px;background:#000a;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;pointer-events:none;z-index:10;border:1px solid #fff2}
+  #toast{position:fixed;left:50%;bottom:70px;transform:translateX(-50%) translateY(20px);background:#000d;padding:12px 22px;border-radius:12px;font-size:18px;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;text-align:center;z-index:40;border:1px solid #fff3;max-width:90vw}
+  #toast.on{opacity:1;transform:translateX(-50%)}
+  #result{position:fixed;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%) scale(.8);opacity:0;pointer-events:none;z-index:41;background:#12111ce8;border:2px solid #ffd34d88;border-radius:18px;padding:10px 14px 12px;text-align:center;width:min(300px,86vw);transition:opacity .25s,transform .25s;box-shadow:0 10px 40px #0009}
+  #guide{position:fixed;left:50%;top:calc(96px + env(safe-area-inset-top));transform:translateX(-50%) translateY(-10px);width:min(360px,90vw);background:#ffd34d;color:#1a1400;font-weight:800;font-size:17px;line-height:1.35;padding:12px 16px;border-radius:16px;text-align:center;z-index:36;pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;box-shadow:0 8px 30px #0008}
+  #guide.on{opacity:1;transform:translateX(-50%)}
+  @media (orientation:portrait){ #guide{top:auto;bottom:calc(112px + env(safe-area-inset-bottom))} }
+  #result.on{opacity:1;transform:translateX(-50%) scale(1)}
+  #result .rs{font-size:40px;line-height:1;letter-spacing:4px}
+  #result .rs i{font-style:normal;color:#444;display:inline-block}
+  #result .rs i.on{color:#ffd34d;text-shadow:0 0 14px #ffb300;animation:starPop .45s backwards}
+  @keyframes starPop{0%{transform:scale(0) rotate(-90deg)}70%{transform:scale(1.35)}100%{transform:scale(1)}}
+  #result .rt{font-size:22px;font-weight:900;margin:2px 0 6px}
+  #result canvas{width:100%;max-width:240px;border-radius:8px;display:block;margin:0 auto 8px}
+  #result .rc{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  #result .rc span{background:#ffffff14;border-radius:999px;padding:4px 10px;font-weight:800;font-size:15px}
+  #result .rc .gold{color:#ffd34d}#result .rc .bad{background:#b71c1c66}#result .rc .ok{background:#2e7d3266}
+  #result .rl{margin-top:8px;font-size:18px;font-weight:900;color:#7cff8a}
+  #prompt{position:fixed;left:50%;top:22%;transform:translateX(-50%);background:#000b;padding:8px 16px;border-radius:10px;display:none;pointer-events:none;z-index:10;border:1px solid #fff3}
+  #fsBtn{position:fixed;left:12px;bottom:12px;z-index:12;background:#000a;color:#eee;border:1px solid #fff3}
+  .overlay{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .4s;z-index:20}
+  .overlay.on{opacity:1;pointer-events:auto}
+  #drawOv{background:radial-gradient(#1a1626f4,#07070cfa)}
+  #shopOv{background:#000c;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center}
+  /* zīmēšana: kanva aizņem visu brīvo ekrānu, vadība apakšā (vertikāli) vai labajā malā (horizontāli) – izmērus liek layoutDraw() */
+  #drawOv{touch-action:none}
+  #draw{position:fixed;border-radius:10px;cursor:crosshair;touch-action:none;transition:box-shadow .2s}
+  #drawTitle{position:fixed;left:0;right:0;top:calc(6px + env(safe-area-inset-top));text-align:center;font-size:16px;font-weight:700;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 6px #000}
+  #drawInfo{position:fixed;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;z-index:2}
+  #drawInfo span{background:#000b;border:1px solid #fff3;border-radius:999px;padding:4px 10px;font-size:14px;font-weight:700}
+  #drawInfo .hot{background:#b71c1ccc}
+  #bWipe{position:fixed;z-index:3;border-radius:999px;font-size:14px;padding:6px 12px;min-height:36px}
+  #palette{position:fixed;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-content:center}
+  #drawBtns{position:fixed;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-content:center}
+  #drawBtns button{flex:1 1 0;min-width:0;min-height:48px;font-size:15px;padding:8px 4px;border-radius:12px;white-space:nowrap}
+  #drawBtns.col button{flex:1 1 40%}
+  #drawBtns.col .kh{display:none}
+  body.touch .kh,body.touch .kbOnly{display:none}
+  #drawHint{position:fixed;left:0;right:0;text-align:center;font-size:13px;color:#aaa}
+  .sw{width:38px;height:38px;border-radius:50%;border:3px solid #fff4;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;transition:transform .15s}
+  .bb{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+  #lookPrev{width:120px;height:150px;border-radius:12px;flex:none}
+  .bbr{flex:1;min-width:220px}
+  .lkRow{margin-bottom:8px}.lkRow small{display:block;color:#aab;margin-bottom:4px;font-weight:700}
+  .lkRow>div{display:flex;flex-wrap:wrap;gap:6px}
+  .lk{width:36px;height:36px;padding:0;border-radius:50%;border:3px solid #fff3;font-size:17px;display:flex;align-items:center;justify-content:center}
+  .lk.sel{border-color:#fff;box-shadow:0 0 10px #fff8;transform:scale(1.1)}
+  .sw.empty{opacity:.45;border-style:dashed}
+  .paintCtl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .paintCtl .can{font-weight:700}
+  .sw.sel{border-color:#fff;transform:scale(1.2);box-shadow:0 0 14px currentColor}
+  button{background:#ffd34d;border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
+  button:disabled{background:#555;color:#999;cursor:default}
+  button.sec{background:#444;color:#eee}
+  #tp{width:min(560px,94vw);max-height:86vh;overflow:auto;background:#1e2027;border-radius:14px;padding:18px;border:1px solid #fff2}
+  #tpBtn{position:fixed;left:150px;bottom:12px;z-index:12;background:#000a;color:#eee;border:1px solid #fff3}
+  body.touch #tpBtn{display:none}
+  #shop{width:min(760px,94vw);max-height:86vh;overflow:auto;background:#1e2027;border-radius:14px;padding:18px;border:1px solid #fff2}
+  .row{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #fff1}
+  .row .n{flex:1}
+  .dot{width:22px;height:22px;border-radius:50%;box-shadow:0 0 10px currentColor}
+  h2{margin:4px 0 8px}
+  #touch{position:fixed;inset:auto 0 0 0;display:none;justify-content:space-between;padding:0 14px 14px;z-index:15;pointer-events:none}
+  #touch div{display:flex;gap:12px;pointer-events:auto}
+  #touch button{width:68px;height:68px;border-radius:50%;font-size:26px;background:#fff3;color:#fff;border:2px solid #fff5;padding:0;touch-action:none}
+  #clock{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;background:#000a;border:1px solid #fff2;border-radius:12px;padding:6px 16px;text-align:center;pointer-events:none;backdrop-filter:blur(4px);min-width:170px}
+  #clock b{font-size:20px}
+  #clock small{display:block;color:#aab;font-size:11px}
+  #clockBar{height:5px;border-radius:4px;margin-top:4px;background:linear-gradient(90deg,#1a1745,#ffd27a 25%,#8fd0ff 50%,#ffd27a 75%,#1a1745);position:relative;opacity:.9}
+  #clockDot{position:absolute;top:-2px;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 6px #fff;transform:translateX(-50%)}
+  #policeSign{position:fixed;top:78px;left:50%;transform:translateX(-50%);z-index:27;text-align:center;pointer-events:none;padding:10px 30px;border-radius:16px;background:rgba(10,14,40,.85);border:3px solid #ff4d5e;display:none;animation:psFlash .5s infinite alternate}
+  .psBig{font-size:36px;font-weight:900;letter-spacing:3px;color:#fff;white-space:nowrap}
+  .psSmall{font-size:15px;color:#ffd0d4;margin-top:2px}
+  @keyframes psFlash{from{border-color:#ff4d5e;box-shadow:0 0 28px #ff4d5e88}to{border-color:#4d8bff;box-shadow:0 0 28px #4d8bff88}}
+  #player{position:fixed;right:12px;top:124px;z-index:12;display:flex;align-items:center;gap:6px;background:#000a;border:1px solid #fff2;border-radius:14px;padding:6px 10px;backdrop-filter:blur(4px);max-width:380px}
+  body.touch #player{top:12px}
+  #player button{background:#fff2;color:#fff;padding:4px 9px;font-size:15px;border-radius:8px}
+  #pInfo{display:flex;flex-direction:column;gap:3px;min-width:0}
+  #pTitle{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;color:#ddd}
+  #pVol{width:84px;height:4px;accent-color:#ffd34d}
+  #pVolTxt{font-size:11px;color:#ccc;min-width:30px}
+  #tutOv{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:#000c;backdrop-filter:blur(6px);padding:16px}
+  #tutOv.on{display:flex}
+  #tut{width:min(460px,100%);max-height:94vh;overflow:auto;background:linear-gradient(160deg,#2a2350,#1e2027 70%);border:1px solid #fff3;border-radius:22px;padding:20px 20px 16px;text-align:center;color:#fff;box-shadow:0 20px 60px #000a}
+  #tut .ti{font-size:64px;line-height:1;display:block;margin:4px 0 8px;animation:tutPop .5s cubic-bezier(.2,1.6,.4,1) both}
+  #tut h3{margin:0 0 8px;font-size:23px}
+  #tut p{margin:0 auto;font-size:17px;line-height:1.45;color:#e8e4ff;max-width:380px;min-height:3em}
+  #tut .dots{display:flex;gap:6px;justify-content:center;margin:14px 0 12px}
+  #tut .dots i{width:8px;height:8px;border-radius:50%;background:#fff3}
+  #tut .dots i.on{background:#ffd34d;width:20px;border-radius:5px}
+  #tut .tb{display:flex;gap:10px}
+  #tut .tb button{flex:1;min-height:52px;font-size:17px;border-radius:14px}
+  #tut .skip{background:none;border:0;color:#aab;font-size:14px;margin-top:10px;min-height:36px;cursor:pointer;text-decoration:underline}
+  @keyframes tutPop{from{transform:scale(.3) rotate(-15deg);opacity:0}to{transform:none;opacity:1}}
+  #pauseBox{width:min(540px,94vw);max-height:90vh;overflow:auto;background:#1e2027;border-radius:16px;padding:20px;border:1px solid #fff2}
+  #pauseBox input[type=range]{width:210px;accent-color:#ffd34d}
+  #setBtn{position:fixed;left:290px;bottom:12px;z-index:12;background:#000a;color:#eee;border:1px solid #fff3}
+  body.touch #setBtn{bottom:96px;left:130px}
+  #inv{position:fixed;left:12px;bottom:54px;z-index:12;display:flex;gap:6px;flex-wrap:wrap;max-width:60vw}
+  body.touch #inv{bottom:150px}
+  #inv button{background:#000a;color:#fff;border:1px solid #fff3;padding:5px 9px;font-size:14px}
+  #inv button:disabled{opacity:.45;background:#000a;color:#bbb}
+  #loot{width:min(520px,94vw);text-align:center;background:#1e2027;border-radius:18px;padding:24px;border:3px solid var(--lc,#fff3);box-shadow:0 0 50px var(--lc,#0000)}
+  .lootbox{font-size:96px;animation:lshake .5s infinite}
+  @keyframes lshake{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg) scale(1.08)}}
+  .reward{display:flex;align-items:center;gap:12px;margin:8px 0;padding:10px 14px;border-radius:12px;background:#ffffff0d;border:2px solid #fff3;font-size:18px;text-align:left;animation:pop .35s both}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+  .xpbar{height:6px;background:#fff2;border-radius:4px;overflow:hidden;margin-top:3px;width:190px}
+  .xpbar div{height:100%;background:linear-gradient(90deg,#7cff8a,#5aa8e8);transition:width .5s}
+  #heatWrap{margin-top:6px;font-size:12px;min-width:190px}
+  .stars{color:#ffca28;letter-spacing:2px;font-size:15px;text-shadow:0 0 8px #ffca28}
+  .stars.hot{animation:blink .6s infinite}
+  @keyframes blink{50%{opacity:.35}}
+  #heatBar{height:8px;background:#fff2;border-radius:6px;overflow:hidden;margin-top:3px}
+  #heatFill{height:100%;width:0;background:#66bb6a;transition:width .3s,background .3s}
+  body.touch #touch{display:flex}
+  body.touch #help{display:none}
+  body.touch #fsBtn{bottom:96px}
+  /* kompakts izkārtojums telefoniem */
+  @media (max-height:520px),(max-width:760px){
+    #hud{top:6px;left:6px;padding:5px 9px;font-size:11px;line-height:1.35;border-radius:10px}
+    #hud b{font-size:15px}
+    #hud .hx{display:none}
+    .xpbar{width:120px}
+    #heatWrap{min-width:120px;margin-top:3px;font-size:11px}
+    .stars{font-size:12px;letter-spacing:1px}
+    #clock{top:6px;padding:3px 10px;min-width:0}
+    #clock b{font-size:14px}
+    #clock small,#clockBar{display:none}
+    #player{top:6px;right:6px;padding:3px 5px;gap:3px;max-width:none}
+    #player button{padding:3px 7px;font-size:13px}
+    #pInfo{display:none}
+    #help,#fsBtn,#setBtn,#tpBtn{display:none}
+    body.touch #inv,#inv{left:50%;right:auto;transform:translateX(-50%);top:auto;bottom:34px;flex-wrap:nowrap;max-width:none}
+    #inv button{padding:3px 7px;font-size:12px}
+    #prompt{top:auto;bottom:72px;font-size:13px;padding:5px 12px;white-space:nowrap}
+    #toast{bottom:auto;top:78px;font-size:13px;padding:8px 14px}
+    #touch{padding:0 8px 8px}
+    #touch div{gap:8px}
+    #touch button{width:54px;height:54px;font-size:20px;background:#fff2}
+    #policeSign{top:38px;padding:4px 14px}
+    .psBig{font-size:18px}
+    .psSmall{font-size:11px}
+  }
+  /* telefons vertikāli */
+  @media (orientation:portrait) and (max-width:760px){
+    #clock{left:auto;right:6px;transform:none;top:40px}
+    body.touch #inv,#inv{bottom:72px}
+    #prompt{bottom:108px}
+    #touch button{width:50px;height:50px}
+    #touch div{gap:6px}
+    #toast{top:110px;max-width:92vw}
+    #policeSign{top:76px}
+  }
+  /* mobilā vadība: salokāmi paneļi, kontekstuālā poga */
+  #hud{pointer-events:auto;cursor:pointer}
+  #hud:not(.open) .hx,#hud:not(.open) .hcity{display:none}
+  #hud:not(.open):not(.heat-on) #heatTxt,#hud:not(.open):not(.heat-on) #heatBar{display:none}
+  #hud:not(.open):not(.food-low) #foodTxt{display:none}
+  #hud .more{opacity:.55;font-size:10px;margin-left:4px}
+  #hud.open .more{display:none}
+  #player:not(.open)>:not(#pToggle):not(#pSet):not(#pChat){display:none}
+  #player:not(.open){padding:3px;gap:3px}
+  #pToggle{font-size:15px}
+  #inv .bag{background:#000c;border:1px solid #fff4}
+  #touch .rgt{align-items:flex-end}
+  #touch button small{display:block;font-size:10px;font-weight:800;line-height:1;margin-top:2px}
+  #touch .ctx{width:84px;height:84px;font-size:30px;background:#ffd34dcc;color:#1a1300;border-color:#fff;box-shadow:0 0 0 0 #ffd34d88;animation:ctxPulse 1.6s infinite;flex-direction:column;display:flex;align-items:center;justify-content:center}
+  #touch .ctx.off{visibility:hidden;animation:none}
+  #touch .tsmall{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#69f0ae55;border-color:#69f0ae}
+  #touch .tsmall.off{display:none}
+  @keyframes ctxPulse{70%{box-shadow:0 0 0 14px #ffd34d00}}
+  body.touch #prompt{display:none!important}
+  @media (orientation:portrait) and (max-width:760px){ #touch .ctx{width:72px;height:72px;font-size:26px} }
+  @media (prefers-reduced-motion:reduce){ #touch .ctx{animation:none} }

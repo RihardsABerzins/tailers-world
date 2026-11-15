@@ -1,0 +1,1684 @@
+// Graffiti RPG – spēles kods (pasaule, zīmēšana, policija, veikali, tiešsaiste). Iezīmējums – index.html, stils – style.css, tulkojumi – lang.js.
+// ================= Palīgfunkcijas =================
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const easeIO=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const rr=(g,x,y,w,h,r,c)=>{ if(c) g.fillStyle=c; g.beginPath(); g.roundRect(x,y,w,h,r); g.fill(); };
+const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+const dpr=Math.min(2,window.devicePixelRatio||1);
+const isTouch=matchMedia('(pointer:coarse)').matches||'ontouchstart' in window;
+if(isTouch) document.body.classList.add('touch');
+
+// ================= Dati =================
+const COLORS=[
+  {id:'black', name:'Black',  hex:'#111111', price:0,   mult:1},
+  {id:'red',   name:'Red',hex:'#e53935', price:0,   mult:1},
+  {id:'blue',  name:'Blue',   hex:'#1e88e5', price:60,  mult:1.1},
+  {id:'green', name:'Green',   hex:'#43a047', price:60,  mult:1.1},
+  {id:'yellow',name:'Yellow',hex:'#fdd835',price:120, mult:1.2},
+  {id:'pink',  name:'Pink',   hex:'#ec407a', price:200, mult:1.3},
+  {id:'orange',name:'Orange', hex:'#fb8c00', price:300, mult:1.4},
+  {id:'purple',name:'Purple',hex:'#8e24aa', price:450, mult:1.5},
+  {id:'gold',  name:'Gold',  hex:'#ffc400', price:900, mult:2},
+  {id:'neon',  name:'Neon',  hex:'#5be84a', price:1800,mult:3},
+];
+const CARS=[
+  {id:'foot',  name:'On foot',        speed:300, price:0,    color:'#ddd',    kind:'foot'},
+  {id:'board', name:'Skateboard', speed:380, price:150,  color:'#ff7043', kind:'board'},
+  {id:'scoot', name:'Scooter',     speed:460, price:500,  color:'#26c6da', kind:'scoot'},
+  {id:'hatch', name:'Hatchback',      speed:560, price:1500, color:'#ab47bc', kind:'car', L:170},
+  {id:'sport', name:'Sports car',  speed:680, price:4500, color:'#e53935', kind:'car', L:190},
+  {id:'super', name:'Supercar',    speed:820, price:12000,color:'#ffd600', kind:'car', L:205},
+];
+// Apavu veikals: ātrāki apavi (darbojas, ejot kājām), raķešu kedas arī lec augstāk
+const SHOES=[
+  {id:'old',  name:'Old sneakers',   i:'👟',k:1,   jump:1,   price:0},
+  {id:'run',  name:'Running shoes',  i:'🏃',k:1.15,jump:1,   price:120},
+  {id:'sport',name:'Sport boots',    i:'🥾',k:1.3, jump:1.1, price:400},
+  {id:'rocket',name:'Rocket sneakers',i:'🚀',k:1.5, jump:1.3, price:1200},
+];
+const shoeOf=()=>SHOES.find(x=>x.id===save.shoe)||SHOES[0];
+const colorById=id=>COLORS.find(c=>c.id===id);
+const carById=id=>CARS.find(c=>c.id===id);
+// Progress glabājas kontā (saves/{uid}) + kešā šajā ierīcē (grafitiRPG:{uid}). Bez interneta (lokāli) – vecā atslēga 'grafitiRPG'.
+const SAVE0=()=>({money:0,colors:['black','red'],cars:['foot'],color:'black',car:'foot',painted:0,xp:0,food:100});
+const ONLINE=location.protocol==='https:';
+const DBP='grafiti/'; // šīs spēles dati Firebase – savā zarā, lai spēles nesajaucas
+let save=SAVE0(), saveOk=!ONLINE, saveUid=null;
+if(!ONLINE){ try{ const s=JSON.parse(localStorage.getItem('grafitiRPG')); if(s) save=Object.assign(save,s); }catch(e){} }
+const persist=()=>{ if(!saveOk) return; try{ localStorage.setItem(saveUid?'grafitiRPG:'+saveUid:'grafitiRPG',JSON.stringify(save)); }catch(e){} if(typeof netStats==='function') netStats(); };
+
+// ================= Kontūras =================
+const circle=(cx,cy,r,a0=0,a1=Math.PI*2,n=60)=>Array.from({length:n+1},(_,i)=>{const a=a0+(a1-a0)*i/n;return [cx+r*Math.cos(a),cy+r*Math.sin(a)]});
+const closed=p=>[...p,p[0]];
+const SHAPES={
+  circle:()=>[circle(0,0,1)],
+  star:  ()=>[closed(Array.from({length:10},(_,i)=>{const r=i%2?0.42:1,a=-Math.PI/2+i*Math.PI/5;return [r*Math.cos(a),r*Math.sin(a)]}))],
+  heart: ()=>[closed(Array.from({length:80},(_,i)=>{const t=i/80*Math.PI*2;return [16*Math.sin(t)**3/17,-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))/17]}))],
+  arrow: ()=>[closed([[-1,-.25],[.2,-.25],[.2,-.7],[1,0],[.2,.7],[.2,.25],[-1,.25]])],
+  bolt:  ()=>[closed([[.2,-1],[-.5,.1],[-.05,.1],[-.25,1],[.5,-.15],[.05,-.15]])],
+  crown: ()=>[closed([[-1,.6],[-1,-.5],[-.5,0],[0,-.7],[.5,0],[1,-.5],[1,.6]])],
+  smiley:()=>[circle(0,0,1),circle(-.35,-.3,.1,0,Math.PI*2,16),circle(.35,-.3,.1,0,Math.PI*2,16),circle(0,.05,.55,.15*Math.PI,.85*Math.PI,30)],
+  plane: ()=>[closed([[-1,.1],[1,-.6],[.3,.65],[.05,.2]]),[[.05,.2],[1,-.6]]],
+  flower:()=>{ const p=[circle(0,-.1,.22,0,Math.PI*2,24)]; for(let k=0;k<5;k++){ const a=-Math.PI/2+k*Math.PI*2/5; p.push(circle(.55*Math.cos(a),-.1+.55*Math.sin(a),.3,0,Math.PI*2,24)); } p.push([[0,.12],[0,.95]]); return p; },
+  house: ()=>[closed([[-.8,.85],[-.8,-.1],[0,-.85],[.8,-.1],[.8,.85]]),closed([[-.2,.85],[-.2,.3],[.2,.3],[.2,.85]]),closed([[.35,-.05],[.6,-.05],[.6,.2],[.35,.2]])],
+  note:  ()=>[circle(-.35,.55,.3,0,Math.PI*2,28),[[-.05,.55],[-.05,-.85],[.6,-.5],[.6,-.15],[-.05,-.5]]],
+  infinity:()=>[Array.from({length:90},(_,i)=>{ const t=i/89*Math.PI*2, d=1+Math.sin(t)**2; return [1.05*Math.cos(t)/d*1.5,1.4*Math.sin(t)*Math.cos(t)/d*1.5]; })],
+  diamond:()=>[closed([[0,-1],[.8,-.2],[0,.95],[-.8,-.2]]),[[-.8,-.2],[.8,-.2]],[[-.3,-.2],[0,-1],[.3,-.2],[0,.95],[-.3,-.2]]],
+  cat:   ()=>[circle(0,.15,.72,0,Math.PI*2,48),[[-.68,-.25],[-.72,-.9],[-.2,-.5]],[[.68,-.25],[.72,-.9],[.2,-.5]],circle(-.28,.05,.09,0,Math.PI*2,14),circle(.28,.05,.09,0,Math.PI*2,14),closed([[-.08,.3],[.08,.3],[0,.4]]),[[-1,.25],[-.5,.32]],[[-1,.45],[-.5,.4]],[[1,.25],[.5,.32]],[[1,.45],[.5,.4]]],
+  triangle:()=>[closed(Array.from({length:3},(_,i)=>{ const a=-Math.PI/2+i*Math.PI*2/3; return [Math.cos(a),Math.sin(a)]; }))],
+  square:()=>[closed([[-.8,-.8],[.8,-.8],[.8,.8],[-.8,.8]])],
+  hexagon:()=>[closed(Array.from({length:6},(_,i)=>{ const a=-Math.PI/2+i*Math.PI/3; return [Math.cos(a),Math.sin(a)]; }))],
+  spiral:()=>[Array.from({length:120},(_,i)=>{const t=i/120*Math.PI*4,r=t/(Math.PI*4);return [r*Math.cos(t),r*Math.sin(t)]})],
+};
+const SHAPE_POOLS=[['circle','star'],['heart','arrow','bolt'],['crown','smiley'],['spiral','smiley','crown'],['plane','diamond','arrow'],['flower','house','note'],['infinity','cat','plane'],['house','note','flower'],['cat','infinity','spiral'],['cat','flower','spiral','infinity']];
+const NLEV=99;
+const TIERS=Array.from({length:NLEV},(_,k)=>({shapes:SHAPE_POOLS[Math.min(9,Math.floor(k/10))],base:Math.round(30*Math.pow(1.065,k)),tol:Math.max(5.5,17*Math.pow(.975,k)),ghost:Math.max(.22,.55*Math.pow(.965,k))}));
+const TIER_COL=Array.from({length:NLEV},(_,k)=>`hsl(${(120-k*3.7+1080)%360},75%,58%)`);
+const DCOL=Array.from({length:10},(_,d)=>TIER_COL[d*10]);
+// 18 ar roku veidotas formas, tālāk – procedurāli, ar katru līmeni sarežģītākas
+const NAMED_SHAPES=['circle','triangle','square','star','heart','arrow','bolt','crown','diamond','hexagon','smiley','plane','house','note','flower','infinity','cat','spiral'];
+function procShape(k){ const j=k-NAMED_SHAPES.length, N=5+Math.floor(j/4), paths=[];
+  paths.push(closed(Array.from({length:N*2},(_,i)=>{ const r=i%2?.62:1, a=-Math.PI/2+i*Math.PI/N; return [r*Math.cos(a),r*Math.sin(a)]; })));
+  paths.push(circle(0,0,.5,0,Math.PI*2,48));
+  if(j>=6){ const n2=3+Math.floor(j/6); paths.push(closed(Array.from({length:n2},(_,i)=>{ const a=Math.PI/2+i*Math.PI*2/n2; return [.34*Math.cos(a),.34*Math.sin(a)]; }))); }
+  if(j>=14){ const a=2+Math.floor(j/14), b=3+Math.floor(j/18); paths.push(Array.from({length:180},(_,i)=>{ const t=i/179*Math.PI*2; return [.78*Math.sin(a*t+Math.PI/2),.78*Math.sin(b*t)]; })); }
+  if(j>=26){ const n3=5+Math.floor((j-26)/6); for(let q=0;q<n3;q++){ const a=q*Math.PI*2/n3; paths.push(circle(.86*Math.cos(a),.86*Math.sin(a),.1,0,Math.PI*2,14)); } }
+  if(j>=40){ paths.push(Array.from({length:100},(_,i)=>{ const t=i/99*Math.PI*3, r=.2*t/(Math.PI*3); return [r*Math.cos(t),r*Math.sin(t)]; })); }
+  if(j>=54){ paths.push(Array.from({length:90},(_,i)=>{ const x=-.95+i/89*1.9; return [x,.92+.05*Math.sin(x*18)]; })); }
+  if(j>=66){ paths.push(closed(Array.from({length:N*2},(_,i)=>{ const r=i%2?.2:.46, a=-Math.PI/2+Math.PI/N+i*Math.PI/N; return [r*Math.cos(a),r*Math.sin(a)]; }))); }
+  return paths; }
+const shapeFor=k=>k<NAMED_SHAPES.length?SHAPES[NAMED_SHAPES[k]]():procShape(k);
+for(let k=0;k<NLEV;k++) SHAPES['L'+k]=()=>shapeFor(k);
+
+// ================= Iela (sānskats) =================
+// pasaules vienības: skata augstums 720; ietves mala y=560, tēli staigā y≈575..604
+const BASE=560, GROUND=590, PS=1.9, PANEL={w:360,h:220,y:320};
+const SHOP_INFO={
+  metro: {name:'METRO',     neon:'#5aa8e8', wall:'#2a3344', awn:['#5aa8e8','#ffffff']},
+  paint: {name:'PAINT DEPOT', neon:'#d96bc0', wall:'#3b2a66', awn:['#ff4fd8','#ffffff']},
+  cafe:  {name:'CAFÉ',  neon:'#e0a85a', wall:'#5b3a2e', awn:['#ffb347','#fff3d6']},
+  pizza: {name:'PIZZERIA',   neon:'#d95b5b', wall:'#2e4a3a', awn:['#e53935','#ffffff']},
+  bike:  {name:'BIKES',       neon:'#5bbcc9', wall:'#2c4766', awn:['#26c6da','#ffffff']},
+  shoes: {name:'SHOES',      neon:'#a3d65a', wall:'#4a3a6a', awn:['#76ff03','#222222']},
+  arcade:{name:'ARCADE', neon:'#8d72e0', wall:'#251f4d', awn:['#7c4dff','#ffea00']},
+  flower:{name:'FLOWERS',      neon:'#e08aa8', wall:'#4e5f3a', awn:['#f48fb1','#ffffff']},
+  barber:{name:'BARBER',  neon:'#5ab4e0', wall:'#523030', awn:['#e53935','#1e88e5']},
+};
+const OTHER_SHOPS=['pizza','bike','shoes','arcade','flower','barber']; const LOT_DEFS=[]; let _sc=0;
+// katrā līmenī 3 sienas: galvenā (līmeņa forma) + 2 papildu ar formām no līmeņa kopas
+for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',ds:k/10}); LOT_DEFS.push({k:'wall',t:k,v:0});
+  if(k===0) LOT_DEFS.push({k:'paint'},{k:'cafe'},{k:'metro',ds:0}); else if(m===0) LOT_DEFS.push({k:'paint'}); else if(m===3) LOT_DEFS.push({k:'cafe'}); else if(m===6||m===9) LOT_DEFS.push({k:OTHER_SHOPS[_sc++%OTHER_SHOPS.length]});
+  LOT_DEFS.push({k:'wall',t:k,v:1},{k:'wall',t:k,v:2}); if(m===0) LOT_DEFS.push({k:'wall',t:k,v:3,free:1}); }
+// Formas: nejauša no līmenim atļautajām (vieglākās + līmeņa forma), neatkārto pēdējās uzzīmētās
+const recentShapes=[];
+// No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (katrā pilsētā klāt nāk jauna). Ja tās nav – jānopērk Krāsu depo.
+const rollNeed=(k,v)=>{ const c=Math.floor(k/10); if(c<1||!v) return null; const pool=COLORS.slice(2,2+Math.min(8,c+1)).map(c_=>c_.id); return pool[(Math.random()*pool.length)|0]; };
+// 1. līmenis – vienkāršās formas; jau no 2. līmeņa plašs klāsts (smaidiņš, lidmašīna, kronis…), no 4. – visas 18
+function pickShape(k,avoid=[]){ const pool=k===0?NAMED_SHAPES.slice(0,4):k<18?NAMED_SHAPES.slice(Math.max(0,k-6),Math.min(18,8+k*4)):[...new Set(['L'+k,'L'+Math.max(18,k-1),'L'+Math.max(18,k-2),'L'+Math.max(18,k-3)])].concat(NAMED_SHAPES.slice(14));
+  let c=pool.filter(n=>!recentShapes.includes(n)&&!avoid.includes(n)); if(!c.length) c=pool.filter(n=>!recentShapes.includes(n)); if(!c.length) c=pool;
+  return c[(Math.random()*c.length)|0]; }
+const usedIn={};
+const lots=[], walls=[];
+let cursorX=520, lastK=0;
+LOT_DEFS.forEach((d,i)=>{
+  const w=(d.k==='wall'||d.k==='metro')?560:620, l={i,kind:d.k,x:cursorX,w,cx:cursorX+w/2,seed:i*7919+13,img:null,off:Math.random()*40};
+  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,free:!!d.free,layers:[],need:d.free?null:rollNeed(d.t,d.v),shape:(usedIn[d.t]=usedIn[d.t]||[]).push(pickShape(d.t,usedIn[d.t]))&&usedIn[d.t][usedIn[d.t].length-1],art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
+  else if(d.k==='metro'){ l.ds=d.ds; l.info=SHOP_INFO.metro; l.door=l.cx-34; l.bonusAt=0; }
+  else { l.door=l.x+w-126; l.info=SHOP_INFO[d.k]; }
+  l.dist=(d.k==='wall'?d.t:d.k==='metro'?d.ds*10:lastK); if(d.k==='wall') lastK=d.t;
+  l.city=Math.floor(l.dist/10); l.hide=d.k==='wall'?d.t%3===1&&!d.v:(d.k!=='metro'&&d.k!=='paint'&&i%3===0);
+  lots.push(l); cursorX+=w;
+});
+const WORLD_W=cursorX+520;
+const stations=lots.filter(l=>l.kind==='metro');
+const signLots=lots.filter((l,i)=>i===0||lots[i-1].dist!==l.dist);
+const CITY_NAMES=['Old Town','Harbor','Neon Heights','Parkside','Market Quarter','Art Block','Skyline','Riverside','Uptown','Crown Hill'];
+const cityRange=Array.from({length:10},(_,c)=>{ const ls=lots.filter(l=>l.city===c); const last=ls[ls.length-1]; return [c===0?0:ls[0].x-40,last.x+last.w+40]; });
+const hideSpots=lots.filter(l=>l.hide).map(l=>({x:l.kind==='wall'?l.x+64:l.x+50,kind:l.kind==='wall'?'dumpster':'crates',lot:l}));
+const lampXs=[]; for(let x=300;x<WORLD_W;x+=410) lampXs.push(x);
+
+const player={x:300,h:0,vy:0,vx:0,face:'down',flip:1,step:0,moving:false,idle:0,dust:0,spin:0};
+const keys={};
+let mode='world'; // world | entering | draw | exiting | shop | chat
+let heat=0, hidden=false, hideAt=null, nearHide=null, recent=[];
+const police={active:false,car:null,extra:[],off:null,offs:[],heli:null,reinf:0,reinfCar:14};
+let curCity=0, dayCount=0, edgeT=0, foodBand=3, curDist=0, clock=17.5, prevDay=null;
+const dayK=()=>clamp((Math.sin((clock-6)/24*Math.PI*2)+.2)/.6,0,1);
+
+// gājēji un satiksme
+const SKINS=['#f2c9a0','#e0ac80','#c68642','#8d5524','#ffdbac'];
+const HOODS=['#e53935','#1e88e5','#43a047','#fdd835','#ec407a','#fb8c00','#8e24aa','#26c6da','#eceff1'];
+const npcs=Array.from({length:150},()=>({x:rnd(200,WORLD_W-200),y:rnd(574,604),dir:Math.random()<.5?-1:1,t:rnd(1,4),pause:0,speed:rnd(35,75),
+  hood:HOODS[(Math.random()*HOODS.length)|0],skin:SKINS[(Math.random()*SKINS.length)|0],cap:['#222','#444','#6d4c41','#37474f'][(Math.random()*4)|0],
+  pants:['#2b3a67','#3e2723','#212121','#455a64'][(Math.random()*4)|0],step:rnd(0,6),face:'side',flip:1,bubble:null,bt:0,snitch:Math.random()<.35,watch:0,called:false,callT:0,seen:false}));
+const traffic=Array.from({length:30},(_,i)=>{ const left=i%2===0; return {x:rnd(0,WORLD_W),dir:left?-1:1,y:left?662:700,speed:rnd(150,260),L:rnd(150,185),spin:0,
+  color:['#ef5350','#42a5f5','#66bb6a','#ffee58','#ab47bc','#eceff1','#ff7043'][(Math.random()*7)|0],cop:i%6===3}; }); // katra 6. mašīna – policijas patrulis
+
+// ================= Kanvasi =================
+const cv=document.getElementById('game'), ctx=cv.getContext('2d');
+const fx=document.getElementById('fx'), fxc=fx.getContext('2d');
+const lc=document.createElement('canvas'), lg=lc.getContext('2d');
+const bl=document.createElement('canvas'), bctx=bl.getContext('2d');
+let W=innerWidth, H=innerHeight;
+function resize(){ W=innerWidth; H=innerHeight; [cv,fx,lc].forEach(c=>{c.width=W*dpr;c.height=H*dpr;}); bl.width=Math.ceil(W/5); bl.height=Math.ceil(H/5); if(mode==='draw'||mode==='entering') layoutDraw(); }
+addEventListener('resize',resize);
+const baseZoom=()=>Math.min(H/720,W/520);
+// vertikālā telefonā iela ir ~63% augstumā (nevis pašā apakšā zem pogām); zem ceļa – pretējā ietve
+const camY0=()=>{ const vh=H/baseZoom(); return vh>720?Math.max(360,590-.13*vh):360; };
+const cam={x:300,y:360,zoom:baseZoom(),shake:0,flash:0};
+resize(); cam.zoom=baseZoom();
+let time=0;
+
+// ================= Daļiņas =================
+const parts=[], sparts=[], floats=[];
+function puff(type,x,y,o={}){ parts.push(Object.assign({type,x,y,z:0,vx:0,vy:0,vz:0,g:0,life:.6,max:.6,size:4,col:'#fff',drag:1},o)); }
+function stepParts(arr,dt){ for(let i=arr.length-1;i>=0;i--){ const p=arr[i]; p.life-=dt; if(p.life<=0){arr.splice(i,1);continue;}
+  p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; p.vz-=p.g*dt; p.vx*=Math.pow(p.drag,dt*60); p.vy*=Math.pow(p.drag,dt*60); if(p.z<0){p.z=0;p.vz*=-.5;} } }
+function drawParts(g,arr){ for(const p of arr){ const a=p.life/p.max; g.save();
+  if(p.type==='dust'){ g.globalAlpha=a*.35; g.fillStyle='#ccc'; g.beginPath(); g.arc(p.x,p.y-p.z,p.size*(2-a),0,7); g.fill(); }
+  else if(p.type==='smoke'){ g.globalAlpha=a*.3; g.fillStyle='#999'; g.beginPath(); g.arc(p.x,p.y-p.z,p.size*(2.2-a),0,7); g.fill(); }
+  else if(p.type==='spray'){ g.globalCompositeOperation='lighter'; g.globalAlpha=a*.8; g.fillStyle=p.col; g.shadowColor=p.col; g.shadowBlur=8; g.beginPath(); g.arc(p.x,p.y-p.z,p.size*(1.4-a*.4),0,7); g.fill(); }
+  else if(p.type==='spark'){ g.globalCompositeOperation='lighter'; g.globalAlpha=a; g.strokeStyle=p.col; g.lineWidth=2.5; g.shadowColor=p.col; g.shadowBlur=10; g.beginPath(); g.moveTo(p.x-p.vx*.04,p.y-p.z-p.vy*.04); g.lineTo(p.x,p.y-p.z); g.stroke(); }
+  else if(p.type==='coin'){ const sq=Math.abs(Math.cos(p.life*14)); g.shadowColor='#ffd34d'; g.shadowBlur=10; g.fillStyle='#ffd34d'; g.beginPath(); g.ellipse(p.x,p.y-p.z,p.size*sq+.8,p.size,0,0,7); g.fill(); g.fillStyle='#fff8'; g.fillRect(p.x-1,p.y-p.z-p.size*.6,1.5,p.size*.8); }
+  g.restore(); } }
+function burst(x,y,col,n=24){ for(let i=0;i<n;i++){ const a=rnd(0,6.28),s=rnd(120,380); puff('spark',x,y,{vx:Math.cos(a)*s,vy:Math.sin(a)*s,col,life:rnd(.4,.9),max:.9,drag:.95}); } }
+function coins(x,y,n){ for(let i=0;i<n;i++){ puff('coin',x,y,{vx:rnd(-160,160),vy:rnd(-30,10),vz:rnd(260,520),g:1100,size:6,life:rnd(1.1,1.8),max:1.8,drag:.98}); } }
+function floatText(x,y,txt,col){ floats.push({x,y,txt,col,t:0}); }
+
+// ================= Skaņa =================
+let AC=null, sprayGain=null;
+function audioInit0(){ if(AC) return; try{ AC=new(window.AudioContext||window.webkitAudioContext)(); const buf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate), d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  const src=AC.createBufferSource(); src.buffer=buf; src.loop=true; const hp=AC.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=3500;
+  sprayGain=AC.createGain(); sprayGain.gain.value=0; src.connect(hp); hp.connect(sprayGain); sprayGain.connect(AC.destination); src.start(); }catch(e){} }
+function spraySound(on){ if(sprayGain) sprayGain.gain.setTargetAtTime(on&&fxOn?0.1*fxK():0,AC.currentTime,0.03); }
+function ding(freqs){ if(!AC||!fxOn) return; freqs.forEach((f,i)=>{ const o=AC.createOscillator(), g=AC.createGain(); o.type='triangle'; o.frequency.value=f; const t0=AC.currentTime+i*0.09;
+  g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(.12*fxK(),t0+.02); g.gain.exponentialRampToValueAtTime(.001,t0+.5); o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0+.55); }); }
+
+
+// ---- skaņas efekti (sintezēti) ----
+const fxK=()=>fxVol*masterVol;
+let fxVol=1, masterVol=1, brightness=1, fxOn=true, noiseBuf=null, sirenO=null, sirenG=null, engO=null, engG=null, heliG=null, lastStepIdx=0;
+const getNoise=()=>{ if(!noiseBuf){ noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate); const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; } return noiseBuf; };
+function tone(f0,f1,dur,type='sine',vol=.08,delay=0){ if(!AC||!fxOn) return; const t0=AC.currentTime+delay, o=AC.createOscillator(), g=AC.createGain(); o.type=type; o.frequency.setValueAtTime(f0,t0);
+  if(f1!==f0) o.frequency.exponentialRampToValueAtTime(f1,t0+dur); g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol*fxK(),t0+.01); g.gain.exponentialRampToValueAtTime(.0005,t0+dur);
+  o.connect(g); g.connect(AC.destination); o.start(t0); o.stop(t0+dur+.05); }
+function noise(dur,vol,ftype='lowpass',freq=800,delay=0){ if(!AC||!fxOn) return; const t0=AC.currentTime+delay, s=AC.createBufferSource(), f=AC.createBiquadFilter(), g=AC.createGain();
+  s.buffer=getNoise(); f.type=ftype; f.frequency.value=freq; g.gain.setValueAtTime(vol*fxK(),t0); g.gain.exponentialRampToValueAtTime(.0005,t0+dur); s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t0,Math.random()*.5); s.stop(t0+dur+.05); }
+const SFX={
+  step:()=>noise(.05,.05,'lowpass',900),
+  honk:()=>{ tone(392,392,.32,'sawtooth',.05); tone(494,494,.32,'sawtooth',.05); },
+  jump:()=>tone(280,620,.16,'sine',.07),
+  land:()=>{ noise(.12,.12,'lowpass',320); tone(90,50,.1,'sine',.1); },
+  shake:()=>{ for(let i=0;i<4;i++) noise(.035,.07,'bandpass',4800,i*.07); },
+  coin:()=>{ tone(1250,1900,.09,'square',.04); tone(1900,2400,.12,'square',.035,.07); },
+  ring:()=>{ for(let i=0;i<3;i++){ tone(880,880,.1,'square',.04,i*.3); tone(660,660,.1,'square',.04,i*.3+.12); } },
+  zap:()=>{ tone(180,1800,.28,'sawtooth',.05); tone(1200,300,.2,'sine',.05,.15); },
+  hide:()=>{ noise(.18,.1,'lowpass',500); tone(110,60,.12,'sine',.08); },
+  bust:()=>{ tone(420,70,.7,'sawtooth',.08); noise(.4,.1,'lowpass',600); },
+  star:()=>{ tone(700,700,.12,'square',.04); tone(950,950,.12,'square',.04,.14); tone(700,700,.12,'square',.04,.28); },
+  click:()=>tone(720,720,.04,'square',.025),
+  buy:()=>{ SFX.coin(); tone(523,784,.2,'triangle',.06,.12); },
+  ride:()=>{ noise(1.2,.16,'lowpass',260); tone(70,180,1.1,'sawtooth',.05); tone(330,330,.35,'square',.03,.1); },
+  box:()=>{ for(let i=0;i<6;i++) noise(.05,.08,'bandpass',900+i*200,i*.09); tone(200,400,.5,'triangle',.05); },
+};
+const sfx=n=>{ try{ SFX[n]&&SFX[n](); }catch(e){} };
+let scO=null,scO2=null,scG=null,lastJoint=0, eng1=null,eng2=null,eng3=null,engF=null,rumG=null,sirenP=null,trO=null,trG=null,trP=null,trLast={d:1e9}, audT=0;
+function buildContinuous(){ if(!AC) return; const dest=AC.destination;
+  sirenO=AC.createOscillator(); sirenO.type='sawtooth'; sirenO.frequency.value=850; const sf=AC.createBiquadFilter(); sf.type='lowpass'; sf.frequency.value=2200; sirenG=AC.createGain(); sirenG.gain.value=0; sirenP=AC.createStereoPanner();
+  sirenO.connect(sf); sf.connect(sirenG); sirenG.connect(sirenP); sirenP.connect(dest); sirenO.start();
+  eng1=AC.createOscillator(); eng1.type='sawtooth'; eng2=AC.createOscillator(); eng2.type='square'; eng3=AC.createOscillator(); eng3.type='sawtooth';
+  engF=AC.createBiquadFilter(); engF.type='lowpass'; engF.frequency.value=500; engG=AC.createGain(); engG.gain.value=0;
+  [[eng1,.5],[eng2,.18],[eng3,.4]].forEach(([o,v])=>{ const g=AC.createGain(); g.gain.value=v; o.connect(g); g.connect(engF); o.start(); });
+  engF.connect(engG); engG.connect(dest);
+  const rs=AC.createBufferSource(); rs.buffer=getNoise(); rs.loop=true; const rf=AC.createBiquadFilter(); rf.type='bandpass'; rf.frequency.value=650; rf.Q.value=.8; rumG=AC.createGain(); rumG.gain.value=0; rs.connect(rf); rf.connect(rumG); rumG.connect(dest); rs.start();
+  trO=AC.createOscillator(); trO.type='sawtooth'; trO.frequency.value=90; const tf_=AC.createBiquadFilter(); tf_.type='lowpass'; tf_.frequency.value=420; trG=AC.createGain(); trG.gain.value=0; trP=AC.createStereoPanner(); trO.connect(tf_); tf_.connect(trG); trG.connect(trP); trP.connect(dest); trO.start();
+  const hs=AC.createBufferSource(); hs.buffer=getNoise(); hs.loop=true; const hf=AC.createBiquadFilter(); hf.type='lowpass'; hf.frequency.value=420; const mod=AC.createGain(); mod.gain.value=.5;
+  const lfo=AC.createOscillator(); lfo.frequency.value=13; const lg_=AC.createGain(); lg_.gain.value=.5; lfo.connect(lg_); lg_.connect(mod.gain); heliG=AC.createGain(); heliG.gain.value=0;
+  hs.connect(hf); hf.connect(mod); mod.connect(heliG); heliG.connect(dest); hs.start(); lfo.start();
+  // skrejritenis: elektromotora dūkoņa (nevis benzīna dzinējs)
+  scO=AC.createOscillator(); scO.type='sine'; scO2=AC.createOscillator(); scO2.type='triangle'; scG=AC.createGain(); scG.gain.value=0; const scg2=AC.createGain(); scg2.gain.value=.35;
+  scO.connect(scG); scO2.connect(scg2); scg2.connect(scG); scG.connect(dest); scO.start(); scO2.start(); }
+function updateAudio(){ if(!AC||!sirenG||!engG) return; const T=AC.currentTime, dtA=Math.max(.001,Math.min(.1,time-(audT||time))); audT=time;
+  // sirēna: lēna "wail" un ātrā "yelp" pakaļdzīšanās laikā, ar stereo pozīciju
+  let sv=0; if(police.car){ const c=[police.car,...police.extra].reduce((a,b)=>Math.abs(b.x-player.x)<Math.abs(a.x-player.x)?b:a), d=Math.abs(c.x-player.x); sv=clamp(1-d/1500,0,1)*.05; const t=c.siren/9, fast=police.off&&(police.off.state==='chase'||police.off.state==='goHide');
+    sirenO.frequency.setTargetAtTime(fast?900+360*Math.sin(t*14):850+450*Math.sin(t*2.1),T,.02); sirenP.pan.setTargetAtTime(clamp((c.x-player.x)/900,-1,1),T,.1); }
+  sirenG.gain.setTargetAtTime(fxOn?sv*fxK():0,T,.1);
+  // spēlētāja dzinējs: pārnesumi, apgriezieni, ātrgaitas troksnis
+  const car=carById(save.car); let ev=0, rv=0;
+  let scv=0;
+  if(mode==='world'&&!hidden&&car.kind==='scoot'){ const r=Math.min(1,Math.abs(player.vx)/car.speed); scO.frequency.setTargetAtTime(220+780*r,T,.05); scO2.frequency.setTargetAtTime(440+1560*r,T,.05); scv=r>.02?.012+.03*r:0; rv=.018*r; }
+  else if(mode==='world'&&!hidden&&car.kind==='car'){
+    const top=car.speed*(buff.energy>0?1.4:1), r=Math.min(1,Math.abs(player.vx)/top), thr=(keys.a||keys.d||keys.arrowleft||keys.arrowright)?1:0, ng=car.kind==='car'?5:3, gear=Math.min(ng-1,Math.floor(r*ng)), frac=r*ng-gear;
+    const rpm=900+frac*4200*(.55+.45*thr)+gear*160+(r<.02?Math.sin(time*18)*25:0), mult={hatch:1,sport:1.2,super:.78,scoot:2.1}[car.id]||1, f=rpm/60*2*mult;
+    eng1.frequency.setTargetAtTime(f,T,.04); eng2.frequency.setTargetAtTime(f*.5,T,.04); eng3.frequency.setTargetAtTime(f*2.01,T,.04);
+    engF.frequency.setTargetAtTime(260+rpm*.28*(car.id==='super'?.8:1),T,.05);
+    ev=(car.kind==='car'?.018:.012)+.05*(.4+.6*thr)*(.3+.7*r)*(car.id==='super'?1.3:1); rv=r*(car.kind==='car'?.05:.03);
+  } else if(mode==='world'&&car.kind==='board'&&player.moving&&player.h<=0){ rv=.04*Math.min(1,Math.abs(player.vx)/car.speed);
+    // skeitborda klaudziens pār ietves plātņu šuvēm
+    const j=Math.floor(player.x/110); if(j!==lastJoint){ lastJoint=j; noise(.035,.05,'highpass',1800); tone(160,120,.05,'square',.02); } }
+  if(scG) scG.gain.setTargetAtTime(fxOn?scv*fxK():0,T,.06);
+  engG.gain.setTargetAtTime(fxOn?ev*fxK():0,T,.06); rumG.gain.setTargetAtTime(fxOn?rv*fxK():0,T,.08);
+  // garāmbraucošas mašīnas ar Doplera efektu un stereo
+  let tv=0, tf=90, tpan=0;
+  if(!inMetro){ let best=null,bd=1e9; traffic.forEach(c=>{ const d=Math.abs(c.x-player.x); if(d<bd){ bd=d; best=c; } });
+    if(best&&bd<1000){ const vr=(trLast.d-bd)/dtA; tf=(75+(best.L-150)*.9)*(1+.16*clamp(vr/300,-1,1)); tv=Math.pow(1-bd/1000,2)*.055; tpan=clamp((best.x-player.x)/700,-1,1); }
+    trLast.d=bd; }
+  trO.frequency.setTargetAtTime(tf,T,.05); trG.gain.setTargetAtTime(fxOn?tv*fxK():0,T,.1); trP.pan.setTargetAtTime(tpan,T,.1);
+  let hv=0; if(police.heli&&!police.heli.leave) hv=clamp(1-Math.abs(police.heli.x-player.x)/1600,0,1)*.12;
+  heliG.gain.setTargetAtTime(fxOn?hv*fxK():0,T,.2);
+  if(music.el){ const duck=(police.active?.55:1)*(mode==='draw'?.8:1); music.el.volume=clamp(music.vol*masterVol*duck*(music.muted?0:1),0,1); } }
+
+// ---- mūzikas atskaņotājs ----
+const TRACKS=[{t:'Lido Tu',f:'lido-tu.mp3',rank:1},{t:'Tu Vari',f:'tu-vari.mp3',rank:2},{t:'Dejot Laiks',f:'dejot-laiks.mp3',rank:3},{t:'Peļķe ielas galā',f:'pelke-ielas-gala.mp3',rank:4},{t:'Esi reāls',f:'esi-reals.mp3',rank:5},
+  {t:'Mirklis vēsturē',f:'mirklis.mp3'},{t:'Fotomomenti',f:'fotomomenti.mp3'},{t:'Kāpēc nē',f:'kapec-ne.mp3'},{t:'Gravitācija',f:'gravitacija.mp3'},{t:'Dzīve paciņā',f:'dzive-pacina.mp3'},
+  {t:'Dīvainis ar dziesmu',f:'divainis-ar-dziesmu.mp3'},{t:'Saku paldies',f:'saku-paldies.mp3'},{t:'Kad zvaigznes krīt uz galvas',f:'kad-zvaigznes-krit.mp3'},{t:'Neaizej',f:'neaizej.mp3'},
+  {t:'Meklēju sajūtas',f:'mekleju-sajutas.mp3'},{t:'Gaismu lej',f:'gaismu-lej.mp3'}];
+const RADIOS=[{t:'Radio TEV',u:'https://stream.radiotev.lv:8443/radiov'},{t:'Radio SWH',u:'https://live.radioswh.lv:8443/swh_lv'},{t:'Latvijas Radio 5 (Pieci)',u:'https://muste.latvijasradio.lv/pieci/smil:k2.smil/playlist.m3u8',hls:true}];
+const music={radio:0,pl:false,el:null,hls:null,i:Math.floor(Math.random()*5),vol:.6,muted:false,started:false,nextPL:0};
+try{ const m=JSON.parse(localStorage.getItem('grafitiMusic')); if(m){ music.vol=m.vol??.6; fxOn=m.fx??true; fxVol=m.fv??1; masterVol=m.mv??1; brightness=m.br??1; } }catch(e){}
+const pTitle=document.getElementById('pTitle'), pPlay=document.getElementById('pPlay'), pVol=document.getElementById('pVol'), pFx=document.getElementById('pFx');
+const saveAudioPrefs=()=>{ try{ localStorage.setItem('grafitiMusic',JSON.stringify({vol:music.vol,fx:fxOn,fv:fxVol,mv:masterVol,br:brightness})); }catch(e){} };
+const nowS=()=>performance.now()/1000;
+function syncPlayer(){ const t=TRACKS[music.i];
+  pTitle.textContent=(music.muted?'🔇 ':'')+(music.pl?'✈ Papīra Lidmašīnas – '+t.t:'📻 '+RADIOS[music.radio].t);
+  pPlay.textContent=music.el&&!music.el.paused?'⏸':'▶'; pFx.textContent=fxOn?'🔊':'🔇'; }
+function ensureEl(){ if(music.el) return; music.el=new Audio();
+  music.el.addEventListener('ended',()=>{ if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } });
+  music.el.addEventListener('play',syncPlayer); music.el.addEventListener('pause',syncPlayer);
+  music.el.addEventListener('error',()=>{ if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else pTitle.textContent='📻 '+RADIOS[music.radio].t+' – unavailable, try ⏭'; }); }
+function setSrc(u,isHls){ if(music.hls){ music.hls.destroy(); music.hls=null; }
+  if(isHls&&!music.el.canPlayType('application/vnd.apple.mpegurl')&&window.Hls&&Hls.isSupported()){ music.hls=new Hls(); music.hls.loadSource(u); music.hls.attachMedia(music.el); }
+  else music.el.src=u; }
+const applyVol=()=>{ if(music.el) music.el.volume=clamp(music.vol*masterVol*(music.muted?0:1),0,1); };
+function playRadio(r){ ensureEl(); music.radio=(r+RADIOS.length)%RADIOS.length; music.pl=false; music.nextPL=nowS()+480; const R=RADIOS[music.radio]; setSrc(R.u,R.hls); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
+function playPL(){ ensureEl(); music.pl=true; setSrc('music/'+TRACKS[music.i].f,false); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
+function loadTrack(i,play=true){ music.i=(i+TRACKS.length)%TRACKS.length; if(play) playPL(); }
+function cycleSource(){ audioInit(); if(music.pl) music.i=(music.i+1)%TRACKS.length; playPL(); }
+function startMusic(){ if(music.started) return; music.started=true; playRadio(music.radio); music.nextPL=nowS()+480; }
+setInterval(()=>{ if(music.started&&!music.pl&&music.el&&!music.el.paused&&nowS()>music.nextPL) playPL(); },2000);
+function audioInit(){ if(!AC){ audioInit0(); buildContinuous(); } if(AC&&AC.state==='suspended') AC.resume(); startMusic(); }
+syncPlayer();
+const pVol2=document.getElementById('pVol2'), pFxVol=document.getElementById('pFxVol'), sMaster=document.getElementById('sMaster'), sBright=document.getElementById('sBright'), pVolTxt=document.getElementById('pVolTxt'), pauseOv=document.getElementById('pauseOv');
+function applyBrightness(){ const f=`brightness(${brightness})`; cv.style.filter=f; fx.style.filter=f; const d_=document.getElementById('draw'); if(d_) d_.style.filter=f; }
+function syncSettings(){ pVol.value=pVol2.value=Math.round(music.vol*100); pVolTxt.textContent=Math.round(music.vol*100)+'%'; pFxVol.value=Math.round(fxVol*100); sMaster.value=Math.round(masterVol*100); sBright.value=Math.round(brightness*100); document.getElementById('pzMute').textContent=music.muted?'🔊 Unmute':'🔇 Mute'; pFx.textContent=fxOn?'🔊':'🔇'; }
+function setVol(v){ music.vol=clamp(v,0,1); if(music.muted&&music.vol>0) music.muted=false; saveAudioPrefs(); syncPlayer(); syncSettings(); }
+pVol.addEventListener('input',()=>setVol(pVol.value/100)); pVol2.addEventListener('input',()=>setVol(pVol2.value/100));
+document.getElementById('pVolDn').onclick=()=>setVol(music.vol-.1); document.getElementById('pVolUp').onclick=()=>setVol(music.vol+.1);
+pFxVol.addEventListener('input',()=>{ fxVol=pFxVol.value/100; saveAudioPrefs(); sfx('coin'); });
+sMaster.addEventListener('input',()=>{ masterVol=sMaster.value/100; saveAudioPrefs(); });
+sBright.addEventListener('input',()=>{ brightness=sBright.value/100; applyBrightness(); saveAudioPrefs(); });
+document.getElementById('pzPrev').onclick=()=>document.getElementById('pPrev').click(); document.getElementById('pzNext').onclick=()=>document.getElementById('pNext').click(); document.getElementById('pzPlay').onclick=()=>document.getElementById('pPlay').click();
+document.getElementById('pzMute').onclick=()=>{ music.muted=!music.muted; syncPlayer(); syncSettings(); };
+function openPause(){ if(mode!=='world') return; mode='pause'; for(const k in keys) keys[k]=false; promptEl.style.display='none'; syncSettings(); pauseOv.classList.add('on'); if(AC&&AC.state==='running') AC.suspend(); }
+function closePause(){ pauseOv.classList.remove('on'); mode='world'; if(AC&&AC.state==='suspended') AC.resume(); }
+document.getElementById('pzResume').onclick=closePause;
+{ const cur=window.TW_LANG||'lv', lv=document.getElementById('lgLv'), en=document.getElementById('lgEn'); (cur==='lv'?lv:en).className=''; lv.onclick=()=>{ if(cur!=='lv') setLang('lv'); }; en.onclick=()=>{ if(cur!=='en') setLang('en'); }; } document.getElementById('pzFs').onclick=()=>toggleFS(); document.getElementById('setBtn').onclick=openPause;
+document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='world') openPause(); });
+applyBrightness(); syncSettings();
+pPlay.onclick=()=>{ audioInit(); if(!music.el) return; music.el.paused?music.el.play().catch(()=>{}):music.el.pause(); };
+document.getElementById('pNext').onclick=()=>{ audioInit(); if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else playRadio(music.radio+1); };
+document.getElementById('pSet').onclick=()=>openPause(); document.getElementById('pStaff').onclick=()=>openStaff();
+document.getElementById('pPrev').onclick=()=>{ audioInit(); playRadio(music.pl?music.radio:music.radio-1); };
+pFx.onclick=()=>{ fxOn=!fxOn; saveAudioPrefs(); syncPlayer(); };
+document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('button')) sfx('click'); });
+
+// ================= Tēli =================
+function drawPerson(g,x,y,s,o){
+  const face=o.face||'down', flip=o.flip||1, step=o.step||0, side=face==='side';
+  const hood=o.hood||'#e53935', skin=o.skin||'#f2c9a0', cap=o.cap||'#1b1b1f', pants=o.pants||'#2b3a67', shoe='#f5f5f5';
+  const sw=Math.sin(step)*4.5, bob=o.still?Math.sin(performance.now()/380)*.7:-Math.abs(Math.cos(step))*1.6;
+  g.save(); g.translate(x,y); g.scale(s,s);
+  if(!o.noShadow){ g.fillStyle='rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(0,1,11,4,0,0,7); g.fill(); }
+  g.translate(0,bob); if(side) g.scale(flip,1);
+  if(!o.ride){
+    if(side){ rr(g,-3+sw,-14,6,13,3,pants); rr(g,-3-sw,-14,6,13,3,pants); rr(g,-3+sw,-3,9,4,2,shoe); rr(g,-3-sw,-3,9,4,2,shoe); }
+    else { const a=sw*.5; rr(g,-7,-14-a,6,13,3,pants); rr(g,1,-14+a,6,13,3,pants); rr(g,-7.5,-3-a,7,4,2,shoe); rr(g,.5,-3+a,7,4,2,shoe); }
+  } else { rr(g,-7,-14,6,13,3,pants); rr(g,1,-14,6,13,3,pants); rr(g,-8,-3,8,4,2,shoe); rr(g,0,-3,8,4,2,shoe); }
+  if(face!=='down') rr(g,side?-13:-8,-29,side?8:16,16,4,'#2d2e36');
+  rr(g,-9,-31,18,19,7,hood); rr(g,-9,-21,18,3,0,'rgba(255,255,255,.3)');
+  if(face==='down') rr(g,-5,-17,10,5,2,'rgba(0,0,0,.2)');
+  g.lineCap='round'; g.strokeStyle=hood; g.lineWidth=5.5;
+  const arm=(sx,sy,ex,ey)=>{ g.beginPath(); g.moveTo(sx,sy); g.lineTo(ex,ey); g.stroke(); g.fillStyle=skin; g.beginPath(); g.arc(ex,ey,2.8,0,7); g.fill(); };
+  if(o.spray){
+    const sx0=side?3:7, sy0=-27; let hx,hy;
+    if(o.target){ const lx=(o.target.x-x)/s*(side?flip:1), ly=(o.target.y-y)/s-bob, dx_=lx-sx0, dy_=ly-sy0, d=Math.hypot(dx_,dy_)||1, L=Math.min(d,16); hx=sx0+dx_/d*L; hy=sy0+dy_/d*L; }
+    else { hx=side?12:9; hy=-44; }
+    arm(sx0,sy0,hx,hy);
+    if(side) arm(-2,-27,-3,-17); else arm(-10,-27,-11,-17);
+    const ang=Math.atan2(hy-sy0,hx-sx0); g.save(); g.translate(hx,hy); g.rotate(ang); rr(g,-1,-4,8,8,2,o.can||'#e53935'); rr(g,-1,-4,3,8,1,'rgba(255,255,255,.45)'); rr(g,7,-1.5,3,3,1,'#ddd'); g.restore();
+    const cs=side?flip:1; o.hand={x:x+(hx+Math.cos(ang)*10)*s*cs, y:y+(hy+Math.sin(ang)*10+bob)*s};
+  } else if(side){ arm(0,-27,-sw*.9,-17); arm(0,-27,sw*.9,-17); }
+  else { const a=sw*.7; arm(-10,-27,-11,-17-a); arm(10,-27,11,-17+a); }
+  g.fillStyle=skin; g.beginPath(); g.arc(0,-37,9.5,0,7); g.fill();
+  if(face==='up'){ g.fillStyle=cap; g.beginPath(); g.arc(0,-37,9.9,0,7); g.fill(); if(o.hat==='beanie'){ g.beginPath(); g.arc(0,-48,3,0,7); g.fill(); } rr(g,-3.5,-39,7,2,1,'rgba(255,255,255,.3)'); }
+  else {
+    if(o.hat==='beanie'){ g.fillStyle=cap; g.beginPath(); g.arc(0,-39,10.2,Math.PI*1.02,-.02); g.closePath(); g.fill(); rr(g,-10.5,-41,21,4,2,'rgba(255,255,255,.25)'); g.beginPath(); g.arc(0,-50,3,0,7); g.fill(); }
+    else if(o.hat==='hair'){ g.fillStyle=cap; g.beginPath(); g.arc(0,-38,10,Math.PI*.95,.05); g.closePath(); g.fill(); if(side){ g.beginPath(); g.arc(-6,-36,5,0,7); g.fill(); } else { rr(g,-10,-40,4,9,2,cap); rr(g,6,-40,4,9,2,cap); } }
+    else { g.fillStyle=cap; g.beginPath(); g.arc(0,-38,10,Math.PI,0); g.closePath(); g.fill();
+    if(side) rr(g,3,-41,11,3.5,1.5,cap); else rr(g,-9,-40,18,3.5,1.5,cap); }
+    g.fillStyle='#111';
+    if(side){ g.beginPath(); g.arc(4.5,-36,1.4,0,7); g.fill(); } else { g.beginPath(); g.arc(-3.5,-36,1.4,0,7); g.fill(); g.beginPath(); g.arc(3.5,-36,1.4,0,7); g.fill(); }
+    if(o.mask!=='none'){ g.fillStyle=o.mask||'#b71c1c'; g.beginPath(); g.arc(0,-37,9.5,.1*Math.PI,.9*Math.PI); g.closePath(); g.fill(); }
+    else { g.strokeStyle='#5d3a2a'; g.lineWidth=1.2; g.beginPath(); side?g.arc(4,-32,2.2,.1*Math.PI,.9*Math.PI):g.arc(0,-32,3,.15*Math.PI,.85*Math.PI); g.stroke(); }
+  }
+  g.restore();
+}
+function carSide(g,x,y,dir,L,color,o={}){ // y = riteņu pieskāriena līnija
+  g.save(); g.translate(x,y); g.scale(dir,1);
+  const Hh=L*.3, wr=L*.1;
+  g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(0,2,L*.52,6,0,0,7); g.fill();
+  const gr=g.createLinearGradient(0,-Hh*1.1,0,-wr*.4); gr.addColorStop(0,'#ffffff55'); gr.addColorStop(.4,'#0000'); gr.addColorStop(1,'#0006');
+  // virsbūve
+  g.fillStyle=color; g.beginPath(); g.roundRect(-L*.5,-Hh*.62,L,Hh*.62-wr*.5,L*.05); g.fill();
+  g.beginPath(); g.moveTo(-L*.22,-Hh*.6); g.lineTo(-L*.12,-Hh*1.08); g.lineTo(L*.16,-Hh*1.08); g.lineTo(L*.3,-Hh*.6); g.closePath(); g.fill();
+  g.fillStyle=gr; g.beginPath(); g.roundRect(-L*.5,-Hh*.62,L,Hh*.62-wr*.5,L*.05); g.fill();
+  // logi
+  g.fillStyle='#16202c'; g.beginPath(); g.moveTo(-L*.18,-Hh*.64); g.lineTo(-L*.1,-Hh*1.0); g.lineTo(L*.14,-Hh*1.0); g.lineTo(L*.25,-Hh*.64); g.closePath(); g.fill();
+  g.fillStyle='rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(-L*.1,-Hh*.98); g.lineTo(L*.0,-Hh*.98); g.lineTo(-L*.06,-Hh*.66); g.lineTo(-L*.16,-Hh*.66); g.closePath(); g.fill();
+  if(o.driver){ const d=o.driver; g.fillStyle=d.skin; g.beginPath(); g.arc(L*.04,-Hh*.82,L*.04,0,7); g.fill(); g.fillStyle=d.cap; g.beginPath(); g.arc(L*.04,-Hh*.84,L*.043,Math.PI,0); g.fill(); rr(g,L*.04,-Hh*.88,L*.07,L*.014,2,d.cap); g.fillStyle=d.hood; g.beginPath(); g.ellipse(L*.04,-Hh*.64,L*.05,L*.03,0,Math.PI,0); g.fill(); }
+  // riteņi
+  [-L*.3,L*.3].forEach(wx=>{ g.fillStyle='#0c0c0f'; g.beginPath(); g.arc(wx,-wr,wr,0,7); g.fill(); g.fillStyle='#9aa0aa'; g.beginPath(); g.arc(wx,-wr,wr*.55,0,7); g.fill();
+    g.strokeStyle='#3a3d45'; g.lineWidth=2; for(let k=0;k<5;k++){ const a=(o.spin||0)+k*Math.PI*2/5; g.beginPath(); g.moveTo(wx,-wr); g.lineTo(wx+Math.cos(a)*wr*.5,-wr+Math.sin(a)*wr*.5); g.stroke(); } });
+  // gaismas
+  if(o.lights!==false){ g.save(); g.globalCompositeOperation='lighter'; g.fillStyle='#fff1b5'; g.shadowColor='#ffe28a'; g.shadowBlur=18; g.fillRect(L*.46,-Hh*.5,L*.05,Hh*.14); g.fillStyle='#ff3030'; g.shadowColor='#f00'; g.fillRect(-L*.5,-Hh*.5,L*.03,Hh*.14); g.restore(); }
+  g.restore();
+}
+// Izskats (frizētava): save.look. Jaka 'auto' = krāsas toni, kā agrāk.
+const LOOK0={skin:'#f2c9a0',hood:'auto',hat:'cap',cap:'#1b1b1f',mask:'#b71c1c',pants:'#2b3a67'};
+const lookOf=()=>Object.assign({},LOOK0,save.look||{});
+const playerOutfit=()=>{ const c=colorById(save.color).hex, L=lookOf(); return {hood:L.hood==='auto'?(c==='#111111'?'#37474f':c):L.hood,skin:L.skin,hat:L.hat,cap:L.cap,pants:L.pants,mask:L.mask,can:c}; };
+
+// ================= Fona zīmēšana (kešota) =================
+const mkCanvas=(w,h)=>{ const c=document.createElement('canvas'); c.width=w*2; c.height=h*2; const g=c.getContext('2d'); g.scale(2,2); return {c,g}; };
+const SKY_W=1800;
+function makeSkyline(seed,minH,maxH,fill,winCols,neon){
+  const {c,g}=mkCanvas(SKY_W,BASE), R=mulberry(seed); let x=-20;
+  while(x<SKY_W){ const w=60+R()*110, h=minH+R()*(maxH-minH), top=BASE-h;
+    g.fillStyle=fill; g.fillRect(x,top,w,h);
+    g.fillStyle='rgba(255,255,255,.04)'; g.fillRect(x,top,3,h);
+    if(R()<.35){ g.fillStyle=fill; g.fillRect(x+w*.4,top-26,3,26); g.fillRect(x+w*.2,top-12,w*.3,12); }
+    for(let wy=top+12;wy<BASE-20;wy+=17) for(let wx=x+9;wx<x+w-12;wx+=15){ if(R()<.34){ g.fillStyle=winCols[(R()*winCols.length)|0]; g.globalAlpha=.55+R()*.4; g.fillRect(wx,wy,7,9); g.globalAlpha=1; } }
+    if(neon&&R()<.28){ const col=['#ff4fd8','#4dd0e1','#ffb347','#b2ff59'][(R()*4)|0]; g.save(); g.shadowColor=col; g.shadowBlur=14; g.fillStyle=col; g.fillRect(x+w-8,top+20+R()*40,4,60+R()*60); g.restore(); }
+    x+=w+(R()<.3?14:0); }
+  return c;
+}
+let FAR=null, MID=null, STARS=[], FGimg=null, camRoll=0;
+function makeForeground(){ const {c,g}=mkCanvas(SKY_W,720), R=mulberry(77); g.filter='blur(3px)'; g.fillStyle='rgba(6,8,18,.9)';
+  for(let x=0;x<SKY_W;x+=140+R()*170){ const h=36+R()*70; g.beginPath(); g.ellipse(x,730,50+R()*50,h,0,Math.PI,0); g.fill(); }
+  g.strokeStyle='rgba(6,8,18,.8)'; g.lineWidth=4; for(let i=0;i<4;i++){ const y0=8+R()*30; g.beginPath(); g.moveTo(0,y0); for(let x=0;x<=SKY_W;x+=60) g.lineTo(x,y0+16*Math.sin(x*.02+i)+i*11); g.stroke(); }
+  return c; }
+function buildBackdrops(){
+  FGimg=makeForeground();
+  FAR=makeSkyline(11,120,330,'#3a2a5e',['#ffd98a','#ff9fb2','#a6e3ff'],false);
+  MID=makeSkyline(29,170,430,'#1d1535',['#ffd98a','#ffb347','#ff7ab8','#8ee3ff'],true);
+  const R=mulberry(5); STARS=Array.from({length:110},()=>({x:R(),y:R()*.6,s:R()*1.6+.4,p:R()*6}));
+}
+const bgBrick=(()=>{ const c=document.createElement('canvas'); c.width=720; c.height=440; const g=c.getContext('2d'); const R=mulberry(99);
+  g.fillStyle='#6a362a'; g.fillRect(0,0,720,440);
+  for(let y=0;y<440;y+=28){ for(let x=(y/28%2)*-30;x<720;x+=60){ const l=34+R()*10; g.fillStyle=`hsl(${8+R()*8},${42+R()*10}%,${l}%)`; g.fillRect(x+2,y+2,56,24); } }
+  for(let i=0;i<900;i++){ g.fillStyle=`rgba(${R()*255|0},${R()*120|0},0,.035)`; g.fillRect(R()*720,R()*440,10+R()*30,6+R()*14); }
+  const vg=g.createRadialGradient(360,220,120,360,220,430); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.25)'); g.fillStyle=vg; g.fillRect(0,0,720,440);
+  return c; })();
+
+const LY0=100, LH=470; // veikala keša kanvasa pasaules Y sākums un augstums
+function windowItems(g,kind,x,y,w,h){
+  const R=mulberry(kind.length*31);
+  g.save();
+  if(kind==='paint'){ for(let r=0;r<3;r++) for(let i=0;i<9;i++){ const col=COLORS[(i+r*3)%COLORS.length].hex; const bx=x+14+i*(w-28)/9, by=y+22+r*30; rr(g,bx,by,18,22,3,col); rr(g,bx,by,18,5,2,'#ddd'); } g.fillStyle='#fff6'; g.fillRect(x+6,y+46,w-12,2); g.fillRect(x+6,y+76,w-12,2); }
+  else if(kind==='cafe'){ for(let i=0;i<4;i++){ const bx=x+30+i*(w-60)/4, by=y+h-32; rr(g,bx,by,18,22,4,'#f5f5f5'); g.strokeStyle='#f5f5f5'; g.lineWidth=2; g.beginPath(); g.arc(bx+19,by+10,5,-1.5,1.5); g.stroke(); g.fillStyle='#fff7'; g.beginPath(); g.arc(bx+9,by-5-i%2*3,3,0,7); g.fill(); } rr(g,x+10,y+h-12,w-20,6,2,'#3e2723'); }
+  else if(kind==='pizza'){ for(let i=0;i<3;i++){ const px=x+50+i*(w-100)/2, py=y+h-45; g.fillStyle='#e6a43c'; g.beginPath(); g.arc(px,py,24,0,7); g.fill(); g.fillStyle='#c8372d'; g.beginPath(); g.arc(px,py,19,0,7); g.fill(); g.fillStyle='#ffe082'; for(let k=0;k<6;k++){ g.beginPath(); g.arc(px+Math.cos(k)*10,py+Math.sin(k*1.7)*10,3.5,0,7); g.fill(); } } }
+  else if(kind==='bike'){ for(let i=0;i<2;i++){ const bx=x+60+i*(w-150), by=y+h-30; g.strokeStyle=['#ff7043','#26c6da'][i]; g.lineWidth=3; [0,56].forEach(o=>{ g.beginPath(); g.arc(bx+o,by,20,0,7); g.stroke(); }); g.beginPath(); g.moveTo(bx,by); g.lineTo(bx+22,by-30); g.lineTo(bx+56,by); g.moveTo(bx+22,by-30); g.lineTo(bx+44,by-30); g.stroke(); } }
+  else if(kind==='shoes'){ for(let i=0;i<4;i++){ const sx=x+24+i*(w-48)/4, sy=y+22+(i%2)*34; rr(g,sx,sy,40,12,5,['#ff5252','#69f0ae','#ffd740','#40c4ff'][i]); rr(g,sx-2,sy+10,44,5,2,'#fff'); } g.fillStyle='#fff6'; g.fillRect(x+6,y+56,w-12,2); }
+  else if(kind==='arcade'){ for(let i=0;i<4;i++){ const ax=x+22+i*(w-44)/4, col=['#7c4dff','#ff4081','#00e5ff','#ffea00'][i]; rr(g,ax,y+16,40,h-16,4,'#1a1530'); rr(g,ax+5,y+24,30,26,2,col); rr(g,ax+8,y+66,24,5,2,col); } }
+  else if(kind==='flower'){ for(let i=0;i<6;i++){ const fx_=x+24+i*(w-48)/6, fy=y+h-24; rr(g,fx_-9,fy,18,18,3,'#8d5a3b'); g.strokeStyle='#4caf50'; g.lineWidth=2.5; g.beginPath(); g.moveTo(fx_,fy); g.lineTo(fx_+rnd(-4,4),fy-34-i%3*10); g.stroke(); g.fillStyle=['#f06292','#ffd54f','#ba68c8','#ff8a65','#e57373','#fff59d'][i]; g.beginPath(); g.arc(fx_,fy-38-i%3*10,10,0,7); g.fill(); } }
+  else if(kind==='barber'){ rr(g,x+30,y+h-50,40,10,4,'#d32f2f'); rr(g,x+34,y+h-40,6,40,2,'#bbb'); rr(g,x+w-110,y+h-60,50,20,6,'#2b2b33'); rr(g,x+w-100,y+h-40,10,40,3,'#999'); g.fillStyle='#fff'; g.fillRect(x+w-70,y+18,36,52); g.fillStyle='#8ee3ff44'; g.fillRect(x+w-66,y+22,28,44); }
+  g.restore();
+}
+function renderShopLot(l){
+  const w=l.w, {c,g}=mkCanvas(w,LH), R=mulberry(l.seed), info=l.info, B=LH-10; // B = ietves mala lokāli
+  const T=62;
+  // korpuss
+  const body=g.createLinearGradient(0,T,0,B); body.addColorStop(0,info.wall); body.addColorStop(1,'#0006'); g.fillStyle=info.wall; g.fillRect(0,T,w,B-T);
+  g.fillStyle=body; g.fillRect(0,T,w,B-T);
+  for(let i=0;i<500;i++){ g.fillStyle=`rgba(255,255,255,${R()*.04})`; g.fillRect(R()*w,T+R()*(B-T),R()*14+2,R()*6+1); }
+  g.fillStyle='rgba(0,0,0,.18)'; g.fillRect(w-8,T,8,B-T);
+  // jumts
+  rr(g,-6,T-14,w+12,18,3,'#2a2733'); rr(g,-6,T-14,w+12,4,2,'rgba(255,255,255,.18)');
+  if(R()<.8){ rr(g,40+R()*200,T-34,50,22,3,'#555b66'); g.fillStyle='#333'; for(let k=0;k<4;k++) g.fillRect(46+k*10,T-30,3,14); } // kondicionieris
+  // augšējie logi
+  const nw=4, gap=(w-nw*66)/(nw+1);
+  for(let i=0;i<nw;i++){ const wx=gap+i*(66+gap), wy=90; const lit=R()<.55;
+    rr(g,wx-5,wy-5,76,92,4,'#1a1822'); const gl=g.createLinearGradient(0,wy,0,wy+82); if(lit){ gl.addColorStop(0,'#ffd98a'); gl.addColorStop(1,'#ff9e5c'); } else { gl.addColorStop(0,'#2a3a55'); gl.addColorStop(1,'#141b2b'); }
+    g.fillStyle=gl; g.fillRect(wx,wy,66,82); g.fillStyle='#1a1822'; g.fillRect(wx+31,wy,4,82); g.fillRect(wx,wy+38,66,4);
+    if(lit){ g.fillStyle='rgba(60,30,30,.5)'; g.fillRect(wx+4,wy+4,18,40); g.fillRect(wx+44,wy+4,18,26); }
+    rr(g,wx-8,wy+82,82,6,2,'#555b66'); }
+  g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(0,196,w,12); g.fillStyle='rgba(255,255,255,.12)'; g.fillRect(0,196,w,2);
+  // izkārtne
+  rr(g,40,212,w-240,52,8,'#0d0c14'); g.strokeStyle=info.neon; g.lineWidth=2; g.shadowColor=info.neon; g.shadowBlur=5; g.beginPath(); g.roundRect(44,216,w-248,44,6); g.stroke();
+  g.font='900 34px system-ui, sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='#f4f1ea'; g.shadowBlur=7; g.fillText(info.name,40+(w-240)/2,240); g.shadowBlur=0; g.fillStyle=info.neon; g.globalAlpha=.4; g.fillText(info.name,40+(w-240)/2,240); g.globalAlpha=1;
+  l.sign={x:40,y:212+LY0,w:w-240,h:52};
+  // markīze
+  const ax=30, aw=w-200, ay=276, ah=36, stripes=10;
+  for(let i=0;i<stripes;i++){ g.fillStyle=info.awn[i%2]; g.beginPath(); g.moveTo(ax+i*aw/stripes,ay); g.lineTo(ax+(i+1)*aw/stripes,ay); g.lineTo(ax+(i+1)*aw/stripes+3,ay+ah); g.lineTo(ax+i*aw/stripes-3,ay+ah); g.closePath(); g.fill();
+    g.beginPath(); g.arc(ax+(i+.5)*aw/stripes,ay+ah,aw/stripes/2+1.5,0,Math.PI); g.fill(); }
+  g.fillStyle='rgba(0,0,0,.2)'; g.fillRect(ax,ay,aw,6); { const sh_=g.createLinearGradient(0,ay+ah,0,ay+ah+28); sh_.addColorStop(0,'rgba(0,0,0,.4)'); sh_.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=sh_; g.fillRect(ax,ay+ah,aw,28); }
+  // skatlogs
+  const wx=ax+14, wy=326, ww=aw-28, wh=108; rr(g,wx-6,wy-6,ww+12,wh+12,6,'#15131c');
+  const wg=g.createLinearGradient(0,wy,0,wy+wh); wg.addColorStop(0,'#f0d9ac'); wg.addColorStop(1,'#d9a066'); g.fillStyle=wg; g.fillRect(wx,wy,ww,wh);
+  windowItems(g,l.kind,wx,wy,ww,wh);
+  g.fillStyle='rgba(255,255,255,.18)'; g.beginPath(); g.moveTo(wx+30,wy); g.lineTo(wx+90,wy); g.lineTo(wx+40,wy+wh); g.lineTo(wx-20,wy+wh); g.closePath(); g.fill();
+  l.window={x:wx+ww/2,y:wy+wh/2+LY0};
+  // durvis
+  const dx=w-160, dy=326; rr(g,dx-6,dy-6,80,B-dy+6,4,'#15131c'); const dg=g.createLinearGradient(0,dy,0,B); dg.addColorStop(0,'#ffd9a0'); dg.addColorStop(1,'#ff9a52'); g.fillStyle=dg; g.fillRect(dx,dy,68,B-dy);
+  g.fillStyle='#15131c'; g.fillRect(dx+32,dy,4,B-dy); g.fillStyle='#d8d8d8'; g.fillRect(dx+26,dy+60,3,26); g.fillRect(dx+39,dy+60,3,26);
+  rr(g,dx+10,dy+16,48,16,3,'#0d0c14'); g.fillStyle='#7cff8a'; g.font='bold 11px system-ui'; g.fillText('OPEN',dx+34,dy+25);
+  // cokols
+  rr(g,0,B-8,w,8,0,'#1b1a22');
+  // rekvizīti
+  if(R()<.7){ rr(g,w-64,B-34,26,34,4,'#37474f'); rr(g,w-66,B-38,30,6,2,'#455a64'); }
+  if(R()<.6){ rr(g,10,B-40,10,40,2,'#444'); rr(g,4,B-44,22,6,3,'#666'); }
+  l.img=c;
+}
+function renderWallLot(l){
+  const w=l.w, {c,g}=mkCanvas(w,LH), R=mulberry(l.seed), B=LH-10, T=62;
+  const upper=['#3f5a73','#7a5a2e','#4c4a6e','#6b3f4a'][(l.i/2|0)%4];
+  // augšējā apmetuma daļa
+  g.fillStyle=upper; g.fillRect(0,T,w,196-T);
+  for(let i=0;i<260;i++){ g.fillStyle=`rgba(255,255,255,${R()*.05})`; g.fillRect(R()*w,T+R()*(196-T),R()*16+2,R()*6+1); }
+  const nw=4, gap=(w-nw*60)/(nw+1);
+  for(let i=0;i<nw;i++){ const wx=gap+i*(60+gap), wy=88, lit=R()<.45; rr(g,wx-5,wy-5,70,86,4,'#16141d');
+    const gl=g.createLinearGradient(0,wy,0,wy+76); if(lit){ gl.addColorStop(0,'#ffd98a'); gl.addColorStop(1,'#ff9e5c'); } else { gl.addColorStop(0,'#2a3a55'); gl.addColorStop(1,'#10151f'); }
+    g.fillStyle=gl; g.fillRect(wx,wy,60,76); g.fillStyle='#16141d'; g.fillRect(wx+28,wy,4,76); g.fillRect(wx,wy+34,60,4); rr(g,wx-7,wy+76,74,6,2,'#555b66'); }
+  rr(g,-6,T-14,w+12,18,3,'#2a2733'); rr(g,-6,T-14,w+12,4,2,'rgba(255,255,255,.18)');
+  // saite starp stāviem
+  g.fillStyle='#2a2733'; g.fillRect(0,196,w,14); g.fillStyle='rgba(255,255,255,.14)'; g.fillRect(0,196,w,2);
+  // ķieģeļu apakšdaļa
+  g.drawImage(bgBrick,0,0,720,440,-10,208,w+20,(B-208));
+  // zīmēšanas panelis (tieši tāds pats ķieģeļu zīmējums kā zīmēšanas logā)
+  const px=(w-PANEL.w)/2, py=PANEL.y-LY0;
+  g.fillStyle='#0006'; g.fillRect(px-12,py-12,PANEL.w+24,PANEL.h+24);
+  g.drawImage(bgBrick,0,0,720,440,px,py,PANEL.w,PANEL.h);
+  g.strokeStyle='#cfc8bd'; g.lineWidth=8; g.strokeRect(px-4,py-4,PANEL.w+8,PANEL.h+8); g.strokeStyle='#0004'; g.lineWidth=2; g.strokeRect(px-8.5,py-8.5,PANEL.w+17,PANEL.h+17);
+  // prožektori
+  [px+60,px+PANEL.w-60].forEach(x=>{ g.fillStyle='#222'; g.fillRect(x-2,py-30,4,18); rr(g,x-10,py-38,20,10,3,'#2e2e36'); g.fillStyle='#fff7d6'; g.fillRect(x-8,py-30,16,3); });
+  // līmeņa plāksnīte
+  rr(g,w/2-52,py-64,104,22,6,'#0d0c14'); g.fillStyle=l.free?'#ff4fd8':TIER_COL[l.tier]; g.font='bold 13px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(l.free?'FREESTYLE':'LEVEL '+(l.tier+1),w/2,py-53);
+  // notekcaurule, mēsli
+  g.fillStyle='#6a7078'; g.fillRect(w-30,T,8,B-T); g.fillStyle='#0003'; g.fillRect(w-24,T,2,B-T);
+  if(l.hide){ rr(g,16,B-52,96,52,4,'#2f5a3f'); rr(g,12,B-58,104,10,3,'#3b6e4d'); g.fillStyle='#0003'; g.fillRect(16,B-26,96,2); }
+  rr(g,0,B-8,w,8,0,'#1b1a22');
+  l.img=c;
+}
+
+// ================= Policija un aizdomas (zvaigznes kā GTA) =================
+const _P=['Sun','Moon','Star','Apple','Birch','Oak','Linden','Rose','Wind','Water','Sand'], _N=['Street','Boulevard','Quarter','Square','Park','Embankment','Harbor','Bridge','Garden'];
+const DIST_NAMES=Array.from({length:99},(_,k)=>`${_P[k%11]} ${_N[Math.floor(k/11)%9]}`);
+// XP līmeņiem (atvieglots): 2. līmenis ≈ 2 sienas
+const LV=[0]; for(let n=1;n<NLEV;n++) LV.push(LV[n-1]+Math.round(60*Math.pow(n,1.15)));
+const xpFor=tier=>Math.round(20+14*(tier+1));
+const distName=k=>DIST_NAMES[Math.min(98,k)];
+const levelOf=xp=>LV.filter(v=>xp>=v).length;
+const xpPct=()=>{ const lv=level(); if(lv>=LV.length) return 100; const a=LV[lv-1], b=LV[lv]; return Math.round(clamp(((save.xp||0)-a)/(b-a),0,1)*100); };
+const xpTxt=()=>{ const lv=level(); return lv>=LV.length?`${save.xp||0} (max)`:`${(save.xp||0)-LV[lv-1]}/${LV[lv]-LV[lv-1]}`; };
+let _lx=-1,_lv=1; const level=()=>{ const xp=save.xp||0; if(xp!==_lx){ _lx=xp; _lv=levelOf(xp); } return _lv; };
+const locked=w=>!w.free&&level()<w.tier+1; // freestyle sienas – visiem
+const districtOf=x=>{ const l=lots.find(l=>x>=l.x&&x<l.x+l.w); const i=l?l.i:(x<lots[0].x?0:lots.length-1); return lots[i].dist; };
+npcs.forEach(n=>{ n.snitch=Math.random()<Math.min(.8,.2+.06*districtOf(n.x)); });
+const STAR_AT=[35,55,70,85,95], COP_SPEED=[220,220,250,280,310,340], COP_COUNT=[0,1,1,2,3,4];
+const copCount=s=>s<1?0:Math.max(1,Math.round(COP_COUNT[s]*(dayK()>.5?1.5:.6)));
+const STAR_MSG=['','one officer','officers closing in','several officers on your tail','officers and a helicopter!','the whole city is after you!'];
+const starsOf=h=>STAR_AT.filter(v=>h>=v).length;
+let prevStars=0, chaseMax=0;
+const heatTxt=document.getElementById('heatTxt'), heatFill=document.getElementById('heatFill'); let heatShown=''; const policeSign=document.getElementById('policeSign'), clockEl=document.getElementById('clock'); let clockShown='';
+function updateClockUi(){ const hh=Math.floor(clock), mm=Math.floor((clock-hh)*60), dk=dayK(), isDay=dk>.5;
+  if(prevDay===null) prevDay=isDay; else if(isDay!==prevDay){ prevDay=isDay; toast(isDay?'🌅 The sun is up – <b>police are more active by day</b> (more officers), and people see farther.':'🌙 Night falls – <b>police are less active at night</b>, it is darker and people see less far.'); }
+  const ph=clock>=5&&clock<8?'Morning':clock>=8&&clock<17?'Day':clock>=17&&clock<20?'Evening':'Night';
+  const s=`${hh}:${mm}:${ph}`; if(s===clockShown) return; clockShown=s;
+  clockEl.innerHTML=`<b>${isDay?'☀️':'🌙'} ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}</b> · ${ph}<small>${isDay?'Police: more':'Police: fewer'}</small><div id="clockBar"><div id="clockDot" style="left:${(clock/24*100).toFixed(1)}%"></div></div>`; }
+function updateHeatUi(){ const st=starsOf(heat), o=police.off, h=Math.round(heat);
+  const label=police.heli&&!police.heli.leave?'Helicopter overhead!':o?(o.state==='chase'||o.state==='goHide'?'Being chased!':o.state==='search'?'Searching for you…':'Leaving…'):police.active?'Police on the way!':st>0?'Suspicious':'Calm';
+  const s=`${label}|${h}|${hidden}|${st}|${police.active}`; if(s===heatShown) return; heatShown=s;
+  heatTxt.innerHTML=`<span class="stars${police.active?' hot':''}">${'★'.repeat(st)}${'☆'.repeat(5-st)}</span> ${label}${hidden?' · hiding':''}`;
+  policeSign.style.display=police.active?'block':'none';
+  if(police.active) policeSign.innerHTML=`<div class="psBig">👮 POLICE 🚨</div><div class="psSmall">${'★'.repeat(st)}${'☆'.repeat(5-st)} · ${label}</div>`;
+  heatFill.style.width=h+'%'; heatFill.style.background=st===0?'#66bb6a':st<3?'#ffca28':'#ef5350'; }
+// Grafiti ir aizliegts – aizdomas rada pats zīmēšanas fakts, nevis zīmējuma kvalitāte. Jo vairāk cilvēku redz, jo vairāk policijas.
+let heatInfo={add:0,seen:0,patrol:false,called:0};
+function addHeatFromPaint(w){ recent=recent.filter(r=>time-r.t<120);
+  const tooFast=recent.length&&time-recent[recent.length-1].t<35, nearCnt=recent.filter(r=>Math.abs(r.x-w.cx)<1600).length, again=w.timesPainted>0;
+  const patrol=traffic.some(c=>c.cop&&Math.abs(c.x-w.cx)<700), seen=npcs.filter(n=>n.seen&&Math.abs(n.x-w.cx)<900).length;
+  recent.push({t:time,x:w.cx}); w.timesPainted=(w.timesPainted||0)+1;
+  let add=0; const why=[];
+  if(seen){ add+=9*seen; why.push(seen===1?'1 person saw you':`${seen} people saw you`); }
+  if(patrol){ add+=30; why.push('patrol saw you'); }
+  if(add){ if(tooFast){ add+=12; why.push('too fast'); } if(nearCnt>=1){ add+=8*nearCnt; why.push('too many in one area'); } if(again){ add+=10; why.push('same wall again'); } }
+  let called=0; npcs.forEach(n=>{ if(buff.mask<=0&&n.snitch&&n.seen&&n.watch>1.5&&!n.called&&Math.abs(n.x-w.cx)<700){ n.called=true; n.callT=time; n.bubble='📞'; n.bt=3.5; n.pause=5; called++; } });
+  if(called){ sfx('ring'); add+=22*called; why.push('witness calls the police'); }
+  heatInfo={add:0,seen,patrol,called};
+  if(!add) return '<br>🙈 Nobody saw you – police not interested.';
+  if(w.tier>=10) why.push(`${distName(w.tier)}: stricter`);
+  add=Math.round(add*(1+.2*Math.floor(w.tier/10))*(.8+.4*dayK()));
+  heatInfo.add=add; heat=Math.min(100,heat+add);
+  return `<br>🚨 Suspicion +${add} (${why.join(', ')})`; }
+function newCop(x,dir,state){ return {x,y:GROUND,state,lastX:player.x,t:0,wd:1,wdT:0,speed:COP_SPEED[starsOf(heat)],step:0,face:'side',flip:dir,knows:false,searchT:0,bubble:'❗',bt:1.4,gone:false,grace:1.5,
+  hood:'#2a49a8',skin:'#f0c8a0',cap:'#0e1a3d',pants:'#0b1230',mask:'#f0c8a0'}; }
+function spawnPolice(){ const side=Math.random()<.5?-1:1, x=clamp(player.x+side*(W/(2*baseZoom())+1800),-200,WORLD_W+200), dir=-side;
+  police.active=true; police.car={x,dir,y:dir<0?662:700,state:'drive',siren:0}; police.extra=[]; police.reinfCar=14; police.offs=[]; police.reinf=0;
+  toast(isTouch?'🚨 <b>Police on the way!</b> Hide 🫣 or run!':'🚨 <b>Police on the way!</b> Hide (↓ / S) or run!'); }
+function walkTo(o,tx,sp,dt){ const d=Math.sign(tx-o.x); o.x+=d*sp*dt; if(d) o.flip=d; o.step+=sp*dt*.05; o.face='side'; }
+const foodPrice=()=>8+4*curCity;
+function eat(){ const p=foodPrice(); if(save.food>90){ toast("🍔 You are not hungry yet."); return; } if(save.money<p){ toast(`🍔 A meal costs €${p} – paint a wall to earn money.`); return; }
+  save.money-=p; save.food=100; foodBand=3; stat('eat'); persist(); dispMoney=save.money; shownMoney=-1; sfx('buy'); floatText(player.x,GROUND-110,`-€${p}`,'#ffb347'); toast('🍔 Yum! You are full for the day.'); }
+// Notverts: neliels sods (10% + 2% par zvaigzni) un aizved uz tuvāko metro tajā pašā pilsētā (ne uz 1. pilsētu)
+function bust(){ const st=starsOf(heat), pct=.1+.02*st, fine=Math.round(save.money*pct); save.money-=fine; stat('busted'); chaseMax=0; persist();
+  const city=inMetro&&metroFrom?metroFrom.city:curCity; let back=null,bd=1e12; stations.forEach(s_=>{ if(Math.floor(s_.dist/10)!==city) return; const d=Math.abs(s_.cx-player.x); if(d<bd){ bd=d; back=s_; } });
+  if(mode!=='world'){ dOv.classList.remove('on'); shopOv.classList.remove('on'); stopPaint(); mode='world'; cam.zoom=baseZoom(); cam.y=camY0(); tr=null; }
+  police.active=false; police.car=null; police.extra=[]; police.off=null; police.offs=[]; police.heli=null; heat=0; prevStars=0; hidden=false; inMetro=false; curCity=city; shownMoney=-1; player.x=back?back.cx:cityRange[city][0]+300; player.vx=0; player.h=0; cam.x=player.x; cam.flash=1; cam.shake=14; sfx('bust'); ding([220,165,110]);
+  toast(`🚓 <b>Busted!</b> Fine: <b style="color:#ffd34d">€ ${fine}</b> (${Math.round(pct*100)}% of your money). The police dropped you at the metro.`); }
+function toggleHide(){ if(mode!=='world') return;
+  if(hidden){ hidden=false; sfx('hide'); toast('You left the hiding spot.'); return; }
+  let best=null,bd=95; hideSpots.forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<bd){bd=d;best=s;} });
+  if(!best){ toast('Nowhere to hide here – look for a dumpster by a wall or crates by a shop (green arrow).'); return; }
+  hidden=true; sfx('hide'); hideAt=best; stat('hide');
+  if(best.found!==dayCount&&Math.random()<(police.active?.1:.06)){ best.found=dayCount; setTimeout(()=>{ if(hidden) showLoot(rollBoxTier(.2),null); },700); } else best.found=dayCount; player.x=best.x; player.vx=0; for(let i=0;i<6;i++) puff('dust',best.x+rnd(-14,14),GROUND,{vx:rnd(-30,30),vy:rnd(-5,5),vz:14,size:3,life:.5,max:.5});
+  let seen=false; police.offs.forEach(o=>{ if(o.state!=='leave'&&Math.abs(o.x-player.x)<300){ o.knows=true; seen=true; } });
+  toast(seen?'The officer saw where you hid!':'Hidden! Wait for them to leave.'); }
+function updateOfficer(o,dt,stars){
+  o.speed=COP_SPEED[stars]; o.bt=Math.max(0,o.bt-dt); if(o.grace>0){ o.grace-=dt; o.face='down'; // izkāpis ceļā – ja ieskrien viņā, satver
+    if(o.state==='chase'&&!hidden&&Math.abs(player.x-o.x)<40&&player.h<34){ player.grab=true; o.catchT=(o.catchT||0)+dt; if(o.catchT>.9){ bust(); return 'bust'; } } return null; }
+  const dist=Math.abs(player.x-o.x), hl=police.heli, help=hl&&!hl.leave&&!hidden&&Math.abs(hl.x-player.x)<200, sees=!hidden&&(dist<520||help);
+  if(o.state==='chase'){
+    if(hidden){ if(o.knows){ o.state='goHide'; o.target=hideAt?hideAt.x:player.x; o.searchT=0; } else { o.state='search'; o.lastX=player.x; o.t=0; o.wdT=0; } }
+    else if(!sees){ o.state='search'; o.lastX=player.x; o.t=0; o.wdT=0; o.bubble='❓'; o.bt=1.5; }
+    else { walkTo(o,player.x,o.speed,dt); if(dist<40&&player.h<34){ player.grab=true; o.bubble='✋'; o.bt=.3; o.catchT=(o.catchT||0)+dt; if(o.catchT>.9){ bust(); return 'bust'; } } else o.catchT=Math.max(0,(o.catchT||0)-dt); } } // satver – spēlētājs palēninās; izlec, lai izrautos
+  else if(o.state==='goHide'){
+    if(!hidden) o.state='chase';
+    else if(Math.abs(o.x-o.target)>45) walkTo(o,o.target,o.speed,dt);
+    else { o.face='down'; o.searchT+=dt; o.bubble='🔍'; o.bt=.3; if(o.searchT>4){ bust(); return 'bust'; } } }
+  else if(o.state==='search'){
+    o.t+=dt; o.wdT-=dt; if(o.wdT<=0){ o.wdT=rnd(1,2.2); o.wd=Math.random()<.5?-1:1; }
+    if(Math.abs(o.x+o.wd*90*dt-o.lastX)>240) o.wd*=-1; o.x+=o.wd*90*dt; o.flip=o.wd; o.step+=dt*4; o.face='side';
+    if(dist>900){ o.state='leave'; o.t=0; }
+    else if(hidden&&o.knows){ o.state='goHide'; o.target=hideAt?hideAt.x:player.x; o.searchT=0; }
+    else if(sees){ o.state='chase'; o.bubble='❗'; o.bt=1.3; }
+    else if(heat<25||o.t>25){ o.state='leave'; heat=Math.min(heat,24); } }
+  else if(o.state==='leave'){ const c=police.car; o.t+=dt;
+    if(!c||o.t>8) o.gone=true; else if(Math.abs(o.x-c.x)>20) walkTo(o,c.x,170,dt); else o.gone=true; }
+  return null;
+}
+function updateLaw(dt){
+  { const pc_=clock; clock=(clock+dt*24/480)%24; if(clock<pc_) dayCount++; } updateClockUi();
+  if(save.food==null) save.food=100; save.food=Math.max(0,save.food-dt*100/480);
+  { const band=save.food<=0?0:save.food<25?1:3; if(band<foodBand) toast(band===0?'🍔 You are starving! You walk slower and your hands shake – eat at a café.':'🍔 You are getting hungry – eat at a café (orange dot on the map).'); foodBand=band; }
+  for(const k_ in buff) if(buff[k_]>0) buff[k_]=Math.max(0,buff[k_]-dt);
+  const stars=starsOf(heat);
+  const painting_=(mode==='entering'||mode==='draw'||mode==='exiting')&&!hidden&&!(curWall&&curWall.isBonus);
+  npcs.forEach(n=>{ const d=Math.abs(n.x-player.x);
+    if(n.called&&time-n.callT>40) n.called=false;
+    if(painting_&&d<300+180*dayK()&&!n.called){ n.watch+=dt; if(n.watch>.6&&!n.seen){ n.seen=true; n.bubble='👀'; n.bt=1.5; }
+      if(n.snitch&&n.watch>1e9){ n.called=true; n.callT=time; n.bubble='📞'; n.bt=3.5; n.pause=5; heat=Math.min(100,heat+35); floatText(n.x,n.y-120,'Someone is calling the police!','#ff5252'); } }
+    else { n.watch=Math.max(0,n.watch-dt*.5); if(n.watch<=0) n.seen=false; } });
+  if(!police.active) heat=Math.max(0,heat-1.2/(1+stars*.3)*dt);
+  else if(hidden&&!(police.heli&&police.heli.found)) heat=Math.max(0,heat-5/(1+stars*.25)*dt);
+  if(stars>prevStars){ toast(`⭐ Wanted level <b>${stars}</b> – ${STAR_MSG[stars]}`); cam.shake=Math.max(cam.shake,5); sfx('star'); }
+  if(stars>prevStars) chaseMax=Math.max(chaseMax,stars);
+  if(prevStars>0&&stars===0){ stat('escape'); if(chaseMax>=5) stat('esc5'); chaseMax=0; persist(); }
+  prevStars=stars;
+  if(stars>=1&&!police.active&&!inMetro) spawnPolice();
+  // helikopters (4+ zvaigznes)
+  let hl=police.heli;
+  if(stars>=4&&police.active&&!hl){ const side=Math.random()<.5?-1:1; hl=police.heli={x:player.x+side*(W/(2*baseZoom())+400),y:190,dir:-side,t:0,found:false,spot:95,leave:false}; toast('🚁 <b>Helicopter</b> is searching for you! Get out of the spotlight.'); }
+  if(hl){
+    if(hl.leave){ hl.y-=140*dt; if(hl.y<-150) police.heli=null; }
+    else { const dx=player.x-hl.x; hl.x+=clamp(dx,-270*dt,270*dt); if(Math.abs(dx)>40) hl.dir=Math.sign(dx);
+      if(hidden){ if(Math.abs(dx)<110) hl.t+=dt; else hl.t=Math.max(0,hl.t-dt); if(hl.t>2.5&&!hl.found){ hl.found=true; police.offs.forEach(o=>{ o.knows=true; }); toast('🚁 The helicopter found your hiding spot!'); } }
+      else { hl.t=0; hl.found=false; }
+      if(stars<3||!police.active) hl.leave=true; } }
+  // policijas auto un pastiprinājumi
+  // Policijas auto brauc spēlētājam līdzi (ja aizskrien – sēžas mašīnā un dzenas pakaļ), pie 2+★ no otras puses atbrauc pastiprinājums.
+  // Kājām no policista aizbēgt grūti, ar skrejriteni/mašīnu – vieglāk (auto ātrums 345–525, sporta auto 680).
+  const carSp=()=>300+45*stars, drop=(c,state)=>{ const o=newCop(c.x,c.dir,state); o.grace=.8; police.offs.push(o); };
+  const all=[police.car,...police.extra].filter(Boolean);
+  all.forEach(c=>{ c.siren+=dt*9;
+    if(c.state==='drive'||c.state==='pursue'){ // mērķis – nedaudz spēlētājam priekšā, lai policists izkāpj ceļā
+      const tx=player.x+(Math.abs(player.vx)>60?Math.sign(player.vx)*170:0), dir=Math.sign(tx-c.x)||1; c.dir=dir; c.y=dir<0?662:700; c.x+=dir*Math.min(carSp()*dt,Math.abs(tx-c.x));
+      if(Math.abs(tx-c.x)<40||Math.abs(player.x-c.x)<120){ c.state='parked'; if(police.offs.length<copCount(stars)+police.extra.length) drop(c,hidden?'search':'chase'); if(c===police.car) police.reinf=5; } }
+    else if(c.state==='parked'){
+      // spēlētājs aizbēdzis tālu un nav paslēpies → mašīna brauc pakaļ
+      if(!hidden&&Math.abs(player.x-c.x)>650&&stars>=1) c.state='pursue'; }
+    else if(c.state==='leave'){ c.x+=c.dir*430*dt; if(Math.abs(c.x-player.x)>W/(2*baseZoom())+600) c.gone=true; } });
+  const car=police.car;
+  if(car&&car.state==='parked'){ police.reinf-=dt;
+    if(police.reinf<=0&&police.offs.length<copCount(stars)&&!police.offs.some(o=>o.state==='leave')){ drop(car,'chase'); police.reinf=5; }
+    if(police.offs.length===0){ [car,...police.extra].forEach(c=>{ c.state='leave'; c.dir=Math.sign(c.x-player.x)||1; c.y=c.dir<0?662:700; }); toast('The police drove away.'); } }
+  // pastiprinājums no priekšas (skrējiena virzienā)
+  if(police.active&&car&&car.state!=='leave'&&stars>=2&&!hidden){ police.reinfCar=(police.reinfCar||14)-dt;
+    if(police.reinfCar<=0&&police.extra.length<2){ police.reinfCar=14; const ahead=Math.sign(player.vx)||-(car.dir)||1; police.extra.push({x:player.x+ahead*(W/(2*baseZoom())+700),dir:-ahead,y:-ahead<0?662:700,state:'drive',siren:0}); toast('🚓 Police backup is coming from the other side!'); sfx('star'); } }
+  police.extra=police.extra.filter(c=>!c.gone);
+  if(car&&car.gone){ police.car=null; if(!police.extra.length){ police.active=false; police.offs=[]; } else police.car=police.extra.shift(); }
+  player.grab=false;
+  for(let i=police.offs.length-1;i>=0;i--){ const o=police.offs[i]; if(updateOfficer(o,dt,stars)==='bust') return; if(o.gone) police.offs.splice(i,1); }
+  police.off=police.offs[0]||null;
+  updateHeatUi(); updateFoodUi();
+}
+const hudBox=document.getElementById('hud');
+function updateFoodUi(){ const f_=Math.round(save.food), ft=document.getElementById('foodTxt'), fs_=`🍔 Food ${f_}%`;
+  if(ft.textContent!==fs_){ ft.textContent=fs_; ft.style.color=f_<=0?'#ff5252':f_<25?'#ffca28':'#cfd'; }
+  hudBox.classList.toggle('food-low',f_<50); hudBox.classList.toggle('heat-on',heat>=1||police.active); }
+function drawOfficer(o){ if(!o) return;
+  drawPerson(ctx,o.x,o.y,PS,{face:o.face,flip:o.flip,step:o.step,hood:o.hood,skin:o.skin,cap:o.cap,pants:o.pants,mask:o.mask,still:o.state==='search'||o.face==='down'});
+  if(o.state==='search'||o.state==='goHide'){ ctx.save(); ctx.globalCompositeOperation='lighter'; const dir=o.flip||1, g=ctx.createLinearGradient(o.x,0,o.x+dir*170,0); g.addColorStop(0,'rgba(255,255,200,.35)'); g.addColorStop(1,'rgba(255,255,200,0)'); ctx.fillStyle=g;
+    ctx.beginPath(); ctx.moveTo(o.x+dir*14,o.y-60); ctx.lineTo(o.x+dir*190,o.y-20); ctx.lineTo(o.x+dir*190,o.y+10); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  if(o.bt>0){ ctx.save(); ctx.font='30px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,o.bt); ctx.fillText(o.bubble,o.x,o.y-104); ctx.restore(); } }
+function drawHeli(){ const h=police.heli; if(!h) return; const x=h.x, y=h.y+Math.sin(time*3)*4;
+  ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createLinearGradient(0,y,0,GROUND+14); g.addColorStop(0,'rgba(220,235,255,.38)'); g.addColorStop(1,'rgba(220,235,255,.1)'); ctx.fillStyle=g;
+  ctx.beginPath(); ctx.moveTo(x-10,y+14); ctx.lineTo(x+10,y+14); ctx.lineTo(x+h.spot,GROUND+16); ctx.lineTo(x-h.spot,GROUND+16); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(235,245,255,.35)'; ctx.beginPath(); ctx.ellipse(x,GROUND+10,h.spot,12,0,0,7); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(x,y); ctx.scale(h.dir,1); ctx.fillStyle='#1c2a4d'; ctx.beginPath(); ctx.ellipse(0,0,46,19,0,0,7); ctx.fill(); ctx.fillRect(-92,-6,60,8);
+  ctx.beginPath(); ctx.moveTo(-92,-6); ctx.lineTo(-100,-26); ctx.lineTo(-84,-6); ctx.fill();
+  ctx.fillStyle='#8fd3ff'; ctx.beginPath(); ctx.ellipse(18,-3,18,11,0,0,7); ctx.fill(); ctx.fillStyle='rgba(255,255,255,.2)'; ctx.fillRect(10,-10,12,3);
+  ctx.fillStyle='#0d1530'; ctx.fillRect(-4,-26,8,8); ctx.globalAlpha=.55; ctx.fillStyle='#dfe8ff'; const rw=130*Math.abs(Math.cos(time*40))+30; ctx.fillRect(-rw/2,-30,rw,3); ctx.globalAlpha=1;
+  ctx.strokeStyle='#6a7898'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(-26,22); ctx.lineTo(28,22); ctx.moveTo(-14,19); ctx.lineTo(-14,22); ctx.moveTo(14,19); ctx.lineTo(14,22); ctx.stroke();
+  ctx.fillStyle=Math.sin(time*8)>0?'#ff1744':'#2979ff'; ctx.beginPath(); ctx.arc(-98,-26,3,0,7); ctx.fill(); ctx.restore();
+  if(h.t>0&&hidden){ ctx.save(); ctx.fillStyle='#ff5252'; ctx.fillRect(x-30,y+34,60*Math.min(1,h.t/2.5),5); ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(x-30,y+34,60,5); ctx.restore(); } }
+
+// ================= Cikls =================
+const hud=document.getElementById('hudMain'), promptEl=document.getElementById('prompt'), toastEl=document.getElementById('toast');
+let toastT=0, shownMoney=-1, dispMoney=save.money;
+function toast(msg){ toastEl.innerHTML=msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('on'),3800); }
+function updateHud(){ const c=colorById(save.color), car=carById(save.car);
+  hud.innerHTML=`<b>€ ${Math.round(dispMoney)}</b><span class="more">▾</span><span class="hx"><br>Color: <span style="color:${c.hex==='#111111'?'#999':c.hex}">●</span> ${c.name} (x${c.mult})<br>Vehicle: ${car.name}<br>Walls painted: ${save.painted}</span><span class="hcity"><br>📍 City ${curCity+1} · ${CITY_NAMES[curCity]}</span><br>Level <b style="font-size:15px;color:#7cff8a;text-shadow:none">${level()}</b> · XP ${xpTxt()}<div class="xpbar"><div style="width:${xpPct()}%"></div></div>`; }
+
+let last=performance.now(), nearLot=null, tr=null;
+function frame(t){ const dt=Math.min(.05,(t-last)/1000); last=t; if(mode!=='pause'){ time+=dt; update(dt); } render(); requestAnimationFrame(frame); }
+
+function update(dt){
+  if(mode==='pause') return;
+  const car=carById(save.car);
+  if(mode==='ride'){ ride.t+=dt; cam.shake=Math.max(cam.shake,2);
+    if(ride.t>.45&&!ride.moved){ ride.moved=true; hidden=false; player.vx=0; player.h=0; if(ride.cb) ride.cb(); cam.x=player.x; cam.y=camY0(); }
+    if(ride.t>1.0){ rideOv.classList.remove('on'); mode='world'; } }
+  if(mode==='world'){
+    const dd=districtOf(player.x); if(dd!==curDist){ curDist=dd; toast(`📍 <b>${DIST_NAMES[dd]}</b> – district ${dd+1}: ${level()>=dd+1?'you may paint here, but drawings are harder and the police are stricter':'🔒 painting here needs level '+(dd+1)}`); }
+    let dir=hidden?0:(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+    if(dir) autoT=null;
+    else if(autoT&&!hidden){ const bd2=bounds(), tx2=clamp(autoT.x,bd2[0],bd2[1]), dx2=tx2-player.x; if(Math.abs(dx2)>Math.max(14,Math.abs(player.vx)*.08)) dir=Math.sign(dx2); else autoT.arrived=true; }
+    const sp=car.speed*(player.grab?.35:1)*(car.kind==='foot'?shoeOf().k:1)*(buff.energy>0?1.4:1)*(save.food<=0?.45:1);
+    player.vx=lerp(player.vx,dir*sp,Math.min(1,dt*(car.kind==='car'?4:9)));
+    { const bd_=bounds(), nx_=player.x+player.vx*dt; player.x=clamp(nx_,bd_[0],bd_[1]); if(!inMetro&&nx_!==player.x&&time>edgeT){ edgeT=time+6; toast('🚧 City limit – take the metro to travel to another city.'); } }
+    player.moving=Math.abs(player.vx)>25;
+    if(dir){ player.flip=dir>0?1:-1; }
+    if(player.moving){ player.face='side'; player.idle=0; player.step+=Math.abs(player.vx)*dt*.05; { const si=Math.floor(player.step/Math.PI); if(si!==lastStepIdx){ lastStepIdx=si; if(player.h<=0&&carById(save.car).kind==='foot') sfx('step'); } } player.spin+=player.vx*dt*.05; }
+    else { player.idle+=dt; player.face=player.idle>.5?'down':'side'; }
+    // lēciens
+    const onGround=player.h<=0;
+    if(onGround&&!hidden&&(keys.w||keys.arrowup||keys[' '])){ player.vy=560*(carById(save.car).kind==='foot'?shoeOf().jump:1); player.h=.01; sfx('jump'); for(let i=0;i<5;i++) puff('dust',player.x+rnd(-10,10),GROUND,{vx:rnd(-30,30),vy:rnd(-5,5),vz:15,size:3,life:.4,max:.4}); }
+    if(player.h>0){ player.vy-=1500*dt; player.h+=player.vy*dt; if(player.h<=0){ player.h=0; player.vy=0; sfx('land'); for(let i=0;i<6;i++) puff('dust',player.x+rnd(-12,12),GROUND,{vx:rnd(-50,50),vy:rnd(-5,5),vz:12,size:3,life:.45,max:.45}); } }
+    player.dust-=dt;
+    if(player.moving&&player.h<=0&&player.dust<=0){ player.dust=car.kind==='car'?.05:.12;
+      if(car.kind==='car'){ puff('smoke',player.x-player.flip*car.L*.5,GROUND-12,{vx:-player.flip*40+rnd(-10,10),vy:rnd(-8,8),vz:30,size:7,life:.8,max:.8}); if(car.speed>=560) puff('spark',player.x-player.flip*car.L*.45,GROUND-6,{vx:-player.flip*180+rnd(-60,60),vy:rnd(-30,30),col:'#ffb74d',life:.3,max:.3}); }
+      else puff('dust',player.x-player.flip*6,GROUND,{vx:-player.flip*rnd(10,40),vy:rnd(-6,6),vz:12,size:3.2,life:.45,max:.45}); }
+    walls.forEach(w=>{ if(w.cool>0) w.cool-=dt; }); metroObjs.forEach(w=>{ if(w.cool>0) w.cool-=dt; });
+    nearLot=null; let bestD=170;
+    for(const l of (inMetro?metroObjs:lots)){ const px=l.kind==='wall'?l.cx:l.door+34, d=Math.abs(px-player.x); if((l.kind==='wall'||l.kind==='paint'||l.kind==='shoes'||l.kind==='barber'||l.kind==='metro'||l.kind==='mwall'||l.kind==='mtrain'||l.kind==='mexit'||l.kind==='cafe'||l.kind==='pizza')&&d<bestD){ bestD=d; nearLot=l; } }
+    nearHide=null; { let hb=95; hideSpots.forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<hb){ hb=d; nearHide=s; } }); }
+    if(autoT&&autoT.arrived){ const a=autoT; autoT=null; if(a.act==='lot'&&nearLot===a.obj){ buzz(15); actionE(); } else if(a.act==='hide'&&nearHide){ buzz(15); toggleHide(); } }
+    updateCtx();
+    if(hidden){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – leave hiding spot'; }
+    else if(nearLot){ promptEl.style.display='block';
+      promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='cafe'||nearLot.kind==='pizza'?`E – eat (€${foodPrice()})`:nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):nearLot.kind==='barber'?'E – barber (change your look)':'E – shoe shop (faster running)'); }
+    else if(nearHide){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – hide ('+(nearHide.kind==='dumpster'?'dumpster':'crates')+')'; }
+    else promptEl.style.display='none';
+    const zt=baseZoom()*(player.moving&&car.speed>=560?.9:1); cam.zoom=lerp(cam.zoom,zt,Math.min(1,dt*3));
+    const hw=W/(2*cam.zoom), bw_=inMetro?[M0,M1]:cityRange[curCity], tx=clamp(player.x+player.vx*.25,bw_[0]+hw,bw_[1]-hw);
+    cam.x+=(tx-cam.x)*Math.min(1,dt*8); cam.y+=(camY0()-cam.y)*Math.min(1,dt*6);
+  }
+  if(mode==='entering'){
+    tr.t=Math.min(1,tr.t+dt/1.0); const e=easeIO(tr.t);
+    cam.zoom=lerp(tr.z0,tr.zt,e); cam.x=lerp(tr.cx0,tr.fx,e); cam.y=lerp(tr.cy0,tr.fy,e);
+    const wk=easeIO(Math.min(1,tr.t*1.2)), px=player.x; player.x=lerp(tr.px0,tr.sx,wk);
+    const moved=player.x-px; if(Math.abs(moved)>.05){ player.step+=Math.abs(moved)*.12; player.flip=moved>0?1:-1; player.face='side'; } else player.face=tr.t>.82?'up':player.face;
+    if(tr.t>.85) sprayAtWall();
+    if(tr.t>=1){ mode='draw'; showDraw(); }
+  } else if(mode==='exiting'){
+    tr.t=Math.min(1,tr.t+dt/.85); const e=easeIO(tr.t);
+    const hw=W/(2*baseZoom()), bw_=inMetro?[M0,M1]:cityRange[curCity], tx=clamp(player.x,bw_[0]+hw,bw_[1]-hw);
+    cam.zoom=lerp(tr.zt,baseZoom(),e); cam.x=lerp(tr.fx,tx,e); cam.y=lerp(tr.fy,camY0(),e);
+    if(tr.t<.35&&tr.burst) sprayAtWall();
+    if(tr.t>=1){ mode='world'; player.vx=0; player.idle=0; }
+  } else if(mode==='draw'){
+    let grow=false; drips.forEach(d=>{ if(d.len<d.max){ d.len=Math.min(d.max,d.len+22*dt); grow=true; } });
+    if(grow||dirty){ redraw(); dirty=grow; }
+    updateDrawInfo();
+    if(painting){
+      const hx=colorById(drawColor).hex, c=hx==='#111111'?'#9aa':hx, sx_=pen?DR.x+pen.x:mouse.x, sy_=pen?DR.y+pen.y:mouse.y;
+      for(let i=0;i<3;i++) sparts.push({type:'spray',x:sx_+rnd(-7,7),y:sy_+rnd(-7,7),z:0,vx:rnd(-25,25),vy:rnd(-25,25),vz:0,g:0,life:.45,max:.45,size:rnd(1.5,3.2),col:c,drag:.96});
+      if(Math.random()<.35) sparts.push({type:'dust',x:sx_+rnd(-12,12),y:sy_+rnd(-12,12),z:0,vx:rnd(-10,10),vy:rnd(-10,10),vz:0,g:0,life:.5,max:.5,size:3,col:'#fff',drag:1});
+    }
+  }
+  for(const n of npcs){
+    n.t-=dt; if(n.t<=0){ n.t=rnd(2,5); n.dir=Math.random()<.5?-1:1; n.pause=Math.random()<.35?rnd(.8,2.2):0; }
+    if(n.pause>0){ n.pause-=dt; n.face='down'; } else { n.face='side'; n.flip=n.dir; n.x+=n.dir*n.speed*dt; n.step+=n.speed*dt*.05; if(n.x<80||n.x>WORLD_W-80) n.dir*=-1; }
+    if(n.bt>0) n.bt-=dt;
+  }
+  for(const c of traffic){ c.x+=c.dir*c.speed*dt; c.spin+=c.dir*c.speed*dt*.03; if(c.x<-200) c.x=WORLD_W+200; if(c.x>WORLD_W+200) c.x=-200; }
+  updateLaw(dt); updateAudio(); guideTick(dt);
+  camRoll=lerp(camRoll,(mode==='world'&&!hidden)?clamp(player.vx/800,-1,1)*.012+Math.sin(time*.6)*.0015:0,Math.min(1,dt*3));
+  stepParts(parts,dt); stepParts(sparts,dt);
+  for(let i=floats.length-1;i>=0;i--){ floats[i].t+=dt; if(floats[i].t>1.8) floats.splice(i,1); }
+  cam.shake*=Math.pow(.02,dt); if(cam.shake<.1) cam.shake=0; cam.flash=Math.max(0,cam.flash-dt*2.2);
+  dispMoney+=(save.money-dispMoney)*Math.min(1,dt*6); if(Math.abs(save.money-dispMoney)<.5) dispMoney=save.money;
+  const sm=Math.round(dispMoney); if(sm!==shownMoney){ shownMoney=sm; updateHud(); }
+}
+function sprayAtWall(){
+  const hx=colorById(mode==='draw'?drawColor:save.color).hex, c=hx==='#111111'?'#889':hx;
+  for(let i=0;i<2;i++) puff('spray',player.x+14,GROUND-80+rnd(-3,3),{vx:rnd(40,110),vy:rnd(-30,10),size:rnd(2,4),col:c,life:.5,max:.5,drag:.96});
+}
+
+// ================= Pasaules zīmēšana =================
+function render(){
+  if(!FAR) buildBackdrops();
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+  const Zs=cam.zoom, sh=cam.shake, cx=cam.x+rnd(-1,1)*sh/Zs, cy=cam.y+rnd(-1,1)*sh/Zs;
+  const SX=x=>(x-cx)*Zs+W/2, SY=y=>(y-cy)*Zs+H/2;
+  // ---- debesis (ekrāna telpā) ----
+  const dk=inMetro?0:dayK(), nt=1-dk, warm=clamp(1-Math.abs(dk-.4)/.4,0,1);
+  const hy=Math.max(40,SY(BASE));
+  const mixc=(p,q,t)=>p.map((v,i)=>Math.round(v+(q[i]-v)*t));
+  const NIGHT=[[7,6,32],[37,26,74],[110,52,98],[190,105,88]], DAYC=[[66,142,215],[118,186,236],[180,216,243],[250,230,200]];
+  const sky=ctx.createLinearGradient(0,0,0,hy);
+  [0,.45,.8,1].forEach((st,i)=>{ let c=mixc(NIGHT[i],DAYC[i],dk); if(i>=2) c=mixc(c,[255,140,95],warm*(i===3?.7:.4)); sky.addColorStop(st,`rgb(${c})`); });
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,Math.max(H,hy));
+  STARS.forEach(s_=>{ ctx.globalAlpha=nt*(.45+.45*Math.sin(time*1.6+s_.p)); ctx.fillStyle='#fff'; ctx.fillRect(((s_.x*W*1.3-cx*.02)%W+W)%W,s_.y*hy*.9,s_.s,s_.s); }); ctx.globalAlpha=1;
+  const bodyAt=(h0)=>{ const t=((clock-h0+24)%24)/12; return t<=1?{x:W*(.08+.84*t)-cx*.02,y:hy*(.8-.62*Math.sin(t*Math.PI))}:null; };
+  const sun=bodyAt(6), moon=bodyAt(18);
+  if(sun){ const g=ctx.createRadialGradient(sun.x,sun.y,8,sun.x,sun.y,200); g.addColorStop(0,'rgba(255,236,170,.55)'); g.addColorStop(1,'rgba(255,236,170,0)'); ctx.fillStyle=g; ctx.fillRect(sun.x-200,sun.y-200,400,400); ctx.fillStyle='#fff3c0'; ctx.beginPath(); ctx.arc(sun.x,sun.y,34,0,7); ctx.fill(); }
+  if(moon){ const g=ctx.createRadialGradient(moon.x,moon.y,10,moon.x,moon.y,130); g.addColorStop(0,'rgba(235,235,215,.3)'); g.addColorStop(1,'rgba(235,235,215,0)'); ctx.fillStyle=g; ctx.fillRect(moon.x-130,moon.y-130,260,260); ctx.fillStyle='#ece6cf'; ctx.beginPath(); ctx.arc(moon.x,moon.y,32,0,7); ctx.fill(); ctx.fillStyle='rgba(180,165,130,.35)'; ctx.beginPath(); ctx.arc(moon.x-8,moon.y-6,8,0,7); ctx.arc(moon.x+10,moon.y+9,5,0,7); ctx.fill(); }
+  const cc=mixc([255,170,190],[255,255,255],dk), ca=.16+.34*dk;
+  for(let k=0;k<5;k++){ const cxp=((k*430+time*(8+k*3)-cx*.05)%(W+500)+W+500)%(W+500)-250, cyp=hy*(.15+k*.1); const g=ctx.createRadialGradient(cxp,cyp,5,cxp,cyp,120); g.addColorStop(0,`rgba(${cc},${ca})`); g.addColorStop(1,`rgba(${cc},0)`); ctx.fillStyle=g; ctx.fillRect(cxp-200,cyp-120,400,240); }
+  // ---- pasaules transformācija ----
+  const T=()=>{ ctx.setTransform(dpr,0,0,dpr,0,0); ctx.translate(W/2,H/2); ctx.rotate(camRoll); ctx.scale(Zs,Zs); ctx.translate(-cx,-cy); };
+  const vx0=cx-W/2/Zs, vx1=cx+W/2/Zs;
+  T();
+  const layer=(img,f)=>{ const off=cx*(1-f); const k0=Math.floor((vx0-off)/SKY_W)-0, k1=Math.ceil((vx1-off)/SKY_W); for(let k=k0;k<=k1;k++) ctx.drawImage(img,off+k*SKY_W,0,SKY_W,BASE); };
+  layer(FAR,.25);
+  ctx.fillStyle=`rgba(170,205,235,${dk*.5})`; ctx.fillRect(vx0-10,0,vx1-vx0+20,BASE);
+  const haze=ctx.createLinearGradient(0,BASE-180,0,BASE); haze.addColorStop(0,'rgba(240,138,93,0)'); haze.addColorStop(1,'rgba(240,138,93,.35)'); ctx.fillStyle=haze; ctx.fillRect(vx0-10,BASE-180,vx1-vx0+20,180);
+  layer(MID,.55);
+  ctx.fillStyle=`rgba(150,185,215,${dk*.3})`; ctx.fillRect(vx0-10,0,vx1-vx0+20,BASE);
+  // ēkas
+  lots.forEach(l=>{ if(l.x>vx1+50||l.x+l.w<vx0-50) return; if(!l.img) (l.kind==='wall'?renderWallLot:l.kind==='metro'?renderMetroLot:renderShopLot)(l); ctx.drawImage(l.img,l.x,LY0,l.w,LH);
+    const sgL=ctx.createLinearGradient(l.x,0,l.x+40,0); sgL.addColorStop(0,'rgba(0,0,0,.3)'); sgL.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=sgL; ctx.fillRect(l.x,LY0+50,40,LH-60);
+    const sgR=ctx.createLinearGradient(l.x+l.w,0,l.x+l.w-40,0); sgR.addColorStop(0,'rgba(0,0,0,.3)'); sgR.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=sgR; ctx.fillRect(l.x+l.w-40,LY0+50,40,LH-60);
+    if(l.kind==='metro'){ const x=l.cx; rr(ctx,x-100,LY0+266,200,28,6,'#05080f'); ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='bold 14px system-ui'; ctx.fillStyle='#7ec8ff'; ctx.fillText('▼ METRO ENTRANCE ▼',x,LY0+280); ctx.restore(); } });
+  // sienu saturs
+  walls.forEach(w=>{ if(w.x>vx1||w.x+w.w<vx0) return;
+    if(w.art) ctx.drawImage(w.art,w.px,w.py,PANEL.w,PANEL.h);
+    else if(w.free&&mode!=='draw'){ ctx.save(); ctx.globalAlpha=.75; ctx.font='bold 22px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#fff'; ctx.fillText('🎨 Draw anything!',w.px+PANEL.w/2,w.py+PANEL.h/2+8); ctx.restore(); }
+    else if(mode!=='draw'){ ctx.save(); ctx.strokeStyle='#fff'; ctx.globalAlpha=.3; ctx.lineWidth=2; ctx.setLineDash([6,5]); const R=70, sx=w.px+PANEL.w/2, sy=w.py+PANEL.h/2; SHAPES[w.shape]().forEach(p=>{ ctx.beginPath(); p.forEach(([x,y],i)=>i?ctx.lineTo(sx+x*R,sy+y*R):ctx.moveTo(sx+x*R,sy+y*R)); ctx.stroke(); }); ctx.restore(); }
+    if(locked(w)&&mode!=='draw'){ ctx.save(); ctx.fillStyle='rgba(8,8,24,.62)'; ctx.fillRect(w.px,w.py,PANEL.w,PANEL.h); ctx.textAlign='center'; ctx.font='64px system-ui'; ctx.fillText('🔒',w.px+PANEL.w/2,w.py+PANEL.h/2+10);
+      ctx.font='bold 20px system-ui'; ctx.fillStyle='#fff'; ctx.fillText(`Needs level ${w.tier+1}`,w.px+PANEL.w/2,w.py+PANEL.h/2+50); ctx.restore(); }
+    if(w.need&&!locked(w)&&mode!=='draw'){ const c=colorById(w.need), own=save.colors.includes(w.need), x=w.px+PANEL.w/2, y=w.py+PANEL.h+16; ctx.save(); rr(ctx,x-96,y-14,192,28,14,own?'#0d0c14e0':'#5a1010e8');
+      ctx.fillStyle=c.hex; ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x-74,y,8,0,7); ctx.fill(); ctx.stroke();
+      ctx.font='bold 14px system-ui'; ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(own?`Paint: ${c.name}`:`🛒 Buy: ${c.name}`,x+10,y+1); ctx.restore(); } });
+  // ietve
+  const sw=ctx.createLinearGradient(0,BASE,0,612); sw.addColorStop(0,'#3d3f4c'); sw.addColorStop(1,'#2b2d38'); ctx.fillStyle=sw; ctx.fillRect(vx0-60,BASE,vx1-vx0+120,52);
+  ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(vx0-60,BASE,vx1-vx0+120,6);
+  ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=2; for(let x=Math.floor(vx0/110)*110;x<vx1+110;x+=110){ ctx.beginPath(); ctx.moveTo(x,BASE+6); ctx.lineTo(x-8,612); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(vx0-60,586); ctx.lineTo(vx1+60,586); ctx.stroke();
+  ctx.fillStyle='#7b7e8d'; ctx.fillRect(vx0-60,612,vx1-vx0+120,5); ctx.fillStyle='#4a4c58'; ctx.fillRect(vx0-60,617,vx1-vx0+120,8);
+  const rd=ctx.createLinearGradient(0,625,0,740); rd.addColorStop(0,'#24252e'); rd.addColorStop(1,'#12131a'); ctx.fillStyle=rd; ctx.fillRect(vx0-60,625,vx1-vx0+120,140);
+  { ctx.fillStyle='#4a4c58'; ctx.fillRect(vx0-60,765,vx1-vx0+120,7); ctx.fillStyle='#7b7e8d'; ctx.fillRect(vx0-60,772,vx1-vx0+120,4); const fs=ctx.createLinearGradient(0,776,0,1400); fs.addColorStop(0,'#33353f'); fs.addColorStop(.12,'#2a2c35'); fs.addColorStop(1,'#0b0c12'); ctx.fillStyle=fs; ctx.fillRect(vx0-60,776,vx1-vx0+120,700);
+    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=2; for(let x=Math.floor(vx0/110)*110;x<vx1+110;x+=110){ ctx.beginPath(); ctx.moveTo(x,776); ctx.lineTo(x+10,840); ctx.stroke(); } }
+  ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=4; ctx.setLineDash([70,56]); ctx.beginPath(); ctx.moveTo(Math.floor((vx0-60)/126)*126,681); // svītras piesaistītas pasaulei, nevis kamerai
+  ctx.lineTo(vx1+60,681); ctx.stroke(); ctx.setLineDash([]);
+  // slapjā ceļa atspīdumi
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const streak=(x,col,a,w)=>{ const g=ctx.createLinearGradient(0,626,0,730); g.addColorStop(0,col.replace('A',a)); g.addColorStop(1,col.replace('A',0)); ctx.fillStyle=g; ctx.fillRect(x-w/2,626,w,104); };
+  lampXs.forEach(x=>{ if(x>vx0-80&&x<vx1+80) streak(x+28,'rgba(255,210,140,A)',.28,34); });
+  lots.forEach(l=>{ if(l.kind!=='wall'&&l.x<vx1&&l.x+l.w>vx0){ const col=l.info.neon, n=parseInt(col.slice(1),16); streak(l.x+40+(l.w-240)/2,`rgba(${n>>16},${(n>>8)&255},${n&255},A)`,.2,150); } });
+  ctx.restore();
+  if(inMetro) drawMetroInterior(vx0,vx1);
+  // laternas
+  lampXs.forEach(x=>{ if(x<vx0-60||x>vx1+60) return;
+    ctx.fillStyle='#14131a'; ctx.fillRect(x-3,BASE-172,6,206); ctx.fillRect(x-3,BASE-172,36,5); ctx.beginPath(); ctx.roundRect(x+22,BASE-174,22,9,3); ctx.fill();
+    ctx.fillStyle='#fff1b5'; ctx.fillRect(x+25,BASE-166,16,3);
+    ctx.save(); ctx.globalCompositeOperation='lighter'; const cg=ctx.createLinearGradient(0,BASE-166,0,BASE+40); cg.addColorStop(0,`rgba(255,225,150,${.28*nt})`); cg.addColorStop(1,'rgba(255,225,150,0)');
+    ctx.fillStyle=cg; ctx.beginPath(); ctx.moveTo(x+27,BASE-164); ctx.lineTo(x+40,BASE-164); ctx.lineTo(x+130,BASE+44); ctx.lineTo(x-60,BASE+44); ctx.closePath(); ctx.fill(); ctx.restore(); });
+  // rajonu izkārtnes
+  signLots.forEach(l=>{ const d=l.dist, x=l.x-34; if(x<vx0-130||x>vx1+130) return; const lk=level()<d+1; ctx.save();
+    ctx.fillStyle='#14131a'; ctx.fillRect(x-3,BASE-150,6,170); rr(ctx,x-110,BASE-190,220,52,8,'#0d0c14');
+    ctx.strokeStyle=TIER_COL[d]; ctx.lineWidth=3; ctx.shadowColor=DCOL[d]; ctx.shadowBlur=14; ctx.beginPath(); ctx.roundRect(x-107,BASE-187,214,46,6); ctx.stroke(); ctx.shadowBlur=0;
+    ctx.textAlign='center'; ctx.fillStyle='#fff'; ctx.font='bold 13px system-ui'; ctx.fillText(`DISTRICT ${d+1}${lk?' 🔒 needs level '+(d+1):''}`,x,BASE-168); ctx.font='bold 15px system-ui'; ctx.fillStyle=DCOL[d]; ctx.fillText(DIST_NAMES[d].toUpperCase(),x,BASE-148); ctx.restore(); });
+  // ikonas virs objektiem, ar ko var darboties
+  { const badge=(x,y,ic,near)=>{ const pulse=near?1+.12*Math.sin(time*6):1, r=17*pulse; ctx.save(); ctx.globalAlpha=near?1:.8;
+      ctx.fillStyle='#0d0c14dd'; ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill(); ctx.lineWidth=near?3:2; ctx.strokeStyle=near?'#ffd34d':'#ffffff88'; ctx.stroke();
+      ctx.font=`${Math.round(18*pulse)}px system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(ic,x,y+1); ctx.restore(); };
+    const objs=inMetro?metroObjs:lots.filter(l=>l.city===curCity);
+    objs.forEach(l=>{ const x=lotX(l); if(x<vx0-80||x>vx1+80) return; const near=nearLot===l&&mode==='world'&&!hidden;
+      if(l.kind==='wall') badge(l.px+PANEL.w-6,l.py+6,locked(l)?'🔒':l.cool>0?'⏳':'🎨',near);
+      else if(l.kind==='mwall') badge(l.px+PANEL.w-6,l.py+6,l.cool>0?'⏳':'🎁',near);
+      else if(l.kind==='mtrain') badge(l.cx,372,'🚆',near);
+      else if(l.kind==='mexit') badge(l.cx,310,'⬆️',near);
+      else if(l.kind==='metro') badge(l.cx,LY0+246,'🚇',near);
+      else if(l.kind==='paint') badge(x,LY0+300,'🛒',near);
+      else if(l.kind==='cafe'||l.kind==='pizza') badge(x,LY0+300,l.kind==='cafe'?'🍔':'🍕',near);
+      else if(l.kind==='shoes') badge(x,LY0+300,'👟',near);
+      else if(l.kind==='barber') badge(x,LY0+300,'💈',near); });
+    if(autoT&&mode==='world'){ const ax=autoT.x, ay=GROUND-120+Math.sin(time*8)*6; ctx.save(); ctx.fillStyle=autoT.act==='hide'?'#69f0ae':autoT.act==='lot'?'#ffd34d':'#ffffffaa';
+      ctx.beginPath(); ctx.moveTo(ax-10,ay-14); ctx.lineTo(ax+10,ay-14); ctx.lineTo(ax,ay); ctx.closePath(); ctx.fill(); ctx.globalAlpha=.35; ctx.beginPath(); ctx.ellipse(ax,GROUND+4,26,7,0,0,7); ctx.fill(); ctx.restore(); } }
+  // pilsētas robežas
+  if(!inMetro){ const cr=cityRange[curCity]; [[cr[0]+40,curCity>0],[cr[1]-40,curCity<9]].forEach(([x,show])=>{ if(!show||x<vx0-120||x>vx1+120) return; ctx.save();
+    for(let i=0;i<5;i++){ ctx.fillStyle=i%2?'#f4f1ea':'#e53935'; ctx.fillRect(x-60+i*24,BASE+2,24,14); } ctx.fillStyle='#333'; ctx.fillRect(x-56,BASE+16,6,30); ctx.fillRect(x+50,BASE+16,6,30);
+    rr(ctx,x-90,BASE-46,180,40,8,'#0d0c14'); ctx.fillStyle='#ffd34d'; ctx.font='bold 13px system-ui'; ctx.textAlign='center'; ctx.fillText('CITY LIMIT',x,BASE-30); ctx.fillStyle='#7ec8ff'; ctx.fillText('🚇 take the metro',x,BASE-13); ctx.restore(); }); }
+  // slēpņi
+  hideSpots.forEach(s=>{ if(s.x<vx0-90||s.x>vx1+90) return;
+    if(s.kind==='crates'){ ctx.save(); const bx=s.x, by=BASE+12; const crate=(x,y,w,h)=>{ ctx.fillStyle='#8a6a3b'; ctx.fillRect(x,y,w,h); ctx.strokeStyle='#5e4526'; ctx.lineWidth=3; ctx.strokeRect(x+1.5,y+1.5,w-3,h-3); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+w,y+h); ctx.moveTo(x+w,y); ctx.lineTo(x,y+h); ctx.stroke(); };
+      crate(bx-52,by-44,56,44); crate(bx+4,by-38,52,38); crate(bx-44,by-80,44,36); ctx.restore(); }
+    const wantHide=heat>=30||police.active;
+    if(hidden&&hideAt===s){ ctx.save(); ctx.font='24px system-ui'; ctx.textAlign='center'; ctx.fillText('👀',s.x,BASE-(s.kind==='dumpster'?56:70)); ctx.restore(); }
+    else if(!hidden&&(wantHide||Math.abs(s.x-player.x)<420)){ const bob=Math.sin(time*5)*5, ay=BASE-(s.kind==='dumpster'?96:112)+bob; ctx.save(); ctx.fillStyle='#69f0ae'; ctx.shadowColor='#69f0ae'; ctx.shadowBlur=12;
+      ctx.beginPath(); ctx.moveTo(s.x-12,ay-16); ctx.lineTo(s.x+12,ay-16); ctx.lineTo(s.x,ay); ctx.closePath(); ctx.fill();
+      if(wantHide){ ctx.font='bold 16px system-ui'; ctx.textAlign='center'; ctx.shadowBlur=6; ctx.fillText('hiding spot',s.x,ay-24); } ctx.restore(); } });
+  drawParts(ctx,parts.filter(p=>p.type==='dust'||p.type==='smoke'));
+  // cilvēki, spēlētājs
+  const list=npcs.filter(n=>n.x>vx0-60&&n.x<vx1+60).map(n=>({y:n.y,fn:()=>{ const s=PS*(.92+.16*(n.y-574)/30); drawPerson(ctx,n.x,n.y,s,n);
+    if(n.bt>0){ ctx.save(); ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,n.bt); ctx.fillText(n.bubble,n.x,n.y-100-(2.5-n.bt)*5); ctx.restore(); }
+    else if(n.snitch&&!n.called){ ctx.save(); ctx.font='18px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=.9; ctx.fillText('📱',n.x+(n.flip>0?14:-14),n.y-76); ctx.restore(); } }}));
+  if(mode!=='draw'&&!hidden) list.push({y:GROUND,fn:drawPlayer});
+  police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
+  if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
+  list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
+  if(mode!=='draw'&&!hidden&&save.food<25&&!(NET.on&&chatBubble(NET.uid))) drawHunger(player.x+22,GROUND-player.h-78);
+  drawGuideArrow();
+  if(NET.on&&mode!=='draw'&&!hidden&&!inMetro) { drawNameTag(player.x,GROUND-player.h-104,TW.display(NET.name,NET.nick),NET.uid,myMedals()); drawBubble(player.x,GROUND-player.h-126,chatBubble(NET.uid)); }
+  // satiksme (priekšplānā)
+  const copLivery=(c,L,siren)=>{ const Hh=L*.3; ctx.save(); ctx.translate(c.x,c.y); ctx.scale(c.dir,1); ctx.fillStyle='#1e5bd8'; ctx.fillRect(-L*.5+4,-Hh*.4,L-8,L*.035);
+    const on=siren!=null&&Math.sin(siren)>0; rr(ctx,-L*.06,-Hh*1.2,L*.07,L*.035,2,siren==null?'#7a1d2a':on?'#ff1744':'#3a0d14'); rr(ctx,L*.01,-Hh*1.2,L*.07,L*.035,2,siren==null?'#1d3a7a':on?'#10204a':'#2979ff'); ctx.restore(); };
+  traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.cop?'#f4f6fa':c.color,{spin:c.spin}); if(c.cop) copLivery(c,c.L,null); });
+  [police.car,...police.extra].forEach(c=>{ if(!c) return; const L=175; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir}); copLivery(c,L,c.siren); });
+  drawHeli();
+  drawParts(ctx,parts.filter(p=>p.type!=='dust'&&p.type!=='smoke'));
+  floats.forEach(f=>{ ctx.save(); const a=1-f.t/1.8; ctx.globalAlpha=Math.min(1,a*2); ctx.font='bold 38px system-ui'; ctx.textAlign='center'; ctx.lineWidth=5; ctx.strokeStyle='#000'; ctx.strokeText(f.txt,f.x,f.y-f.t*70); ctx.fillStyle=f.col; ctx.shadowColor=f.col; ctx.shadowBlur=14; ctx.fillText(f.txt,f.x,f.y-f.t*70); ctx.restore(); });
+
+  // priekšplāna slānis (3D dziļums)
+  if(FGimg&&!inMetro&&Zs<baseZoom()*1.3){ ctx.save(); ctx.globalAlpha=.6; const off=cx*(1-1.5), k0=Math.floor((vx0-off)/SKY_W), k1=Math.ceil((vx1-off)/SKY_W); for(let k=k0;k<=k1;k++) ctx.drawImage(FGimg,off+k*SKY_W,0,SKY_W,720); ctx.restore(); }
+  // ---- apgaismojums ----
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  lg.setTransform(dpr,0,0,dpr,0,0); lg.globalCompositeOperation='source-over'; lg.clearRect(0,0,W,H);
+  lg.fillStyle=`rgba(8,10,38,${(.6*nt).toFixed(3)})`; lg.fillRect(0,0,W,H); lg.globalCompositeOperation='destination-out';
+  const hole=(x,y,r,a=1)=>{ const sx=SX(x), sy=SY(y), R=r*Zs; if(sx<-R||sx>W+R||sy<-R||sy>H+R) return; const g=lg.createRadialGradient(sx,sy,0,sx,sy,R); g.addColorStop(0,`rgba(0,0,0,${a})`); g.addColorStop(1,'rgba(0,0,0,0)'); lg.fillStyle=g; lg.fillRect(sx-R,sy-R,R*2,R*2); };
+  lampXs.forEach(x=>hole(x+30,BASE-150,300,.95));
+  if(inMetro){ for(let x=M0;x<=M1;x+=300) hole(x,BASE-140,330,.98); }
+  lots.forEach(l=>{ if(l.window) hole(l.x+l.window.x,l.window.y,230,.8); });
+  walls.forEach(w=>{ hole(w.px+PANEL.w/2,w.py+PANEL.h/2+10,w.art?260:200,w.art?.85:.55); });
+  if(mode!=='draw') hole(player.x,GROUND-40,190,.8);
+  traffic.forEach(c=>hole(c.x+c.dir*c.L*.8,c.y-24,170,.8));
+  if(police.car) hole(police.car.x+police.car.dir*140,police.car.y-24,190,.85);
+  if(police.heli){ hole(police.heli.x,GROUND-40,260,.9); hole(police.heli.x,police.heli.y,150,.7); }
+  ctx.drawImage(lc,0,0,W,H);
+  ctx.globalCompositeOperation='lighter';
+  const glow=(x,y,r,col,a)=>{ const sx=SX(x), sy=SY(y), R=r*Zs; if(sx<-R||sx>W+R||sy<-R||sy>H+R) return; const g=ctx.createRadialGradient(sx,sy,0,sx,sy,R); g.addColorStop(0,col.replace('A',a)); g.addColorStop(1,col.replace('A',0)); ctx.fillStyle=g; ctx.fillRect(sx-R,sy-R,R*2,R*2); };
+  lampXs.forEach(x=>glow(x+33,BASE-166,150,'rgba(255,200,120,A)',.3*nt));
+  lots.forEach(l=>{ if(l.kind==='wall'){ if(l.art){ const n=hexN(l.glow); glow(l.px+PANEL.w/2,l.py+PANEL.h/2,300,`rgba(${n[0]},${n[1]},${n[2]},A)`,(.2+.05*Math.sin(time*3+l.x))*(.5+.5*nt)); } return; }
+    if(!l.sign) return; const n=hexN(l.info.neon), fl=.8+.2*Math.sin(time*7+l.i*3)*(Math.sin(time*.9+l.i)>.92?-1:1);
+    glow(l.x+l.sign.x+l.sign.w/2,l.sign.y+26,Math.max(l.sign.w*.7,160),`rgba(${n[0]},${n[1]},${n[2]},A)`,.17*fl*(.35+.65*nt));
+    glow(l.x+l.window.x,l.window.y,240,'rgba(255,190,110,A)',.16*(.3+.7*nt)); });
+  [police.car,...police.extra].forEach(pc=>{ if(!pc) return; const on=Math.sin(pc.siren)>0; glow(pc.x,pc.y-70,340,on?'rgba(255,23,68,A)':'rgba(41,121,255,A)',.5); });
+  ctx.globalCompositeOperation='source-over';
+  // bloom
+  bctx.setTransform(1,0,0,1,0,0); bctx.clearRect(0,0,bl.width,bl.height);
+  try{ bctx.filter='blur(3px) brightness(1.1)'; }catch(e){}
+  bctx.drawImage(cv,0,0,bl.width,bl.height); bctx.filter='none';
+  ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.2+.08*nt; ctx.drawImage(bl,0,0,W,H); ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+  // ātruma līnijas
+  const car=carById(save.car);
+  if(mode==='world'&&player.moving&&car.speed>=560){ ctx.save(); ctx.strokeStyle='rgba(255,255,255,.16)'; ctx.lineWidth=2; for(let i=0;i<12;i++){ const x=rnd(0,W),y=rnd(0,H),l=rnd(60,200); ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-Math.sign(player.vx)*l,y); ctx.stroke(); } ctx.restore(); }
+  const vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.4,W/2,H/2,Math.max(W,H)*.8); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.55)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  if(cam.flash>0){ ctx.fillStyle=`rgba(255,255,255,${cam.flash*.55})`; ctx.fillRect(0,0,W,H); }
+  if(mode==='entering'||mode==='exiting'||mode==='draw'){ const k=mode==='entering'?easeIO(tr.t):mode==='exiting'?1-easeIO(tr.t):1; ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H*.08*k); ctx.fillRect(0,H-H*.08*k,W,H*.08*k); }
+  // sirēnas zibsnis
+  if(police.car){ const on=Math.sin(police.car.siren)>0, g=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,on?'rgba(255,23,68,.33)':'rgba(41,121,255,.33)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
+  // norādes uz veikaliem, slēpņiem un policiju
+  if(mode==='world'||mode==='shop'){
+    const tg=[], wanted=heat>=30||police.active;
+    if(wanted&&!hidden){ let b=null,bd=1e9; hideSpots.filter(s=>s.lot.city===curCity).forEach(s=>{ const d=Math.abs(s.x-player.x); if(d<bd){bd=d;b=s;} }); if(b) tg.push({x:b.x,t:'Hiding spot',c:'#69f0ae'}); }
+    if(police.off) tg.push({x:police.off.x,t:'Officer',c:'#ff5252'}); else if(police.car) tg.push({x:police.car.x,t:'Police',c:'#ff5252'});
+    const afford=Math.min(Infinity,...COLORS.filter(c=>!save.colors.includes(c.id)).map(c=>c.price),...CARS.filter(c=>!save.cars.includes(c.id)).map(c=>c.price));
+    if(!wanted&&save.food<50){ let b=null,bd=1e9; lots.forEach(l=>{ if((l.kind==='cafe'||l.kind==='pizza')&&l.city===curCity){ const d=Math.abs(l.door+34-player.x); if(d<bd){bd=d;b=l;} } }); if(b) tg.push({x:b.door+34,t:'🍔 Café',c:'#ffb347'}); }
+    if(!wanted&&save.colors.some(id=>paintOf(id)<15)&&save.money>=20){ const p=lots.find(l=>l.kind==='paint'&&l.city===curCity); if(p) tg.push({x:p.door+34,t:'🪣 Paint Depot',c:'#ff4fd8'}); } else
+    if(!wanted&&save.money>=afford){ const p=lots.find(l=>l.kind==='paint'&&l.city===curCity); if(p) tg.push({x:p.door+34,t:'Paint Depot',c:'#ff4fd8'}); }
+    if(!wanted){ let b=null,bd=1e9; stations.filter(st=>st.city===curCity).forEach(st=>{ const d=Math.abs(st.cx-player.x); if(d>350&&d<bd){ bd=d; b=st; } }); if(b) tg.push({x:b.cx,t:'Metro',c:'#5aa8e8'}); }
+    if(!wanted){ let b=null,bd=1e9; walls.forEach(w=>{ if(w.city===curCity&&w.cool<=0&&!locked(w)){ const d=Math.abs(w.cx-player.x); if(d>350&&d<bd){bd=d;b=w;} } }); if(b) tg.push({x:b.cx,t:'Wall (lvl '+(b.tier+1)+')',c:TIER_COL[b.tier]}); }
+    if(inMetro){ tg.length=0; const tr_=metroObjs.find(o=>o.kind==='mtrain'); tg.push({x:tr_.cx,t:'Train',c:'#5aa8e8'}); tg.push({x:metroObjs[0].cx,t:'Exit',c:'#7cff8a'}); tg.push({x:metroObjs[6].cx,t:'Exit',c:'#7cff8a'}); }
+    tg.forEach((t,i)=>{ const sx=SX(t.x); if(sx>70&&sx<W-70) return; const left=sx<=70, ey=H*.3+i*44, m=Math.round(Math.abs(t.x-player.x)/10);
+      ctx.save(); ctx.font='bold 14px system-ui'; const pw=Math.min(196,ctx.measureText(window.tr(`${t.t} · ${m} m`)).width+54); ctx.fillStyle='#000b'; ctx.beginPath(); ctx.roundRect(left?8:W-8-pw,ey-17,pw,34,17); ctx.fill(); ctx.strokeStyle=t.c; ctx.lineWidth=2; ctx.stroke();
+      ctx.fillStyle=t.c; ctx.beginPath(); if(left){ ctx.moveTo(18,ey); ctx.lineTo(32,ey-9); ctx.lineTo(32,ey+9); } else { ctx.moveTo(W-18,ey); ctx.lineTo(W-32,ey-9); ctx.lineTo(W-32,ey+9); } ctx.closePath(); ctx.fill();
+      ctx.font='bold 14px system-ui'; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText(`${t.t} · ${m} m`,left?42:W-pw+4,ey); ctx.restore(); }); }
+  // ielas josla
+  if((mode==='world'||mode==='shop')&&!inMetro){ const bw=Math.min(520,W*.55,W-40), bx=(W-bw)/2, by=H-(H>W&&isTouch?96:26);
+    ctx.fillStyle='#000a'; ctx.beginPath(); ctx.roundRect(bx-8,by-9,bw+16,18,9); ctx.fill();
+    const cr=cityRange[curCity], mx_=x=>bx+clamp((x-cr[0])/(cr[1]-cr[0]),0,1)*bw;
+    lots.forEach(l=>{ if(l.city!==curCity) return; const x=mx_(l.x+l.w/2); ctx.fillStyle=l.kind==='wall'?(locked(l)?'#555':l.art&&l.cool>0?'#66bb6a':TIER_COL[l.tier]):(l.kind==='paint'?'#ff4fd8':l.kind==='metro'?'#5aa8e8':l.kind==='cafe'||l.kind==='pizza'?'#ffb347':'#8892a6'); ctx.beginPath(); ctx.arc(x,by,l.kind==='wall'?4:3,0,7); ctx.fill(); });
+    ctx.fillStyle='#69f0ae'; hideSpots.forEach(s=>{ if(s.lot.city===curCity) ctx.fillRect(mx_(s.x)-1.5,by-10,3,3); });
+    if(police.car){ ctx.fillStyle=Math.sin(police.car.siren)>0?'#ff1744':'#2979ff'; ctx.beginPath(); ctx.arc(mx_(police.off?police.off.x:police.car.x),by,4.5,0,7); ctx.fill(); }
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(mx_(player.x),by,5,0,7); ctx.fill();
+    ctx.fillStyle='#ccd'; ctx.font='bold 11px system-ui'; ctx.textAlign='center'; ctx.fillText(`City ${curCity+1} · ${CITY_NAMES[curCity]}`,bx+bw/2,by-14); }
+  for(let i=ripples.length-1;i>=0;i--){ const r=ripples[i]; r.t+=1/60; if(r.t>.5){ ripples.splice(i,1); continue; } ctx.save(); ctx.globalAlpha=1-r.t/.5; ctx.strokeStyle=r.c; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(r.x,r.y,10+r.t*70,0,7); ctx.stroke(); ctx.restore(); }
+  renderFx();
+}
+const hexN=h=>{ if(h==='#111111') h='#8899aa'; const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
+
+// izsalcis tēls: domu burbulis ar 🍔, kas pulsē (badā – sarkans un biežāk)
+function drawHunger(x,y){ const starving=save.food<=0, ph=(time*(starving?2.2:1.2))%1, a=starving?1:Math.min(1,Math.sin(ph*Math.PI)*1.6); if(a<=0) return;
+  ctx.save(); ctx.globalAlpha=a; const s=1+.08*Math.sin(time*(starving?9:5));
+  ctx.fillStyle=starving?'#ff5252':'#fff'; ctx.beginPath(); ctx.arc(x+14,y+26,4,0,7); ctx.arc(x+20,y+16,6,0,7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+30,y-6,26*s,21*s,0,0,7); ctx.fill();
+  ctx.font='26px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🍔',x+30,y-5);
+  if(starving){ ctx.font='900 14px system-ui'; ctx.fillStyle='#fff'; ctx.strokeStyle='#000'; ctx.lineWidth=3; const t='grrr…'; ctx.strokeText(t,x-26,y-16+Math.sin(time*6)*2); ctx.fillText(t,x-26,y-16+Math.sin(time*6)*2); }
+  ctx.restore(); }
+function drawPlayer(){
+  const car=carById(save.car), o=playerOutfit(), busy=mode==='entering'||mode==='exiting';
+  const y=GROUND-player.h;
+  if(busy){
+    if(car.kind!=='foot'){ const px=tr.sx-110; if(car.kind==='car') carSide(ctx,px,GROUND+6,1,car.L,car.color,{lights:false}); else { rr(ctx,px-20,GROUND-8,40,6,3,car.color); ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(px-12,GROUND-3,4,0,7); ctx.arc(px+12,GROUND-3,4,0,7); ctx.fill(); } }
+    drawPerson(ctx,player.x,GROUND,PS,Object.assign({},o,{face:player.face,flip:player.flip,step:player.step,spray:player.face==='up'||(mode==='exiting'),still:player.face==='up'}));
+    return;
+  }
+  if(car.kind==='car'){ carSide(ctx,player.x,y+6,player.flip,car.L,car.color,{driver:o,spin:player.spin}); return; }
+  if(car.kind==='board'||car.kind==='scoot'){
+    ctx.save(); ctx.translate(player.x,y); ctx.scale(player.flip,1);
+    rr(ctx,-24,-9,48,6,3,car.color); ctx.fillStyle='#1a1a1a'; [-15,15].forEach(wx=>{ ctx.beginPath(); ctx.arc(wx,-3,5.5,0,7); ctx.fill(); });
+    if(car.kind==='scoot'){ ctx.strokeStyle='#ddd'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(20,-8); ctx.lineTo(22,-52); ctx.lineTo(8,-54); ctx.stroke(); }
+    ctx.restore();
+    drawPerson(ctx,player.x,y-8,PS,Object.assign({},o,{face:'side',flip:player.flip,step:0,ride:true,still:true,noShadow:true}));
+    return;
+  }
+  drawPerson(ctx,player.x,y,PS,Object.assign({},o,{face:player.h>0?'side':player.face,flip:player.flip,step:player.h>0?1.2:player.step,still:!player.moving}));
+}
+
+// ================= Zīmēšanas režīms =================
+const dOv=document.getElementById('drawOv'), dc=document.getElementById('draw'), dctx=dc.getContext('2d');
+let curWall=null, strokes=[], drips=[], painting=false, dirty=false, drawColor='black', targetPaths=[], targetSamples=[];
+const mouse={x:W/2,y:H/2};
+addEventListener('pointermove',e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+const panelK=()=>Math.min(1,(W-24)/720,(H-180)/440); // tikai kameras pietuvinājumam, ieejot zīmēšanā
+// Zīmēšanas kanva aizņem visu brīvo ekrānu. Koordinātas kanvā = CSS pikseļi (pielaide un līnijas biezums ekrāna pikseļos).
+const DR={x:0,y:0,w:720,h:440}; let shapeR=150, shapeBox=null, pen=null, penT=null;
+function layoutDraw(){ const land=W>H*1.15, m=8, top=36+m, el=id=>document.getElementById(id), pal=el('palette'), btns=el('drawBtns'), hint=el('drawHint');
+  if(land){ const cw=Math.min(230,Math.max(150,W*.24)); DR.x=m; DR.y=top; DR.w=W-cw-m*3; DR.h=H-top-m;
+    Object.assign(pal.style,{left:(W-cw-m)+'px',width:cw+'px',top:top+'px',height:'auto',transform:'none'});
+    Object.assign(btns.style,{left:(W-cw-m)+'px',width:cw+'px',top:'auto',bottom:m+'px'}); btns.classList.add('col'); hint.style.display='none'; }
+  else { btns.classList.remove('col'); const bh=save.colors.length>7?168:122; DR.x=m; DR.y=top; DR.w=W-m*2; DR.h=H-top-bh-m;
+    Object.assign(pal.style,{left:m+'px',width:(W-m*2)+'px',top:(DR.y+DR.h+8)+'px',height:'auto',transform:'none'});
+    Object.assign(btns.style,{left:m+'px',width:(W-m*2)+'px',top:'auto',bottom:m+'px',flexWrap:'nowrap'}); hint.style.display='none'; }
+  if(land) btns.style.flexWrap='wrap';
+  if(!isTouch&&DR.w>900){ const cw=Math.min(DR.w,1100), ch=Math.min(DR.h,700); DR.x+=(DR.w-cw)/2; DR.w=cw; DR.h=ch; }
+  Object.assign(dc.style,{left:DR.x+'px',top:DR.y+'px',width:DR.w+'px',height:DR.h+'px'});
+  dc.width=Math.round(DR.w*dpr); dc.height=Math.round(DR.h*dpr);
+  const inf=el('drawInfo'); inf.style.left=(DR.x+8)+'px'; inf.style.top=(DR.y+8)+'px'; const bw=el('bWipe'); bw.style.right=(W-DR.x-DR.w+8)+'px'; bw.style.top=(DR.y+8)+'px';
+  dirty=true; if(mode==='draw'&&curWall) fitShape(); }
+// formu ietilpina kanvā (ar atkāpi), lai tā būtu pēc iespējas lielāka
+function fitShape(){ if(curWall.free){ const f=freeFrame(); shapeR=f.h/2; shapeBox={cx:DR.w/2,cy:DR.h/2,x0:f.x,y0:f.y,x1:f.x+f.w,y1:f.y+f.h}; targetPaths=[]; targetSamples=[]; dirty=true; return; }
+  const raw=SHAPES[curWall.shape](); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  raw.forEach(p=>p.forEach(([x,y])=>{ x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y); }));
+  const pad=Math.max(26,Math.min(DR.w,DR.h)*.08), R=Math.min((DR.w-pad*2)/(x1-x0),(DR.h-pad*2)/(y1-y0),340), cx=DR.w/2-(x0+x1)/2*R, cy=DR.h/2-(y0+y1)/2*R;
+  if(shapeBox&&shapeR&&strokes.length){ const k=R/shapeR, ox=shapeBox.cx, oy=shapeBox.cy; strokes.forEach(s_=>s_.pts.forEach(p_=>{ p_.x=cx+(p_.x-ox)*k; p_.y=cy+(p_.y-oy)*k; })); drips=[]; }
+  shapeR=R; shapeBox={cx,cy,x0:cx+x0*R,y0:cy+y0*R,x1:cx+x1*R,y1:cy+y1*R};
+  targetPaths=raw.map(p=>p.map(([x,y])=>[cx+x*R,cy+y*R]));
+  targetSamples=[];
+  targetPaths.forEach(p=>{ for(let i=1;i<p.length;i++){ const [x0,y0]=p[i-1],[x1,y1]=p[i]; const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/4)); for(let k=0;k<n;k++) targetSamples.push([x0+(x1-x0)*k/n,y0+(y1-y0)*k/n]); } });
+  dirty=true; }
+// pielaide ekrāna pikseļos: tā pati grūtība kā agrāk attiecībā pret formas izmēru, bet ne mazāk par 12 px (pirksts)
+const tolPx=()=>Math.max(12,shapeR*TIERS[curWall.tier].tol/150);
+function openDraw(w){
+  audioInit(); sfx('shake'); curWall=w; promptEl.style.display='none'; drawColor=w.need&&save.colors.includes(w.need)?w.need:paintOf(save.color)>0?save.color:save.colors.find(id=>paintOf(id)>0); mode='entering';
+  tr={t:0,z0:cam.zoom,zt:2*panelK(),cx0:cam.x,cy0:cam.y,fx:w.cx,fy:PANEL.y+PANEL.h/2,px0:player.x,sx:w.cx-PANEL.w/2-45};
+  player.moving=false; player.vx=0;
+}
+function showDraw(){
+  const w=curWall; strokes=[]; drips=[]; dirty=true; shapeBox=null; pen=penT=null;
+  wipePrev=false; layoutDraw(); fitShape(); syncWipe();
+  document.getElementById('drawTitle').textContent=w.free?'🎨 Freestyle – draw anything you like!':w.isBonus?`🎁 Bonus wall – more accurate = better box!`:w.need?`Level ${w.tier+1} · paint: ${colorById(w.need).name}!`:`Wall – level ${w.tier+1}. Draw the outline!`;
+  buildPalette(); redraw(); dOv.classList.add('on'); updateDrawInfo(true);
+}
+// krāsas pogā redzams, cik krāsas palicis (kā bundžā)
+function swFill(d,id){ const c=colorById(id), p=Math.ceil(paintOf(id)); d.style.background=`linear-gradient(to top,${c.hex} ${p}%,#2a2a33 ${p}%)`; d._p=p; }
+function buildPalette(){
+  const p=document.getElementById('palette'); p.innerHTML='';
+  save.colors.forEach((id,i)=>{ const c=colorById(id), d=document.createElement('div');
+    d.className='sw'+(id===drawColor?' sel':'')+(paintOf(id)<=0?' empty':''); d.dataset.id=id; swFill(d,id); d.style.color=c.hex; d.title=`${c.name} x${c.mult}`;
+    d.innerHTML=`<span style="color:#fff;mix-blend-mode:difference">${!isTouch&&i<9?i+1:''}</span>`; d.onclick=()=>{ if(paintOf(id)<=0){ toast(`🪣 ${c.name} is empty – refill it at the Paint Depot (€ ${refillPrice(id)}).`); return; } drawColor=id; buildPalette(); }; p.appendChild(d); });
+  const hx=colorById(drawColor).hex; dc.style.boxShadow=`0 0 40px ${hx==='#111111'?'#889':hx}99`;
+}
+function brickCover(g,w,h){ const k=Math.max(w/720,h/440); g.drawImage(bgBrick,(w-720*k)/2,(h-440*k)/2,720*k,440*k); }
+function redraw(showGhost=true){
+  dctx.setTransform(dpr,0,0,dpr,0,0); dctx.shadowBlur=0; dctx.globalAlpha=1; brickCover(dctx,DR.w,DR.h);
+  // citu (un savi iepriekšējie) zīmējumi uz šīs sienas – zīmē tiem pa virsu
+  if(curWall.layers&&curWall.layers.length&&!wipePrev&&!curWall.isBonus){ const cr=cropRect(), k=cr.w/720; dctx.save(); dctx.translate(cr.x,cr.y); dctx.scale(k,k); drawLayers(dctx,curWall.layers); dctx.restore(); }
+  if(curWall.free){ const f=freeFrame(); dctx.save(); dctx.fillStyle='rgba(0,0,0,.55)'; dctx.fillRect(0,0,DR.w,f.y); dctx.fillRect(0,f.y+f.h,DR.w,DR.h); dctx.fillRect(0,f.y,f.x,f.h); dctx.fillRect(f.x+f.w,f.y,DR.w,f.h);
+    dctx.strokeStyle='#ff4fd8'; dctx.lineWidth=3; dctx.setLineDash([12,8]); dctx.strokeRect(f.x,f.y,f.w,f.h); dctx.restore(); }
+  if(showGhost){ dctx.save(); dctx.strokeStyle='#fff'; dctx.globalAlpha=TIERS[curWall.tier].ghost; dctx.lineWidth=3; dctx.setLineDash([10,8]);
+    targetPaths.forEach(p=>{ dctx.beginPath(); p.forEach(([x,y],i)=>i?dctx.lineTo(x,y):dctx.moveTo(x,y)); dctx.stroke(); }); dctx.restore(); }
+  const lw=Math.max(7,shapeR*.05);
+  dctx.lineCap='round'; dctx.lineJoin='round'; dctx.lineWidth=lw;
+  strokes.forEach(s=>{ const c=colorById(s.color).hex; dctx.strokeStyle=c; dctx.fillStyle=c; dctx.shadowColor=c; dctx.shadowBlur=6;
+    if(s.pts.length===1){ dctx.beginPath(); dctx.arc(s.pts[0].x,s.pts[0].y,lw/2,0,7); dctx.fill(); }
+    else { dctx.beginPath(); s.pts.forEach((p,i)=>i?dctx.lineTo(p.x,p.y):dctx.moveTo(p.x,p.y)); dctx.stroke(); } });
+  dctx.shadowBlur=0; dctx.lineWidth=3;
+  drips.forEach(d=>{ const c=colorById(d.color).hex; dctx.strokeStyle=c; dctx.fillStyle=c; dctx.beginPath(); dctx.moveTo(d.x,d.y); dctx.lineTo(d.x,d.y+d.len); dctx.stroke(); dctx.beginPath(); dctx.arc(d.x,d.y+d.len,2.8,0,7); dctx.fill(); });
+}
+// sienas attēls (720×440) no zīmējuma: izgriež apgabalu ap formu
+// Sienas attēls = slāņi (katra spēlētāja zīmējums kā līnijas 720×440 koordinātās). Tos dala ar citiem spēlētājiem (grafiti/walls/{pilsēta}/w{nr}),
+// tāpēc uz vienas sienas var zīmēt vairāki – sanāk kopzīmējums. Glabā pēdējos 6 slāņus.
+const ART_A=720/440;
+function freeFrame(){ const w=Math.min(DR.w-16,(DR.h-16)*ART_A), h=w/ART_A; return {x:(DR.w-w)/2,y:(DR.h-h)/2,w,h}; }
+function cropRect(){ if(curWall&&curWall.free) return freeFrame(); const b=shapeBox, sh=Math.max(b.y1-b.y0,(b.x1-b.x0)/ART_A)/.72, sw=sh*ART_A; return {x:(b.x0+b.x1)/2-sw/2,y:(b.y0+b.y1)/2-sh/2,w:sw,h:sh}; }
+function encodeLayer(step=4){ const cr=cropRect(), k=720/cr.w, lw=Math.round(Math.max(7,shapeR*.05)*k*10)/10, out=[];
+  strokes.forEach(st=>{ const p=[]; let lx=-1e9,ly=-1e9; st.pts.forEach((q,i)=>{ const x=Math.round((q.x-cr.x)*k), y=Math.round((q.y-cr.y)*k); if(i===0||i===st.pts.length-1||Math.hypot(x-lx,y-ly)>=step){ p.push(x,y); lx=x; ly=y; } }); if(p.length) out.push([st.color,lw,p]); });
+  const js=JSON.stringify(out); return js.length>24000&&step<32?encodeLayer(step*2):js; }
+function drawLayers(g,layers){ g.save(); g.lineCap='round'; g.lineJoin='round';
+  layers.forEach(L=>{ let arr; try{ arr=JSON.parse(L.s); }catch(e){ return; } if(!Array.isArray(arr)) return;
+    arr.forEach(st=>{ if(!Array.isArray(st)) return; const [cid,lw,p]=st, c=colorById(cid); if(!c||!Array.isArray(p)||p.length<2) return; g.strokeStyle=c.hex; g.fillStyle=c.hex; g.shadowColor=c.hex; g.shadowBlur=6; g.lineWidth=+lw||8;
+      if(p.length<=2){ g.beginPath(); g.arc(+p[0],+p[1],g.lineWidth/2,0,7); g.fill(); return; } g.beginPath(); for(let i=0;i+1<p.length;i+=2) i?g.lineTo(+p[i],+p[i+1]):g.moveTo(+p[i],+p[i+1]); g.stroke(); }); });
+  g.restore(); }
+function layersArt(w){ if(!w.layers||!w.layers.length) return null; const a=document.createElement('canvas'); a.width=720; a.height=440; const g=a.getContext('2d'); g.drawImage(bgBrick,0,0); drawLayers(g,w.layers); return a; }
+let wallRef=null;
+function wallsListen(c){ if(wallRef){ wallRef.off(); wallRef=null; } if(c<0||!NET.db) return; wallRef=NET.db.ref(DBP+'walls/'+c);
+  const ap=(snap,del)=>{ const w=lots[+String(snap.key).slice(1)]; if(!w||w.kind!=='wall') return; const v=del?null:snap.val();
+    w.layers=v?Object.values(v).filter(x=>x&&typeof x.s==='string').sort((a,b)=>(a.t||0)-(b.t||0)).slice(-6):[]; w.art=layersArt(w); if(w===curWall&&mode==='draw'){ dirty=true; syncWipe(); } };
+  wallRef.on('child_added',s_=>ap(s_),()=>{}); wallRef.on('child_changed',s_=>ap(s_),()=>{}); wallRef.on('child_removed',s_=>ap(s_,true),()=>{}); }
+function shareLayer(w,layer,wipe){ if(!NET.on||!NET.db) return; const ref=NET.db.ref(`${DBP}walls/${w.city}/w${w.i}`), L=Object.assign({},layer,{t:firebase.database.ServerValue.TIMESTAMP});
+  if(wipe){ ref.set({[ref.push().key]:L}).catch(()=>{}); return; }
+  ref.push(L).then(()=>ref.once('value')).then(sn=>{ const v=sn.val()||{}, ks=Object.keys(v).sort((a,b)=>(v[a].t||0)-(v[b].t||0)); if(ks.length>6){ const up={}; ks.slice(0,ks.length-6).forEach(k=>up[k]=null); ref.update(up); } }).catch(()=>{}); }
+function artFromDraw(){ const art=document.createElement('canvas'); art.width=720; art.height=440; const g=art.getContext('2d'); g.drawImage(bgBrick,0,0);
+  const cr0=cropRect(), sh=cr0.h, sw=cr0.w, cx=cr0.x+sw/2, cy=cr0.y+sh/2;
+  // avots ārpus kanvas robežām: Safari (iPhone) tad izstiepj attēlu – tāpēc apgriežam paši un proporcionāli rēķinām mērķi
+  const sx0=cx-sw/2, sy0=cy-sh/2, ax=Math.max(0,sx0), ay=Math.max(0,sy0), bx=Math.min(DR.w,sx0+sw), by=Math.min(DR.h,sy0+sh), kx=720/sw, ky=440/sh;
+  if(bx>ax&&by>ay) try{ g.drawImage(dc,ax*dpr,ay*dpr,(bx-ax)*dpr,(by-ay)*dpr,(ax-sx0)*kx,(ay-sy0)*ky,(bx-ax)*kx,(by-ay)*ky); }catch(e){}
+  art.crop={x:cx-sw/2,y:cy-sh/2,w:sw}; return art; }
+const pos=e=>{ const r=dc.getBoundingClientRect(); return {x:(e.clientX-r.left)*DR.w/r.width, y:(e.clientY-r.top)*DR.h/r.height}; };
+const starving=()=>save.food<=0;
+const PAINT_USE=3.2; // % uz formas rādiusu: aplis ≈ 20 % bundžas
+function addPt(p){ const s=strokes[strokes.length-1], l=s.pts[s.pts.length-1];
+  const seg=Math.hypot(p.x-l.x,p.y-l.y); save.paint[s.color]=Math.max(0,paintOf(s.color)-seg/shapeR*PAINT_USE);
+  const sw_=document.querySelector(`#palette .sw[data-id="${s.color}"]`); if(sw_&&sw_._p!==Math.ceil(paintOf(s.color))) swFill(sw_,s.color);
+  if(paintOf(s.color)<=0){ stopPaint(); buildPalette(); toast(`🪣 ${colorById(s.color).name} paint ran out! Pick another color or refill at the Paint Depot.`); sfx('bust'); return; }
+  s.pts.push(p);
+  if(Math.hypot(p.x-l.x,p.y-l.y)<4&&Math.random()<.12) drips.push({x:p.x,y:p.y+2,len:0,max:rnd(8,30),color:drawColor}); dirty=true; }
+dc.addEventListener('pointerdown',e=>{ audioInit(); if(paintOf(drawColor)<=0){ toast(`🪣 ${colorById(drawColor).name} is empty – pick another color.`); return; } painting=true; dc.setPointerCapture(e.pointerId); const p=pos(e); strokes.push({color:drawColor,pts:[p]}); pen={x:p.x,y:p.y}; penT={x:p.x,y:p.y}; dirty=true; spraySound(true); });
+// izsalcis: rokas trīc – līnija raustās, tāpēc zīmējums sanāk mazāk precīzs
+const shake=p=>{ if(!starving()) return p; const t=performance.now()/1000, A=Math.max(6,shapeR*.045); return {x:p.x+Math.sin(t*23)*A+Math.sin(t*61)*A*.5+rnd(-2,2),y:p.y+Math.cos(t*19)*A+Math.sin(t*53)*A*.5+rnd(-2,2)}; };
+dc.addEventListener('pointermove',e=>{ if(!painting) return; const p=shake(pos(e)); pen={x:p.x,y:p.y}; addPt(p); });
+const stopPaint=()=>{ if(painting) persist(); painting=false; spraySound(false); };
+dc.addEventListener('pointerup',stopPaint); dc.addEventListener('pointercancel',stopPaint);
+// zīmēšanas augšējā josla: badā un cik cilvēku redz
+let drawInfoKey='', wipePrev=false;
+const bWipe=document.getElementById('bWipe');
+function syncWipe(){ const show=curWall&&curWall.free&&curWall.layers&&curWall.layers.length; bWipe.style.display=show?'':'none'; bWipe.textContent=wipePrev?'↩️ Keep the old drawing':'🧽 Clean the wall first'; }
+bWipe.onclick=()=>{ wipePrev=!wipePrev; syncWipe(); dirty=true; buzz(10); };
+function updateDrawInfo(force){ if(mode!=='draw'&&!force) return; const w_=npcs.filter(n=>n.seen&&!n.called).length, c_=npcs.filter(n=>n.called&&time-n.callT<40&&Math.abs(n.x-player.x)<900).length;
+  const key=`${w_}|${c_}|${starving()}|${curWall&&curWall.isBonus}`; if(key===drawInfoKey&&!force) return; drawInfoKey=key;
+  let h=''; if(!(curWall&&curWall.isBonus)){ h+=w_?`<span class="${w_>=3?'hot':''}">👀 ${w_} watching</span>`:'<span>🙈 Nobody sees you</span>'; if(c_) h+=`<span class="hot">📞 ${c_} calling the police!</span>`; }
+  if(starving()) h+='<span class="hot">🍔 Hungry – shaky hands!</span>';
+  document.getElementById('drawInfo').innerHTML=h; }
+
+function evaluate(){ if(!targetSamples.length) return {acc:0,cover:0,prec:0};
+  const pts=[]; let len=0;
+  strokes.forEach(s=>{ for(let i=0;i<s.pts.length;i++){ if(i===0){pts.push([s.pts[0].x,s.pts[0].y]);continue;}
+    const a=s.pts[i-1],b=s.pts[i], d=Math.hypot(b.x-a.x,b.y-a.y); len+=d; const n=Math.max(1,Math.ceil(d/3));
+    for(let k=1;k<=n;k++) pts.push([a.x+(b.x-a.x)*k/n,a.y+(b.y-a.y)*k/n]); } });
+  if(len<120) return {acc:0,cover:0,prec:0};
+  const tol=tolPx();
+  const near=(p,arr,r)=>{ const r2=r*r; for(const q of arr){ const a=p[0]-q[0],b=p[1]-q[1]; if(a*a+b*b<=r2) return true; } return false; };
+  const cover=targetSamples.filter(t=>near(t,pts,tol)).length/targetSamples.length;
+  const prec=pts.filter(p=>near(p,targetSamples,tol*1.6)).length/pts.length;
+  return {acc:cover*prec,cover,prec};
+}
+function leaveDraw(burst){ stopPaint(); dOv.classList.remove('on'); mode='exiting'; tr.t=0; tr.burst=burst; player.face='up'; }
+// Rezultāta kartīte: zvaigznes, zīmējums virs kontūras un ikonas (bērniem – mazāk teksta). Netraucē spēlei, pazūd pati.
+let resT=0;
+function showResult(o){ const el=document.getElementById('result'); clearTimeout(resT);
+  const st=[0,1,2].map(i=>`<i class="${i<o.stars?'on':''}" style="animation-delay:${.15+i*.18}s">★</i>`).join('');
+  const h=heatInfo, chip=(t,c='')=>`<span class="${c}">${t}</span>`;
+  el.innerHTML=`<div class="rs">${o.stars<0?'🎨':st}</div><div class="rt">${o.stars?o.rating:'Try again!'}</div><canvas width="240" height="147"></canvas>
+    <div class="rc">${chip(`💰 +€${o.money}`,'gold')}${chip(`📈 +${o.xp} XP`)}${o.mult>1?chip(`🎨 ×${o.mult}`):''}${o.wrongColor?chip(`🎨❌ ½ <b style="color:${o.wrongColor.hex}">●</b>`,'bad'):''}
+    ${h.add?chip(`👀 ${h.seen}${h.patrol?' 🚓':''}${h.called?' 📞':''} → 🚨 +${h.add}`,'bad'):chip('🙈 0 👀','ok')}</div>${o.lvUp?`<div class="rl">🎉 Level ${o.lvUp}!</div>`:''}`;
+  // zīmējums ar balto kontūru virsū – redz, kur trāpīja
+  const c=el.querySelector('canvas'), g=c.getContext('2d'), cr=o.art.crop, k=240/cr.w; g.drawImage(o.art,0,0,240,147);
+  g.save(); g.strokeStyle='#fff'; g.globalAlpha=.75; g.lineWidth=1.5; g.setLineDash([4,3]); targetPaths.forEach(p=>{ g.beginPath(); p.forEach(([x,y],i)=>{ const X=(x-cr.x)*k, Y=(y-cr.y)*k; i?g.lineTo(X,Y):g.moveTo(X,Y); }); g.stroke(); }); g.restore();
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); resT=setTimeout(()=>el.classList.remove('on'),4200); }
+// Freestyle: zīmē, ko gribi; bez precizitātes – samaksa, ja uzzīmēts pietiekami daudz. Var zīmēt virsū vai notīrīt iepriekšējo.
+function finishFree(){ const w=curWall, f=freeFrame(); let tot=0, wsum=0;
+  strokes.forEach(s_=>{ let L=0; for(let i=1;i<s_.pts.length;i++) L+=Math.hypot(s_.pts[i].x-s_.pts[i-1].x,s_.pts[i].y-s_.pts[i-1].y); tot+=L; wsum+=L*colorById(s_.color).mult; });
+  if(!tot){ leaveDraw(false); return; }
+  const enough=tot>=f.w*.8, mult=Math.max(1,Math.round(wsum/tot*100)/100), money=enough?Math.round(TIERS[Math.max(0,Math.min(w.tier,level()-1))].base*.4*mult):0;
+  redraw(false); const layer={u:NET.uid||'me',n:NET.name||'',s:encodeLayer()};
+  w.layers=(wipePrev?[]:(w.layers||[])).concat(Object.assign({t:Date.now()},layer)).slice(-6); const art=layersArt(w); art.crop=cropRect(); shareLayer(w,layer,wipePrev);
+  w.art=art; w.cool=20; save.money+=money; save.painted++; stat('earned',money); stat('free'); persist(); addHeatFromPaint(w);
+  const xpGain=enough?Math.round(xpFor(w.tier)*.4*(buff.xp2>0?2:1)):0, lv0=level(); save.xp=(save.xp||0)+xpGain; persist(); shownMoney=-1;
+  if(level()>lv0) ding([523,659,784,1047,1319]);
+  leaveDraw(true); if(money){ coins(w.px+PANEL.w/2,w.py+PANEL.h/2+40,Math.min(20,4+Math.round(money/12))); sfx('coin'); }
+  showResult({stars:-1,rating:enough?'Freestyle!':'Draw a bit more!',money,xp:xpGain,mult,lvUp:level()>lv0?level():0,art}); }
+function finishDraw(){ if(curWall&&curWall.isBonus){ finishBonus(); return; } if(curWall&&curWall.free){ finishFree(); return; }
+  // krāsas bonuss – pēc tā, cik garu līniju ar katru krāsu uzvilka (nevis viens neona punkts visai sienai)
+  const sl=s_=>{ let L=0; for(let i=1;i<s_.pts.length;i++) L+=Math.hypot(s_.pts[i].x-s_.pts[i-1].x,s_.pts[i].y-s_.pts[i-1].y); return L; };
+  let tot=0, wsum=0, needL=0; strokes.forEach(s_=>{ const L=sl(s_); tot+=L; wsum+=L*colorById(s_.color).mult; if(s_.color===curWall.need) needL+=L; });
+  const r=evaluate(), mult=Math.max(1,Math.round((tot?wsum/tot:1)*100)/100), wrongColor=curWall.need&&tot&&needL/tot<.5;
+  const money=Math.round(TIERS[curWall.tier].base*r.acc*r.acc*mult*(wrongColor?.5:1));
+  const rating=r.acc>=.9?'Masterpiece!':r.acc>=.75?'Super!':r.acc>=.5?'Good':r.acc>=.25?'Poor':'Scribble';
+  redraw(false);
+  const layer={u:NET.uid||'me',n:NET.name||'',s:encodeLayer()}; curWall.layers=(curWall.layers||[]).concat(Object.assign({t:Date.now()},layer)).slice(-6);
+  const art=layersArt(curWall); art.crop=cropRect(); shareLayer(curWall,layer,false);
+  recentShapes.unshift(curWall.shape); recentShapes.length=Math.min(recentShapes.length,3); curWall.shape=pickShape(curWall.tier,walls.filter(w=>w.tier===curWall.tier).map(w=>w.shape)); const needWas=curWall.need; curWall.need=rollNeed(curWall.tier,curWall.v);
+  curWall.art=art; curWall.cool=20; curWall.glow=strokes[0]?colorById(strokes[0].color).hex:'#ff4fd8';
+  save.money+=money; save.painted++; stat('earned',money); if(r.acc>=.9) stat('master'); if(r.acc>=.98) stat('perfect'); if(dayK()<.35) stat('night'); persist();
+  const hmsg=addHeatFromPaint(curWall);
+  const xpGain=Math.round(xpFor(curWall.tier)*(.2+r.acc*.8)*(buff.xp2>0?2:1)), lv0=level(); save.xp=(save.xp||0)+xpGain; persist();
+  let lvmsg=`<br>+${xpGain} XP`; if(level()>lv0){ lvmsg+=`<br>🎉 <b>New level ${level()}!</b> Wall ${level()} unlocked (${distName(level()-1)})`; ding([523,659,784,1047,1319]); }
+  shownMoney=-1;
+  const wx=curWall.px+PANEL.w/2, wy=curWall.py+PANEL.h/2, col=curWall.glow==='#111111'?'#ffd34d':curWall.glow;
+  leaveDraw(true);
+  if(money>0){ cam.flash=r.acc>=.75?1:.5; cam.shake=r.acc>=.75?14:6; burst(wx,wy,col,r.acc>=.75?60:28); coins(wx,wy+40,Math.min(30,4+Math.round(money/12))); floatText(wx,wy-30,`+€${money}`,'#ffd34d'); sfx('coin'); setTimeout(()=>sfx('coin'),150); setTimeout(()=>sfx('coin'),300); ding(r.acc>=.75?[523,659,784,1047]:[523,659]); }
+  else ding([220]);
+  npcs.forEach(n=>{ if(Math.abs(n.x-wx)<700){ n.bubble=r.acc>=.5?'👏':'🤔'; n.bt=2.5; n.pause=2.5; } });
+  showResult({stars:r.acc>=.9?3:r.acc>=.75?2:r.acc>=.5?1:0,rating,acc:r.acc,money,xp:xpGain,mult,wrongColor:wrongColor?colorById(needWas):null,lvUp:level()>lv0?level():0,art});
+}
+document.getElementById('bDone').onclick=finishDraw;
+document.getElementById('bUndo').onclick=()=>{ strokes.pop(); dirty=true; };
+document.getElementById('bClear').onclick=()=>{ strokes=[]; drips=[]; dirty=true; };
+document.getElementById('bCancel').onclick=()=>leaveDraw(false);
+
+// zīmēšanas režīma efekti (tēls + izsmidzināšana)
+function renderFx(){
+  fxc.setTransform(dpr,0,0,dpr,0,0); fxc.clearRect(0,0,W,H);
+  if(mode!=='draw'){ sparts.length=0; return; }
+  // tēls mazs kanvas apakšējā kreisajā stūrī (forma ir centrā, stūris brīvs)
+  const r=dc.getBoundingClientRect(), s=clamp(Math.min(r.width,r.height)/170,1.5,3);
+  const px=r.left+16*s, py=r.bottom-4, tg=pen&&painting?{x:DR.x+pen.x,y:DR.y+pen.y}:{x:mouse.x,y:mouse.y};
+  const o=Object.assign({},playerOutfit(),{face:'side',flip:1,still:true,spray:true,target:tg});
+  drawPerson(fxc,px,py,s,o);
+  if(painting&&o.hand){ const hx=colorById(drawColor).hex, c=hx==='#111111'?'#9aa':hx; fxc.save(); fxc.globalCompositeOperation='lighter'; fxc.globalAlpha=.18; fxc.fillStyle=c;
+    fxc.beginPath(); fxc.moveTo(o.hand.x,o.hand.y); fxc.lineTo(tg.x-12,tg.y-12); fxc.lineTo(tg.x+12,tg.y+12); fxc.closePath(); fxc.fill(); fxc.restore(); }
+  drawParts(fxc,sparts);
+  if(!isTouch){ fxc.save(); fxc.strokeStyle='#fff9'; fxc.lineWidth=1.5; fxc.beginPath(); fxc.arc(mouse.x,mouse.y,10,0,7); fxc.stroke(); fxc.restore(); }
+}
+
+function renderMetroLot(l){
+  const w=l.w,{c,g}=mkCanvas(w,LH), B=LH-10, T=70, mx=w/2;
+  const bg=g.createLinearGradient(0,T,0,B); bg.addColorStop(0,'#2d3648'); bg.addColorStop(1,'#1b212e'); g.fillStyle=bg; g.fillRect(0,T,w,B-T);
+  g.strokeStyle='rgba(255,255,255,.05)'; g.lineWidth=1; for(let x=0;x<w;x+=28){ g.beginPath(); g.moveTo(x,T); g.lineTo(x,B); g.stroke(); } for(let y=T;y<B;y+=28){ g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); }
+  rr(g,-6,T-14,w+12,18,3,'#1a1f2b'); rr(g,-6,T-14,w+12,4,2,'rgba(255,255,255,.2)');
+  g.save(); g.shadowColor='#5aa8e8'; g.shadowBlur=6; g.fillStyle='#0c1424'; g.beginPath(); g.arc(mx,150,52,0,7); g.fill(); g.strokeStyle='#5aa8e8'; g.lineWidth=7; g.beginPath(); g.arc(mx,150,46,0,7); g.stroke(); g.restore();
+  g.fillStyle='#f4f1ea'; g.font='900 64px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('M',mx,153);
+  rr(g,mx-150,222,300,36,8,'#0c1424'); g.fillStyle='#cfe6ff'; g.font='bold 19px system-ui'; g.fillText(l.ds===0?'CENTRAL STATION':'STATION · '+DIST_NAMES[l.ds*10].toUpperCase(),mx,241);
+  l.sign={x:mx-150,y:222+LY0,w:300,h:36};
+  const ex=mx-80, ey=300; rr(g,ex-8,ey-8,176,B-ey+8,6,'#0c1018'); const eg=g.createLinearGradient(0,ey,0,B); eg.addColorStop(0,'#1d2a40'); eg.addColorStop(1,'#08101c'); g.fillStyle=eg; g.fillRect(ex,ey,160,B-ey);
+  g.strokeStyle='#ffd34d'; g.lineWidth=3; for(let i=0;i<7;i++){ const yy=ey+22+i*18; g.beginPath(); g.moveTo(ex+14,yy); g.lineTo(ex+80,yy+10); g.lineTo(ex+146,yy); g.stroke(); }
+  g.strokeStyle='#9aa4b5'; g.lineWidth=4; g.beginPath(); g.moveTo(ex-6,B); g.lineTo(ex-6,ey+30); g.moveTo(ex+166,B); g.lineTo(ex+166,ey+30); g.stroke();
+  g.fillStyle='rgba(120,200,255,.35)'; g.fillRect(ex,ey-4,160,4);
+  [[24,300],[w-114,300]].forEach(([px,py],i)=>{ rr(g,px,py,90,120,4,'#10131c'); g.fillStyle=['#ff6f91','#4dd0e1'][i]; g.fillRect(px+8,py+8,74,60); g.fillStyle='#fff6'; g.fillRect(px+8,py+78,74,6); g.fillRect(px+8,py+92,52,6); });
+  rr(g,0,B-8,w,8,0,'#10131c');
+  l.window={x:mx,y:ey+60+LY0};
+  l.img=c; }
+
+// ================= Metro, lootbox un priekšmeti =================
+save.items=Object.assign({smoke:0,energy:0,xp2:0,mask:0},save.items||{});
+// Krāsas iztērējas: save.paint[id] = 0..100 %. Uzpilda Krāsu depo; melnā ir lētākā (€20 = ikdienas dāvana).
+const REFILL={black:20,red:25}, refillPrice=id=>REFILL[id]||Math.max(30,Math.round(colorById(id).price*.4));
+const refillCost=id=>Math.max(1,Math.ceil(refillPrice(id)*(100-paintOf(id))/100));
+const paintOf=id=>Math.max(0,(save.paint&&save.paint[id])||0);
+function ensurePaint(){ save.paint=save.paint||{}; save.colors.forEach(id=>{ if(save.paint[id]==null) save.paint[id]=100; }); }
+ensurePaint();
+save.st=save.st||{}; const stat=(k,v=1)=>{ save.st[k]=(save.st[k]||0)+v; }; // skaitītāji medaļām
+const ITEMS={ smoke:{n:'Smoke bomb',i:'💨',k:'Z',d:'police lose you, suspicion −35'}, energy:{n:'Energy drink',i:'⚡',k:'X',d:'+40% speed for 40 s'}, xp2:{n:'Double XP',i:'📈',k:'C',d:'XP ×2 for 5 min'}, mask:{n:'Mask',i:'🎭',k:'V',d:'witnesses will not call for 3 min'} };
+const BOXES=[{n:'Bronze box',c:'#cd7f32',i:'📦'},{n:'Silver box',c:'#c0c8d4',i:'🎁'},{n:'Gold box',c:'#ffd34d',i:'🎁'},{n:'Diamond box',c:'#7ee8ff',i:'💎'}];
+const buff={energy:0,xp2:0,mask:0};
+const invEl=document.getElementById('inv'); let invShown='';
+function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.items[id]||0),0), anyBuff=Object.values(buff).some(v=>v>0);
+  const s_=(total||anyBuff?`<button class="bag" data-bag="1">🎒 ${total}</button>`:'')+(!invOpen?'':Object.keys(ITEMS).filter(id=>(save.items[id]||0)>0||buff[id]>0||!isTouch).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">${Math.ceil(buff[id])}s</span>`:''; return `<button data-it="${id}" ${n?'':'disabled'} title="${it.n}: ${it.d} (${it.k})">${it.i} ×${n}${isTouch?'':` <small>${it.k}</small>`}${b}</button>`; }).join(''));
+  if(s_!==invShown){ invShown=s_; invEl.innerHTML=s_; invEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(b.dataset.bag){ invOpen=!invOpen; renderInv(); } else useItem(b.dataset.it); }); } }
+let invOpen=!isTouch;
+setInterval(renderInv,400); renderInv();
+hudBox.classList.toggle('open',!isTouch); hudBox.addEventListener('pointerdown',e=>{ hudBox.classList.toggle('open'); e.stopPropagation(); });
+{ const pl=document.getElementById('player'); let plT=0; pl.classList.toggle('open',!isTouch);
+  document.getElementById('pToggle').onclick=()=>{ pl.classList.toggle('open'); clearTimeout(plT); if(isTouch&&pl.classList.contains('open')) plT=setTimeout(()=>pl.classList.remove('open'),8000); }; }
+function useItem(id){ if(mode!=='world'||!(save.items[id]>0)) return; save.items[id]--; stat('items'); persist();
+  if(id==='smoke'){ heat=Math.max(0,heat-35); police.offs.forEach(o=>{ if(o.state==='chase'||o.state==='goHide'){ o.state='search'; o.lastX=player.x; o.t=0; o.wdT=0; o.knows=false; o.bubble='❓'; o.bt=1.5; } });
+    for(let i=0;i<22;i++) puff('smoke',player.x+rnd(-20,20),GROUND-rnd(0,60),{vx:rnd(-60,60),vy:rnd(-10,10),vz:rnd(10,40),size:11,life:1.6,max:1.6}); sfx('hide'); toast('💨 Smoke bomb! The police lost you.'); }
+  else if(id==='energy'){ buff.energy=40; sfx('buy'); toast('⚡ Energy! Run 40% faster for 40 seconds.'); }
+  else if(id==='xp2'){ buff.xp2=300; sfx('buy'); toast('📈 Double XP for 5 minutes!'); }
+  else if(id==='mask'){ buff.mask=180; sfx('buy'); toast('🎭 Mask! Witnesses will not call the police for 3 minutes.'); }
+  renderInv(); }
+function addXp(v){ const lv0=level(); save.xp=(save.xp||0)+v; persist(); if(level()>lv0){ ding([523,659,784,1047,1319]); toast(`🎉 <b>New level ${level()}!</b> Wall ${level()} unlocked (${distName(level()-1)})`); } shownMoney=-1; }
+// ---- metro iekšpuse: sava ainava ar sienām un vilcienu ----
+const M0=WORLD_W+2000, M1=M0+3600, MC=(M0+M1)/2;
+let inMetro=false, metroFrom=null, metroObjs=[], metroLot=null, metroKey='';
+const bounds=()=>inMetro?[M0+60,M1-60]:[cityRange[curCity][0]+60,cityRange[curCity][1]-60];
+const metroPrompt=l=>'E – enter the metro';
+const metroObjPrompt=o=>o.kind==='mtrain'?'E – train: choose a district (travel instantly)':o.kind==='mexit'?'E – to the street':(o.cool>0?`Paint drying… ${Math.ceil(o.cool)} s`:`E – bonus wall (shape ${o.tier+1}) → lootbox!`);
+(function buildMetro(){ const lv=level(), mk=(kind,cx)=>({kind,cx,door:cx-34,i:-1,w:0,cool:0});
+  const mw=cx=>{ const k=Math.max(0,lv-1-Math.floor(Math.random()*4)); return Object.assign(mk('mwall',cx),{tier:k,shape:pickShape(k),isBonus:true,px:cx-PANEL.w/2,py:PANEL.y,art:null,glow:'#5aa8e8'}); };
+  metroObjs=[mk('mexit',M0+110),mw(M0+560),mw(M0+1160),mk('mtrain',MC),mw(M1-1160),mw(M1-560),mk('mexit',M1-110)]; })();
+const ride={t:0,cb:null,moved:false,label:''}, rideOv=document.getElementById('rideOv'), rideText=document.getElementById('rideText');
+function travel(cb,label){ stat('metro'); closeShop(); mode='ride'; ride.t=0; ride.cb=cb; ride.moved=false; ride.label=label; rideText.textContent='🚇 '+label; rideOv.classList.add('on'); sfx('ride'); }
+function enterMetro(st){ if(police.active){ toast('🚓 The police are looking for you – metro unavailable!'); return; }
+  metroFrom=st; travel(()=>{ inMetro=true; metroObjs.forEach(w=>{ if(w.kind==='mwall'&&w.cool<=0){ const k=Math.max(0,level()-1-Math.floor(Math.random()*4)); w.tier=k; w.shape=pickShape(k); w.art=null; } }); player.x=M0+300; player.flip=1; },'Metro'); }
+function exitMetro(){ travel(()=>{ inMetro=false; curCity=metroFrom?metroFrom.city:0; shownMoney=-1; player.x=metroFrom?metroFrom.cx:300; },'To the street'); }
+function goDistrict(k){ const w=walls.find(w=>w.tier===k); travel(()=>{ inMetro=false; curCity=w.city; shownMoney=-1; player.x=w.cx; },`Level ${k+1}: ${distName(k)} (City ${w.city+1})`); }
+function goCity(c){ travel(()=>{ inMetro=false; curCity=c; shownMoney=-1; player.x=stations[c].cx; },`City ${c+1}: ${CITY_NAMES[c]}`); }
+function openMetro(){ if(mode!=='world'||!inMetro) return; mode='shop'; promptEl.style.display='none'; tpOv.classList.add('on'); renderMetro(); }
+function renderMetro(){ if(!inMetro||!tpOv.classList.contains('on')) return; const lv=Math.min(NLEV,level()); let rows='';
+  for(let c=Math.min(9,Math.floor((lv-1)/10));c>=0;c--) rows+=`<div class="row"><div class="dot" style="background:${TIER_COL[c*10]};color:${TIER_COL[c*10]}"></div><div class="n">City ${c+1}: ${CITY_NAMES[c]} <small>(levels ${c*10+1}–${Math.min(NLEV,c*10+10)})</small></div><button data-c="${c}">Go</button></div>`;
+  tpEl.innerHTML=`<h2>🚇 Train – choose a city</h2><div style="margin-bottom:8px;color:#aab;font-size:13px">Each city has 10 levels. New cities open as you level up. Travel instantly, no waiting.</div>${rows}
+    <div class="row"><div class="n">Go straight to level (1–${lv})</div><input id="tpNum" type="number" min="1" max="${lv}" value="${lv}" style="width:70px;padding:6px;border-radius:6px;border:0"><button id="tpGo">Go</button></div><br><button class="sec" id="tpClose">Close (E / Esc)</button>`;
+  tpEl.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>goCity(+b.dataset.c));
+  document.getElementById('tpGo').onclick=()=>goDistrict(clamp((parseInt(document.getElementById('tpNum').value)||1)-1,0,lv-1));
+  document.getElementById('tpClose').onclick=closeShop; }
+function drawMetroInterior(vx0,vx1){
+  const x0=vx0-100, w_=vx1-vx0+200;
+  const bg=ctx.createLinearGradient(0,0,0,BASE); bg.addColorStop(0,'#131a27'); bg.addColorStop(1,'#27313f'); ctx.fillStyle=bg; ctx.fillRect(x0,-60,w_,BASE+60);
+  ctx.strokeStyle='rgba(255,255,255,.045)'; ctx.lineWidth=2; for(let x=Math.floor(x0/60)*60;x<x0+w_;x+=60){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,BASE); ctx.stroke(); } for(let y=0;y<BASE;y+=60){ ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x0+w_,y); ctx.stroke(); }
+  ctx.fillStyle='#1b2433'; ctx.fillRect(x0,BASE-60,w_,60);
+  ctx.fillStyle='#0a0e17'; ctx.fillRect(x0,-60,w_,130);
+  for(let x=M0;x<=M1;x+=300){ if(x<x0-80||x>x0+w_+80) continue; rr(ctx,x-50,62,100,9,4,'#eaf4ff'); ctx.save(); ctx.globalCompositeOperation='lighter'; const g=ctx.createLinearGradient(0,70,0,BASE); g.addColorStop(0,'rgba(210,235,255,.13)'); g.addColorStop(1,'rgba(210,235,255,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(x-45,70); ctx.lineTo(x+45,70); ctx.lineTo(x+170,BASE); ctx.lineTo(x-170,BASE); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  // vilciens (3 vagoni)
+  const tx=MC-440, tw=880, ty=388, th=172, g2=ctx.createLinearGradient(0,ty,0,ty+th); g2.addColorStop(0,'#d3dbe8'); g2.addColorStop(1,'#8a95a8'); ctx.fillStyle=g2; ctx.beginPath(); ctx.roundRect(tx,ty,tw,th,26); ctx.fill();
+  ctx.fillStyle='#2f6fb8'; ctx.fillRect(tx,ty+116,tw,14);
+  for(let i=0;i<3;i++){ const cx0=tx+i*(tw/3); if(cx0<x0-300||cx0>x0+w_+300) continue; ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(cx0,ty+8,3,th-14);
+    [14,62,190,238].forEach(o=>{ rr(ctx,cx0+o,ty+28,40,52,6,'#243a52'); }); const dg=ctx.createLinearGradient(0,ty+34,0,ty+150); dg.addColorStop(0,'#ffe9a8'); dg.addColorStop(1,'#f0c878'); ctx.fillStyle=dg; ctx.fillRect(cx0+120,ty+34,56,116); ctx.fillStyle='#8a6a3a'; ctx.fillRect(cx0+147,ty+34,3,116); }
+  ctx.fillStyle='#10202f'; ctx.font='bold 18px system-ui'; ctx.textAlign='center'; ctx.fillText('METRO',MC,ty+104);
+  ctx.save(); ctx.globalCompositeOperation='lighter'; const dgl=ctx.createRadialGradient(MC,ty+120,10,MC,ty+120,260); dgl.addColorStop(0,'rgba(255,225,150,.2)'); dgl.addColorStop(1,'rgba(255,225,150,0)'); ctx.fillStyle=dgl; ctx.fillRect(MC-260,ty-140,520,520); ctx.restore();
+  ctx.fillStyle='#7ec8ff'; ctx.font='bold 17px system-ui'; ctx.fillText('▼ TRAIN · E – choose a district ▼',MC,ty-14+Math.sin(time*4)*3);
+  // platforma un sliedes
+  const fg=ctx.createLinearGradient(0,BASE,0,612); fg.addColorStop(0,'#3a4152'); fg.addColorStop(1,'#2a3040'); ctx.fillStyle=fg; ctx.fillRect(x0,BASE,w_,52);
+  ctx.fillStyle='#ffd34d'; ctx.fillRect(x0,606,w_,4); ctx.fillStyle='#0d1019'; ctx.fillRect(x0,612,w_,130);
+  ctx.fillStyle='#4a5160'; ctx.fillRect(x0,650,w_,4); ctx.fillRect(x0,690,w_,4); ctx.fillStyle='#2a2e38'; for(let x=Math.floor(x0/40)*40;x<x0+w_;x+=40) ctx.fillRect(x,640,16,64);
+  // kāpnes uz ielu (abos galos)
+  [[M0,1],[M1,-1]].forEach(([ex,dir])=>{ const sx=ex+(dir>0?24:-224); rr(ctx,sx,370,200,190,6,'#0a0e17'); const sg=ctx.createLinearGradient(0,370,0,560); sg.addColorStop(0,'rgba(255,245,200,.9)'); sg.addColorStop(1,'rgba(255,245,200,.05)'); ctx.fillStyle=sg; ctx.fillRect(sx+10,380,180,170);
+    ctx.fillStyle='#2b3345'; for(let i=0;i<8;i++){ const yy=550-i*20; ctx.fillRect(dir>0?sx+10+i*8:sx+190-i*8-180+8,yy,180-i*8,10); }
+    rr(ctx,sx+30,330,140,30,6,'#0f3a24'); ctx.fillStyle='#7cff8a'; ctx.font='bold 15px system-ui'; ctx.textAlign='center'; ctx.fillText('↑ TO STREET',sx+100,350); });
+  // bonusa sienas
+  metroObjs.forEach(w=>{ if(w.kind!=='mwall') return; if(w.cx<x0-300||w.cx>x0+w_+300) return;
+    ctx.fillStyle='#0006'; ctx.fillRect(w.px-12,w.py-12,PANEL.w+24,PANEL.h+24); ctx.drawImage(bgBrick,w.px,w.py,PANEL.w,PANEL.h);
+    if(w.art) ctx.drawImage(w.art,w.px,w.py,PANEL.w,PANEL.h);
+    else if(mode!=='draw'){ ctx.save(); ctx.strokeStyle='#fff'; ctx.globalAlpha=.3; ctx.lineWidth=2; ctx.setLineDash([6,5]); const R=70, sx=w.px+PANEL.w/2, sy=w.py+PANEL.h/2; SHAPES[w.shape]().forEach(p=>{ ctx.beginPath(); p.forEach(([x,y],i)=>i?ctx.lineTo(sx+x*R,sy+y*R):ctx.moveTo(sx+x*R,sy+y*R)); ctx.stroke(); }); ctx.restore(); }
+    ctx.strokeStyle='#cfc8bd'; ctx.lineWidth=8; ctx.strokeRect(w.px-4,w.py-4,PANEL.w+8,PANEL.h+8);
+    rr(ctx,w.cx-100,w.py-52,200,26,6,'#0d0c14'); ctx.fillStyle='#ffd34d'; ctx.font='bold 14px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(w.cool>0?`⏳ drying ${Math.ceil(w.cool)} s`:`🎁 BONUS · shape ${w.tier+1}`,w.cx,w.py-39); ctx.textBaseline='alphabetic'; });
+}
+function rollBoxTier(acc){ const w=[70,22+8*acc,7+4*acc,1+1.5*acc]; let r=Math.random()*w.reduce((a,b)=>a+b,0); for(let i=0;i<4;i++){ if((r-=w[i])<0) return i; } return 0; }
+function finishBonus(){ const w=curWall, r=evaluate();
+  const bt=Math.random()<.15+.25*r.acc?rollBoxTier(r.acc):-1, cash=Math.round(TIERS[w.tier].base*.25*r.acc);
+  stat('bonus'); if(cash>0){ save.money+=cash; stat('earned',cash); shownMoney=-1; } persist();
+  redraw(false); const art=artFromDraw();
+  recentShapes.unshift(w.shape); recentShapes.length=Math.min(recentShapes.length,3); w.shape=pickShape(w.tier);
+  w.art=art; w.cool=60; w.glow=strokes[0]?colorById(strokes[0].color).hex:'#5aa8e8';
+  leaveDraw(false); showLoot(bt,r.acc,cash); }
+let lootOpen=false; const lootOv=document.getElementById('lootOv'), lootEl=document.getElementById('loot');
+function closeLoot(){ lootOpen=false; lootOv.classList.remove('on'); renderInv(); }
+const lootHead=acc=>acc==null?'<h2>🎉 Congratulations!</h2><p>You found a hidden lootbox!</p>':`<h2>Accuracy ${Math.round(acc*100)}%</h2>`;
+function showLoot(bt,acc,cash=0){ lootOpen=true; lootOv.classList.add('on');
+  if(bt<0){ lootEl.style.setProperty('--lc','#555'); lootEl.innerHTML=`${lootHead(acc)}<p>No lootbox this time${cash?` – but you earned <b style="color:#ffd34d">€ ${cash}</b>`:''}.</p><p style="color:#aab;font-size:13px">Tip: lootboxes are rare. Some are hidden in dumpsters and crates.</p><button id="lootOk">OK</button>`; document.getElementById('lootOk').onclick=closeLoot; sfx('bust'); return; }
+  const B=BOXES[bt]; lootEl.style.setProperty('--lc',B.c);
+  lootEl.innerHTML=`${lootHead(acc)}<div class="lootbox" style="filter:drop-shadow(0 0 22px ${B.c})">${B.i}</div><p style="color:${B.c};font-weight:700;font-size:20px">${B.n}</p><button id="lootOpen">Open box</button>`;
+  sfx('box'); document.getElementById('lootOpen').onclick=()=>openLoot(bt); }
+function rollReward(bt){ const Wt=[{m:60,i:25,x:10,c:5},{m:40,i:30,x:15,c:15},{m:30,i:30,x:15,c:25},{m:25,i:25,x:20,c:30}][bt];
+  const lvl=Math.min(NLEV,Math.max(1,level())), base=TIERS[lvl-1].base, maxPrice=[120,450,900,1e9][bt];
+  let pool=COLORS.filter(c=>!save.colors.includes(c.id)&&c.price<=maxPrice); if(!pool.length) pool=COLORS.filter(c=>!save.colors.includes(c.id));
+  const w=Object.assign({},Wt); if(!pool.length){ w.m+=w.c; w.c=0; }
+  let r=Math.random()*(w.m+w.i+w.x+w.c), type;
+  if(r<w.m) type='m'; else if((r-=w.m)<w.i) type='i'; else if((r-=w.i)<w.x) type='x'; else type='c';
+  if(type==='m') return {t:'money',v:Math.round(base*[.8,2,5,14][bt]*rnd(.8,1.25)+20)};
+  if(type==='i'){ const id=Object.keys(ITEMS)[(Math.random()*4)|0]; return {t:'item',id,q:1+((Math.random()*(bt+1))|0)}; }
+  if(type==='x') return {t:'xp',v:Math.round(xpFor(lvl-1)*[1,2,4,8][bt])};
+  return {t:'color',id:pool[(Math.random()*pool.length)|0].id}; }
+function openLoot(bt){ stat('box'); if(bt>=3) stat('legend'); const B=BOXES[bt], n=1+(bt>=2?1:0)+(bt>=3?1:0), got=[]; for(let i=0;i<n;i++) got.push(rollReward(bt));
+  const cards=got.map((g_,i)=>{ let txt='';
+    if(g_.t==='money'){ save.money+=g_.v; txt=`💰 € ${g_.v}`; }
+    else if(g_.t==='item'){ save.items[g_.id]=(save.items[g_.id]||0)+g_.q; txt=`${ITEMS[g_.id].i} ${ITEMS[g_.id].n} ×${g_.q}`; }
+    else if(g_.t==='xp'){ addXp(g_.v); txt=`📈 +${g_.v} XP`; }
+    else { const c=colorById(g_.id); if(!save.colors.includes(c.id)) save.colors.push(c.id); save.paint[c.id]=100; txt=`🎨 New color: <b style="color:${c.hex==='#111111'?'#aaa':c.hex}">${c.name}</b> (bonus x${c.mult})`; }
+    return `<div class="reward" style="animation-delay:${i*.35}s;border-color:${B.c}">${txt}</div>`; }).join('');
+  persist(); shownMoney=-1; dispMoney=save.money; sfx('coin'); setTimeout(()=>sfx('coin'),160); ding([523,659,784,1047]);
+  lootEl.innerHTML=`<h2 style="color:${B.c}">${B.n} opened!</h2>${cards}<br><button id="lootOk">Awesome!</button>`; document.getElementById('lootOk').onclick=closeLoot; }
+
+// ================= Veikals =================
+const shopOv=document.getElementById('shopOv'), shopEl=document.getElementById('shop');
+function openShop(){ mode='shop'; promptEl.style.display='none'; renderShop(); shopOv.classList.add('on'); }
+const tpOv=document.getElementById('tpOv'), tpEl=document.getElementById('tp');
+function closeShop(){ shopOv.classList.remove('on'); tpOv.classList.remove('on'); metroLot=null; metroKey=''; mode='world'; }
+function openTeleport(){ if(mode!=='world') return; if(inMetro){ const t_=metroObjs.find(o=>o.kind==='mtrain'); if(Math.abs(player.x-t_.cx)<440) return openMetro(); toast(isTouch?'🚇 The train stands in the middle of the station – tap it.':'🚇 The train stands in the middle of the station – walk to it and press E.'); return; } let b=null,bd=1e9; stations.forEach(st=>{ const d=Math.abs(st.cx-player.x); if(d<bd){ bd=d; b=st; } });
+  if(bd<170) return openMetro(b);
+  toast(`🚇 Teleporting is metro only! Nearest station: ${Math.round(bd/10)} m ${b.cx>player.x?'→':'←'} (blue arrow).`); }
+function doTeleport(d){ if(police.active){ closeShop(); toast('🚓 The police are after you – teleport unavailable!'); return; } closeShop(); const ox=player.x;
+  for(let i=0;i<16;i++) puff('spark',ox+rnd(-14,14),GROUND-rnd(0,80),{vx:rnd(-140,140),vy:rnd(-180,-20),col:'#8ee3ff',life:.5,max:.5,drag:.95});
+  player.x=d.x; player.vx=0; player.h=0; hidden=false; cam.x=d.x; cam.flash=.7; burst(d.x,GROUND-40,'#8ee3ff',32); sfx('zap'); ding([880,1175]); toast('⚡ '+d.n); }
+// Frizētava: tēla izskats ar dzīvu priekšskatu (bez maksas)
+const LOOK_OPTS={
+  skin:['#ffdbac','#f2c9a0','#e0ac80','#c68642','#8d5524','#5c3a21'],
+  hood:['auto','#e53935','#1e88e5','#43a047','#fdd835','#ec407a','#fb8c00','#8e24aa','#26c6da','#eceff1','#37474f','#111111'],
+  hat:['cap','beanie','hair'],
+  cap:['#1b1b1f','#e53935','#1e88e5','#43a047','#fdd835','#ec407a','#8e24aa','#eceff1','#6d4c41','#f5c542'],
+  mask:['none','#b71c1c','#111111','#1e88e5','#43a047','#ec407a','#eceff1','#fb8c00'],
+  pants:['#2b3a67','#1b1b1f','#5d4037','#455a64','#2e7d32','#6a1b9a','#c62828','#9e9e9e'],
+};
+const LOOK_ROWS=[['skin','Skin'],['hood','Hoodie'],['hat','Head'],['cap','Hat / hair color'],['mask','Mask'],['pants','Pants']];
+function openBarber(){ mode='shop'; promptEl.style.display='none'; renderBarber(); shopOv.classList.add('on'); stat('barber'); }
+function renderBarber(){ const L=lookOf();
+  const sw=(k,v)=>{ const sel=L[k]===v; let inner='', bg=v;
+    if(v==='auto'){ bg=`conic-gradient(#e53935,#fdd835,#43a047,#1e88e5,#8e24aa,#e53935)`; inner='🎨'; }
+    else if(v==='none'){ bg='#2a2a33'; inner='🙂'; }
+    else if(k==='hat'){ bg='#2a2a33'; inner={cap:'🧢',beanie:'🧶',hair:'💇'}[v]; }
+    return `<button class="lk${sel?' sel':''}" data-k="${k}" data-v="${v}" style="background:${bg}">${inner}</button>`; };
+  shopEl.innerHTML=`<h2>💈 Barber</h2><div class="bb"><canvas id="lookPrev" width="240" height="300"></canvas><div class="bbr">${LOOK_ROWS.map(([k,n])=>`<div class="lkRow"><small>${n}</small><div>${LOOK_OPTS[k].map(v=>sw(k,v)).join('')}</div></div>`).join('')}</div></div>
+    <button id="lookRnd" class="sec">🎲 Random</button> <button id="shopClose">✔ Done<span class="kh"> (E / Esc)</span></button>`;
+  const c=document.getElementById('lookPrev'), g=c.getContext('2d'); g.fillStyle='#1d1b29'; g.fillRect(0,0,240,300); g.fillStyle='#2b2d38'; g.fillRect(0,250,240,50);
+  drawPerson(g,120,262,4.6,Object.assign({},playerOutfit(),{face:'down',still:true}));
+  const pushLook=()=>{ if(NET.on&&NET.db) NET.db.ref('users/'+NET.uid+'/look').set(save.look).catch(()=>{}); };
+  shopEl.querySelectorAll('.lk').forEach(b=>b.onclick=()=>{ save.look=Object.assign(lookOf(),{[b.dataset.k]:b.dataset.v}); persist(); pushLook(); renderBarber(); });
+  document.getElementById('lookRnd').onclick=()=>{ const r=a=>a[(Math.random()*a.length)|0]; save.look={skin:r(LOOK_OPTS.skin),hood:r(LOOK_OPTS.hood),hat:r(LOOK_OPTS.hat),cap:r(LOOK_OPTS.cap),mask:r(LOOK_OPTS.mask),pants:r(LOOK_OPTS.pants)}; persist(); pushLook(); renderBarber(); };
+  document.getElementById('shopClose').onclick=closeShop; }
+function openShoes(){ mode='shop'; promptEl.style.display='none'; renderShoes(); shopOv.classList.add('on'); }
+function renderShoes(){ save.shoes=save.shoes||['old'];
+  const rows=SHOES.map(x=>{ const own=save.shoes.includes(x.id), on=shoeOf().id===x.id;
+    return `<div class="row"><div class="dot" style="background:#333;font-size:22px;display:flex;align-items:center;justify-content:center">${x.i}</div><div class="n">${x.name} <small>– speed ×${x.k}${x.jump>1?`, jump ×${x.jump}`:''}</small></div>`+
+      (own?(on?'<span>✔ in use</span>':`<button data-act="wear" data-id="${x.id}" class="sec">Use</button>`):`<button data-act="buys" data-id="${x.id}" ${save.money<x.price?'disabled':''}>€ ${x.price}</button>`)+`</div>`; }).join('');
+  shopEl.innerHTML=`<h2>👟 Shoe shop <span style="float:right;color:#ffd34d">€ ${save.money}</span></h2><p style="color:#aab;margin:0 0 8px">Faster shoes = run faster on foot (escape the police!).</p>${rows}<br><button id="shopClose">Close<span class="kh"> (E / Esc)</span></button>`;
+  shopEl.querySelectorAll('button[data-act]').forEach(b=>b.onclick=()=>{ const x=SHOES.find(q=>q.id===b.dataset.id);
+    if(b.dataset.act==='wear') save.shoe=x.id;
+    if(b.dataset.act==='buys'&&save.money>=x.price){ save.money-=x.price; save.shoes.push(x.id); save.shoe=x.id; stat('shoes'); sfx('buy'); }
+    persist(); renderShoes(); dispMoney=save.money; updateHud(); });
+  document.getElementById('shopClose').onclick=closeShop; }
+function renderShop(){
+  const colorRows=COLORS.map(c=>{ const own=save.colors.includes(c.id);
+    return `<div class="row"><div class="dot" style="background:${c.hex};color:${c.hex}"></div><div class="n">${c.name} <small>– bonus x${c.mult}</small></div>`+
+      (own?`<span class="paintCtl"><small class="can" style="color:${paintOf(c.id)<=0?'#ff5252':paintOf(c.id)<25?'#ffca28':'#9e9'}">🪣 ${Math.ceil(paintOf(c.id))}%</small>${paintOf(c.id)<100?`<button data-act="fill" data-id="${c.id}" ${save.money<refillCost(c.id)?'disabled':''}>Refill € ${refillCost(c.id)}</button>`:''}${save.color===c.id?' ✔':`<button data-act="col" data-id="${c.id}" class="sec">Select</button>`}</span>`:`<button data-act="buyc" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
+  const carRows=CARS.map(c=>{ const own=save.cars.includes(c.id);
+    return `<div class="row"><div class="dot" style="background:${c.color};color:${c.color}"></div><div class="n">${c.name} <small>– speed ${c.speed}</small></div>`+
+      (own?`<span>${save.car===c.id?'✔ in use':`<button data-act="car" data-id="${c.id}" class="sec">Use</button>`}</span>`:`<button data-act="buyk" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
+  shopEl.innerHTML=`<h2>Paint Depot <span style="float:right;color:#ffd34d">€ ${save.money}</span></h2><b>Colors</b>${colorRows}<br><b>Vehicles</b>${carRows}<br><button id="shopClose">Close<span class="kh"> (E / Esc)</span></button>`;
+  shopEl.querySelectorAll('button[data-act]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.id, a=b.dataset.act;
+    if(a==='col') save.color=id;
+    if(a==='car') save.car=id;
+    if(a==='buyc'){ const c=colorById(id); if(save.money>=c.price){ save.money-=c.price; save.colors.push(id); save.paint[id]=100; save.color=id; sfx('buy'); } }
+    if(a==='fill'){ const k=refillCost(id); if(save.money>=k&&paintOf(id)<100){ save.money-=k; save.paint[id]=100; stat('refill'); sfx('buy'); } }
+    if(a==='buyk'){ const c=carById(id); if(save.money>=c.price){ save.money-=c.price; save.cars.push(id); save.car=id; sfx('buy'); } }
+    persist(); renderShop(); dispMoney=save.money; updateHud();
+  });
+  document.getElementById('shopClose').onclick=closeShop;
+}
+
+// ================= Ievade =================
+// ---- pieskārienu vadība: spied uz objektiem pasaulē ----
+let autoT=null, ctxShown='';
+const ripples=[];
+const buzz=ms=>{ try{ navigator.vibrate&&navigator.vibrate(ms); }catch(e){} };
+const lotX=l=>l.kind==='wall'||l.kind==='mwall'?l.cx:l.door+34;
+function pickTarget(wx,wy){
+  if(!inMetro){ for(const s_ of hideSpots){ if(s_.lot.city===curCity&&Math.abs(wx-s_.x)<75&&wy>BASE-110&&wy<BASE+40) return {act:'hide',x:s_.x,obj:s_}; } }
+  const list=inMetro?metroObjs:lots.filter(l=>l.city===curCity);
+  for(const l of list){
+    if(l.kind==='wall'||l.kind==='mwall'){ if(wx>l.px-20&&wx<l.px+PANEL.w+20&&wy>l.py-40&&wy<l.py+PANEL.h+60) return {act:'lot',x:l.cx,obj:l}; continue; }
+    if(l.kind==='mtrain'){ if(Math.abs(wx-l.cx)<440&&wy>370&&wy<BASE+20) return {act:'lot',x:l.cx,obj:l}; continue; }
+    if(l.kind==='mexit'){ if(Math.abs(wx-l.cx)<120&&wy>320&&wy<BASE+20) return {act:'lot',x:l.cx,obj:l}; continue; }
+    if(['paint','cafe','pizza','shoes','barber','metro'].includes(l.kind)&&wx>l.x&&wx<l.x+l.w&&wy>LY0+150&&wy<BASE+20) return {act:'lot',x:lotX(l),obj:l};
+  }
+  return null; }
+cv.addEventListener('pointerdown',e=>{ if(mode!=='world'||lootOpen) return; audioInit();
+  const Zs=cam.zoom, wx=(e.clientX-W/2)/Zs+cam.x, wy=(e.clientY-H/2)/Zs+cam.y;
+  if(NET.on&&!inMetro&&window.TWS){ let po=null,pd=70; Object.values(NET.others).forEach(o=>{ if(o.hid) return; const d=Math.abs(o.dx-wx); if(d<pd&&wy>GROUND-240&&wy<GROUND+30){ pd=d; po=o; } });
+    if(po){ buzz(10); ripples.push({x:e.clientX,y:e.clientY,t:0,c:'#5ac8ff'}); openChat(()=>TWS.openPlayer(po.uid)); return; } }
+  const hit=pickTarget(wx,wy);
+  if(!hit) return; // staigāšana tikai ar bultiņām – spiediens strādā tikai uz objektiem
+  ripples.push({x:e.clientX,y:e.clientY,t:0,c:hit.act==='hide'?'#69f0ae':'#ffd34d'});
+  if(hidden){ if(hit.act==='hide'&&hit.obj===hideAt){ buzz(15); toggleHide(); } return; }
+  autoT=Object.assign(hit,{arrived:false}); buzz(8); });
+function ctxInfo(){ if(mode!=='world') return null;
+  if(hidden) return null;
+  const l=nearLot; if(!l) return null;
+  if(l.kind==='wall') return locked(l)?{i:'🔒',t:'Lv '+(l.tier+1)}:l.need&&!save.colors.includes(l.need)?{i:'🛒',t:colorById(l.need).name}:l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎨',t:'Paint'};
+  if(l.kind==='mwall') return l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎁',t:'Bonus'};
+  return {paint:{i:'🛒',t:'Shop'},cafe:{i:'🍔',t:'Eat'},pizza:{i:'🍕',t:'Eat'},shoes:{i:'👟',t:'Shop'},barber:{i:'💈',t:'Look'},metro:{i:'🚇',t:'Metro'},mtrain:{i:'🚆',t:'Travel'},mexit:{i:'⬆️',t:'Exit'}}[l.kind]||null; }
+function updateCtx(){ if(!isTouch) return; const c=ctxInfo(), hs=hidden?'out':nearHide?'in':'';
+  const key=(c?c.i+c.t:'-')+'|'+hs; if(key===ctxShown) return; ctxShown=key;
+  const b=document.getElementById('tAct'); b.classList.toggle('off',!c); if(c){ document.getElementById('tActI').textContent=c.i; document.getElementById('tActL').textContent=c.t; }
+  const h=document.getElementById('tS'); h.classList.toggle('off',!hs); h.innerHTML=hidden?'↩️<small>Out</small>':'🫣<small>Hide</small>'; }
+function actionE(){
+  if(mode!=='world'||!nearLot||hidden) return;
+  if(nearLot.kind==='cafe'||nearLot.kind==='pizza'){ eat(); return; }
+  if((nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.cool<=0||nearLot.kind==='mwall'&&nearLot.cool<=0)&&!save.colors.some(id=>paintOf(id)>0)){ toast('🪣 All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.'); return; }
+  if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&save.colors.includes(nearLot.need)&&paintOf(nearLot.need)<=0){ const c=colorById(nearLot.need); toast(`🪣 This wall needs ${c.name} paint, but your can is empty – refill at the Paint Depot (€ ${refillPrice(c.id)}).`); return; }
+  if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&!save.colors.includes(nearLot.need)){ const c=colorById(nearLot.need); toast(`🎨 This wall needs this paint: <b style="color:${c.hex}">${c.name}</b> – buy it at the Paint Depot (€ ${c.price}).`); return; }
+  if(nearLot.kind==='wall') locked(nearLot)?toast(`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()}). Paint easier walls and earn XP.`):nearLot.cool>0?toast('Paint still drying – come back later or find another wall!'):openDraw(nearLot);
+  else if(nearLot.kind==='paint') openShop();
+  else if(nearLot.kind==='metro') enterMetro(nearLot);
+  else if(nearLot.kind==='mexit') exitMetro();
+  else if(nearLot.kind==='mtrain') openMetro();
+  else if(nearLot.kind==='mwall') nearLot.cool>0?toast('Paint still drying – try another bonus wall.'):openDraw(nearLot);
+  else if(nearLot.kind==='shoes') openShoes();
+  else if(nearLot.kind==='barber') openBarber();
+}
+function toggleFS(){ const d=document; if(!d.fullscreenElement) (d.documentElement.requestFullscreen||d.documentElement.webkitRequestFullscreen||(()=>{})).call(d.documentElement); else (d.exitFullscreen||d.webkitExitFullscreen||(()=>{})).call(d); }
+document.getElementById('fsBtn').onclick=toggleFS;
+addEventListener('keydown',e=>{
+  audioInit();
+  const k=e.key.toLowerCase();
+  if(e.target&&e.target.tagName==='INPUT'&&k!=='escape'&&k!=='enter') return;
+  if(typeof lootOpen!=='undefined'&&lootOpen){ if(k==='enter'||k===' '){ const b=lootEl.querySelector('button'); b&&b.click(); } return; }
+  if(document.getElementById('tutOv').classList.contains('on')){ if(k==='escape') closeTut(); else if(k==='arrowright'||k==='enter'||k===' ') document.getElementById('tutNext').click(); else if(k==='arrowleft') showTut(tutI-1); return; }
+  if(mode==='pause'){ if(k==='escape'||k==='p') closePause(); return; }
+  if(mode==='chat'){ if(k==='escape') TWS.close(); return; }
+  if(mode==='ride') return;
+  if(k==='-'||k==='_'){ setVol(music.vol-.1); return; }
+  if(k==='+'||k==='='){ setVol(music.vol+.1); return; }
+  if(k==='m'&&mode!=='draw'){ music.muted=!music.muted; syncPlayer(); return; }
+  if(k==='f'&&mode!=='draw'){ toggleFS(); return; }
+  if(mode==='draw'){
+    if(k==='enter') finishDraw(); else if(k==='escape') leaveDraw(false);
+    else if(k==='z'){ strokes.pop(); dirty=true; } else if(k==='c'){ strokes=[]; drips=[]; dirty=true; }
+    else if(/^[1-9]$/.test(k)&&save.colors[+k-1]){ drawColor=save.colors[+k-1]; buildPalette(); }
+    return;
+  }
+  if(mode==='shop'){ if(k==='b'||k==='escape'||k==='e'||k==='t') closeShop(); return; }
+  if(mode!=='world') return;
+  if(k==='escape'||k==='p'){ openPause(); return; }
+  keys[k]=true;
+  if(k==='e') actionE();
+  if(k==='h'&&carById(save.car).kind==='car') sfx('honk');
+  if(k==='z') useItem('smoke'); if(k==='x') useItem('energy'); if(k==='c') useItem('xp2'); if(k==='v') useItem('mask');
+  if(k==='s'||k==='arrowdown') toggleHide();
+  if(k.startsWith('arrow')||k===' ') e.preventDefault();
+});
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; });
+// skārienvadība
+document.querySelectorAll('#touch button[data-k]').forEach(b=>{ const k=b.dataset.k; b.addEventListener('pointerdown',e=>{ audioInit(); keys[k]=true; e.preventDefault(); }); ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false)); });
+document.getElementById('tAct').addEventListener('pointerdown',e=>{ audioInit(); autoT=null; buzz(15); actionE(); e.preventDefault(); });
+document.getElementById('tS').addEventListener('pointerdown',e=>{ audioInit(); autoT=null; buzz(15); toggleHide(); e.preventDefault(); });
+
+// ================= Tiešsaiste: konts, citi spēlētāji, rezultāti =================
+const NET={on:false,uid:null,name:'',others:{},city:-2,ref:null,sub:null,off:0,lastSent:0,lastStats:0,db:null};
+if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
+  try{ const fa=firebase.auth(); NET.db=firebase.database();
+    NET.db.ref('.info/serverTimeOffset').on('value',s=>{ NET.off=s.val()||0; });
+    fa.onAuthStateChanged(async u=>{
+      if(!u){ location.href='../index.html'; return; }
+      NET.uid=u.uid; NET.name=u.email.split('@')[0];
+      try{ const s=await NET.db.ref('users/'+u.uid).get(); const v=s.val()||{}; if(v.name) NET.name=v.name; NET.nick=v.nick||''; }catch(e){}
+      if(window.TW) await TW.ready;
+      await loadSave(u.uid);
+      if(window.TWA){ const v=await TWA.visit(u.uid); NET.visits={streak:v.best||0,days:v.days||0}; }
+      NET.on=true; netStats(true); toast(`👋 Sveiks, ${TW.display(NET.name,NET.nick)}${TW.badge(TW.role(NET.uid))?' '+TW.badge(TW.role(NET.uid)):''}!`);
+      TW.heartbeat(NET.uid,()=>({game:'Graffiti RPG',where:inMetro?'Metro':`City ${curCity+1} · Līm. ${level()}`,name:NET.name,nick:NET.nick||''}));
+      NET.db.ref('kicks/'+NET.uid).on('value',s=>{ const k=s.val(); if(k&&k.until>TW.now()) kickedOut(k); },()=>{});
+      let st=''; try{ st=sessionStorage.getItem('twMode'); }catch(e){}
+      if(window.TWS) TWS.init({uid:NET.uid,name:NET.name,nick:NET.nick||''},{fab:false,getCity:()=>inMetro?null:curCity,
+        onClose:()=>{ if(mode==='chat') mode='world'; },
+        onBadge:n=>{ const b=document.getElementById('pChatN'); b.textContent=n>9?'9+':n; b.style.display=n?'flex':'none'; }});
+      const showStaff=()=>{ document.getElementById('pStaff').style.display=(TW.isStaff(NET.uid)&&st==='staff')?'':'none'; }; showStaff(); document.addEventListener('tw-roles',showStaff);
+    });
+  }catch(e){}
+}
+// Ielādē progresu no konta. Ņem jaunāko (vairāk XP) no konta un šīs ierīces kešatmiņas.
+// Veco ierīces saglabājumu ('grafitiRPG', pirms kontu saglabāšanas) piešķir tikai tam kontam, kura līderu XP tam atbilst –
+// lai brālis uz tās pašas planšetes nepaņem māsas progresu.
+async function loadSave(uid){
+  const rd=k=>{ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }, xpOf=s=>(s&&s.xp)||0;
+  let cloud=null, cloudOk=false, stats=null;
+  try{ cloud=(await NET.db.ref(DBP+'saves/'+uid).get()).val(); cloudOk=true; }catch(e){}
+  if(cloudOk&&!cloud) try{ cloud=(await NET.db.ref('saves/'+uid).get()).val(); }catch(e){} // vecā vieta (pirms spēļu zariem)
+  let best=cloud; const mine=rd('grafitiRPG:'+uid); if(xpOf(mine)>xpOf(best)) best=mine;
+  const legacy=rd('grafitiRPG');
+  if(legacy&&!cloud){ try{ stats=(await NET.db.ref('stats/'+uid).get()).val(); }catch(e){}
+    if(stats&&Math.abs((stats.xp||0)-xpOf(legacy))<=Math.max(50,xpOf(legacy)*.05)&&xpOf(legacy)>=xpOf(best)){ best=legacy; try{ localStorage.removeItem('grafitiRPG'); }catch(e){} } }
+  save=Object.assign(SAVE0(),best||{}); save.items=Object.assign({smoke:0,energy:0,xp2:0,mask:0},save.items||{}); save.st=save.st||{}; ensurePaint();
+  if(!save.colors.includes(save.color)) save.color=save.colors[0];
+  // tēla izskats ir kopīgs visām spēlēm – users/{uid}/look
+  try{ const lk=(await NET.db.ref('users/'+uid+'/look').get()).val(); if(lk&&typeof lk==='object') save.look=lk; else if(save.look) NET.db.ref('users/'+uid+'/look').set(save.look).catch(()=>{}); }catch(e){}
+  saveUid=uid; saveOk=true; _lx=-1; dispMoney=save.money; shownMoney=-1; foodBand=3;
+  metroObjs.forEach(o=>{ if(o.kind==='mwall'){ o.tier=Math.max(0,level()-1-Math.floor(Math.random()*4)); o.shape=pickShape(o.tier); } });
+  renderInv(); updateHud(); setTimeout(dailyGift,2500);
+  if(cloudOk) NET.db.ref(DBP+'saves/'+uid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
+// Ikdienas dāvana: katru nakti 02:00 +€20 (tieši melnās krāsas uzpilde). Laiks pēc servera pulksteņa.
+function dailyGift(){ if(!saveOk) return; const d=new Date(Date.now()+(NET.off||0)-2*3600e3), key=`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  if(save.daily===key) return; save.daily=key; save.money+=20; dispMoney=save.money-20; shownMoney=-1; persist(); ding([523,659,784,1047]);
+  toast('🌙 <b>Daily gift: € 20!</b><br>Enough to refill black paint. A new gift comes every night at 02:00.'); }
+setInterval(dailyGift,60000);
+function cloudSave(){ if(NET.on&&saveOk&&saveUid) NET.db.ref(DBP+'saves/'+saveUid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') cloudSave(); });
+function netTick(){ if(!NET.on) return;
+  if(window.TW&&TW.active&&!TW.active()){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } NET.city=-2; return; } // fonā/neaktīvs – citiem nerādāmies
+  const c=inMetro?-1:curCity;
+  if(c!==NET.city){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } if(NET.sub){ NET.sub.off(); NET.sub=null; } NET.others={}; NET.city=c;
+    wallsListen(c);
+    if(c>=0){ NET.ref=NET.db.ref('presence/'+c+'/'+NET.uid); NET.ref.onDisconnect().remove();
+      NET.sub=NET.db.ref('presence/'+c); NET.sub.on('value',s=>{ const now=Date.now()+NET.off, o={};
+        s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({uid:p.key,dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
+  const now=Date.now();
+  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,l:(()=>{ const o=playerOutfit(); return {s:o.skin,t:o.hat,c:o.cap,m:o.mask,p:o.pants}; })(),hid:hidden?1:0,m:myMedals()||null,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
+function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000){ if(!NET.trail) NET.trail=setTimeout(()=>{ NET.trail=null; netStats(true); },5000-(now-NET.lastStats)); return; } NET.lastStats=now; cloudSave();
+  NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+  if(window.TWA) TWA.sync(NET.uid,Object.assign({},save.st,NET.visits,{level:level(),painted:save.painted||0,city:save.st.maxCity=Math.max(save.st.maxCity||1,curCity+1),rich:save.st.rich=Math.max(save.st.rich||0,save.money),colors:save.colors.length,cars:save.cars})).then(n=>{ n.forEach((m,i)=>setTimeout(()=>{ toast(`🏅 <b>New medal!</b><br><span style="font-size:30px">${m.i}</span> ${TWA.title(m)}`); ding([784,988,1175,1568]); buzz(30); },4200*i)); }).catch(()=>{}); }
+const myMedals=()=>window.TWA&&TWA.owned?TWA.LIST.filter(m=>TWA.owned[m.id]).length:0;
+function drawNameTag(x,y,name,uid,medals){ if(!name) return; const fT=(...a)=>(ctx.fillTextRaw||ctx.fillText).apply(ctx,a), sT=(...a)=>(ctx.strokeTextRaw||ctx.strokeText).apply(ctx,a); const role=window.TW?TW.role(uid):'', adm=role==='admin', mod=role==='mod', lab=(adm?'👑 ':mod?'🛡️ ':'')+name;
+  ctx.save(); ctx.font='900 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
+  if(adm){ const w=ctx.measureText(lab).width, sh=((time*120)%(w+160))-80;
+    const g=ctx.createLinearGradient(x-w/2,y-9,x-w/2,y+9); g.addColorStop(0,'#fff8d0'); g.addColorStop(.35,'#ffd34d'); g.addColorStop(.6,'#b07a12'); g.addColorStop(1,'#ffe68a');
+    ctx.lineWidth=5; ctx.strokeStyle='#2a1a00'; sT(lab,x,y); ctx.fillStyle=g; fT(lab,x,y); // bez zelta spīduma mākoņa
+    const hl=ctx.createLinearGradient(x-w/2+sh-30,0,x-w/2+sh+30,0); hl.addColorStop(0,'rgba(255,255,255,0)'); hl.addColorStop(.5,'rgba(255,255,255,.85)'); hl.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.globalCompositeOperation='source-atop'; ctx.fillStyle=hl; fT(lab,x,y); }
+  else if(mod){ const fl=.85+.15*Math.sin(time*9)*(Math.sin(time*1.3)>.9?1:0); ctx.lineWidth=5; ctx.strokeStyle='#00243a'; sT(lab,x,y);
+    ctx.shadowColor='#2ec5ff'; ctx.shadowBlur=16; ctx.globalAlpha=fl; ctx.fillStyle='#bff3ff'; fT(lab,x,y); ctx.shadowBlur=6; fT(lab,x,y); }
+  else if(medals>=50){ const blue=medals>=100, pul=.6+.4*Math.sin(time*(blue?3:4)); ctx.lineWidth=5; ctx.strokeStyle=blue?'#001033':'#2a0008'; sT(lab,x,y); // 50 medaļas – sarkans, 100 – zils spīdums
+    ctx.shadowColor=blue?'#3d8bff':'#ff1f3d'; ctx.shadowBlur=10+10*pul;
+    if(blue){ const w=ctx.measureText(lab).width, sh=((time*140)%(w+160))-80, g=ctx.createLinearGradient(x-w/2+sh-60,0,x-w/2+sh+60,0); g.addColorStop(0,'#5b9dff'); g.addColorStop(.5,'#ffffff'); g.addColorStop(1,'#5b9dff'); ctx.fillStyle=g; }
+    else ctx.fillStyle='#ff6b78';
+    fT(lab,x,y); ctx.shadowBlur=4; fT(lab,x,y); }
+  else { ctx.lineWidth=4; ctx.strokeStyle='#000'; sT(lab,x,y); ctx.fillStyle='#fff'; fT(lab,x,y); }
+  ctx.restore();
+  if(medals>0){ ctx.save(); ctx.font='900 17px system-ui'; const w=ctx.measureText(lab).width, mx=x+w/2+5, t='🏅'+medals; // medaļu skaits mazs blakus vārdam
+    ctx.font='800 11px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.lineJoin='round'; ctx.lineWidth=3; ctx.strokeStyle='#000'; sT(t,mx,y+1); ctx.fillStyle='#ffd34d'; fT(t,mx,y+1); ctx.restore(); } }
+// ---- čats: atver paneli, frāžu burbuļi virs galvām ----
+function openChat(fn){ if(!NET.on||!window.TWS||(mode!=='world'&&mode!=='chat')) return; mode='chat'; for(const k in keys) keys[k]=false; autoT=null; promptEl.style.display='none'; (fn||(()=>TWS.openPanel()))(); }
+document.getElementById('pChat').onclick=e=>{ e.stopPropagation(); audioInit(); if(!NET.on) return toast('Čats strādā, kad esi ielogojies.'); openChat(); };
+function chatBubble(uid){ const a=window.TWS&&TWS.cityMsgs; if(!a||!a.length) return null; const now=Date.now()+NET.off;
+  for(let i=a.length-1;i>=0;i--){ const m=a[i]; if(m.u===uid) return now-(m.t||0)<7000?TWS.PHRASES[m.p]:null; } return null; }
+function drawBubble(x,y,txt){ if(!txt) return; ctx.save(); ctx.font='800 16px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const w=ctx.measureText(txt).width+22, h=30; ctx.fillStyle='#fff'; ctx.strokeStyle='#000'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.roundRect(x-w/2,y-h,w,h,12); ctx.moveTo(x-7,y); ctx.lineTo(x,y+9); ctx.lineTo(x+7,y); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#111'; ctx.fillText(txt,x,y-h/2); ctx.restore(); }
+// ---- izmešana no spēles ----
+let kickShown=false;
+function kickedOut(k){ if(kickShown) return; kickShown=true; mode='pause'; spraySound&&spraySound(false);
+  if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref=null; } NET.on=false;
+  const mins=Math.max(1,Math.ceil((k.until-TW.now())/60000)), d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;z-index:100;background:#000d;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:system-ui';
+  d.innerHTML=`<div style="background:#1f1a3a;border:2px solid #ff6b7a88;border-radius:22px;padding:24px;max-width:420px;color:#fff"><div style="font-size:54px">🚫</div><h2 style="margin:8px 0">Tevi uz laiku izmeta no spēles</h2><p style="color:#c4bde6">Varēsi atgriezties pēc ~${mins} min. Spēlē draudzīgi! 🙂</p><a href="../index.html" style="display:inline-block;margin-top:10px;background:#ffd34d;color:#1a1300;font-weight:900;padding:14px 22px;border-radius:16px;text-decoration:none">Uz sākumlapu</a></div>`;
+  document.body.appendChild(d); setTimeout(()=>{ location.href='../index.html'; },8000); }
+// ---- admina / moderatora rīki spēlē ----
+async function openStaff(){ if(!NET.on||!TW.isStaff(NET.uid)||mode!=='world') return; mode='shop'; promptEl.style.display='none'; tpOv.classList.add('on');
+  tpEl.innerHTML='<h2>🛠 Spēlētāji tiešsaistē</h2><div style="color:#aab">Ielādē…</div>';
+  const now=TW.now(), rows=[]; const snaps=await Promise.all(Array.from({length:10},(_,c)=>NET.db.ref('presence/'+c).get().catch(()=>null)));
+  snaps.forEach((s,c)=>{ if(s) s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<30000) rows.push({uid:p.key,c,x:v.x,name:v.nk||v.n,user:v.n}); }); });
+  const canKick=uid=>{ const r=TW.role(uid), me=TW.role(NET.uid); return r!=='admin'&&!(me==='mod'&&r==='mod'); };
+  const esc=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  tpEl.innerHTML=`<h2>🛠 Spēlētāji tiešsaistē (${rows.length})</h2>`+(rows.length?rows.map((r,i)=>`<div class="row"><div class="n">${TW.badge(TW.role(r.uid))} <b>${esc(r.name)}</b> <small>(${esc(r.user)}) · City ${r.c+1}</small></div><button data-go="${i}" class="sec">📍 Iet pie</button>${canKick(r.uid)?`<button data-kick="${i}" style="background:#ff6b7a">🚫 Izmest</button>`:''}</div>`).join(''):'<p style="color:#aab">Pilsētās šobrīd neviena cita nav.</p>')
+    +'<p style="color:#aab;font-size:13px">Izmešana ir uz 10 minūtēm. Pilnu sarakstu redzi admina panelī.</p><br><button class="sec" id="tpClose">Aizvērt</button>';
+  tpEl.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ const r=rows[+b.dataset.go]; travel(()=>{ inMetro=false; curCity=r.c; shownMoney=-1; player.x=r.x; },`Pie ${r.name}`); });
+  tpEl.querySelectorAll('[data-kick]').forEach(b=>b.onclick=async()=>{ const r=rows[+b.dataset.kick]; b.disabled=true;
+    try{ await NET.db.ref('kicks/'+r.uid).set({by:NET.name,until:TW.now()+600000,t:firebase.database.ServerValue.TIMESTAMP}); b.textContent='✓ Izmests'; }catch(e){ b.textContent='Nav atļauts'; } });
+  document.getElementById('tpClose').onclick=closeShop; }
+// cita spēlētāja izskats no presence (tikai krāsu virknes un zināmie galvas veidi)
+const lookFrom=l=>{ if(!l||typeof l!=='object') return {}; const col=v=>typeof v==='string'&&/^#[0-9a-f]{3,8}$/i.test(v)?v:undefined, r={skin:col(l.s),cap:col(l.c),pants:col(l.p),mask:l.m==='none'?'none':col(l.m),hat:['cap','beanie','hair'].includes(l.t)?l.t:undefined}; Object.keys(r).forEach(k=>r[k]===undefined&&delete r[k]); return r; };
+function drawOther(o,mv){ ctx.save(); ctx.globalAlpha=.93;
+  drawPerson(ctx,o.dx,GROUND-2,PS,Object.assign({face:mv?'side':'down',flip:o.f||1,step:o.step,hood:o.h||'#888',skin:'#f2c9a0',cap:'#1b1b1f',pants:'#2b3a67',mask:'#b71c1c',still:!mv},lookFrom(o.l))); ctx.restore();
+  drawNameTag(o.dx,GROUND-104,o.nk||o.n,o.uid,o.m||0); drawBubble(o.dx,GROUND-126,chatBubble(o.uid)); }
+setInterval(netTick,500);
+
+updateHud();
+// ---- Pirmās spēles instrukcija (1–2 teikumi par katru funkciju) ----
+const TUT_LV=[
+  ['🎯','Tavs mērķis','Kļūsti par labāko grafiti mākslinieku! Zīmē sienas, krāj naudu un XP, kāp līmeņos un tiec līdz 99. līmenim un 10. pilsētai.'],
+  ['🕹️','Kustība',isTouch?'Staigā ar ◀ ▶ bultiņām un lec ar ⤒. Uzspied uz veikala, sienas vai miskastes – tēls pats aizies un izdarīs.':'Skrien ar A / D, lec ar W. Pie sienas, veikala vai metro spied E.'],
+  ['🎨','Zīmēšana',isTouch?'Pie sienas spied 🎨 Zīmēt un ar pirkstu apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.':'Pie sienas spied E un ar peli apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.'],
+  ['🧱','Līmeņi','Katrā līmenī ir 3 sienas. Sakrāj XP, un atveras nākamā līmeņa sienas – grūtākas, bet maksā vairāk.'],
+  ['🚓','Policija','Grafiti ir aizliegts! Jo vairāk cilvēku redz, kā tu zīmē (👀), jo ātrāk ierodas policija. Zīmē, kad neviens neskatās, bēdz vai paslēpies miskastē 🫣.'],
+  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Krāsa zīmējot iztērējas 🪣 – uzpildi to depo (melnā lētākā, €20). Katru nakti 02:00 saņem €20 dāvanā!'],
+  ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet lēnāk, un rokas trīc – zīmējums sanāk šķībs. Ieej kafejnīcā.'],
+  ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
+  ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
+  ['⚙️','Iestatījumi','⚙ pogā ir skaņa, gaišums un valoda, 🎵 – radio. Šo instrukciju vari atvērt vēlreiz pauzē: ❓ Kā spēlēt.'],
+];
+const TUT_EN=[
+  ['🎯','Your goal','Become the best graffiti artist! Paint walls, earn money and XP, level up and reach level 99 and city 10.'],
+  ['🕹️','Moving',isTouch?'Walk with the ◀ ▶ arrows and jump with ⤒. Tap a shop, wall or dumpster – your character walks there and does it.':'Run with A / D, jump with W. Press E at a wall, shop or metro.'],
+  ['🎨','Painting',isTouch?'At a wall tap 🎨 Paint and trace the shape with your finger. The more accurate, the more money and XP.':'Press E at a wall and trace the shape with the mouse. The more accurate, the more money and XP.'],
+  ['🧱','Levels','Every level has 3 walls. Earn XP to unlock the next level\'s walls – harder, but they pay more.'],
+  ['🚓','Police','Graffiti is illegal! The more people see you paint (👀), the faster the police come. Paint when nobody is looking, run or hide in a dumpster 🫣.'],
+  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Paint runs out as you draw 🪣 – refill it there (black is cheapest, €20). Every night at 02:00 you get €20 as a gift!'],
+  ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks slower and their hands shake – drawings get wobbly. Visit a café.'],
+  ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
+  ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
+  ['⚙️','Settings','The ⚙ button has sound, brightness and language, 🎵 is the radio. Open this guide again from pause: ❓ How to play.'],
+];
+let tutI=0, tutPrev='world';
+function showTut(i){ const T=window.TW_LANG==='en'?TUT_EN:TUT_LV, en=window.TW_LANG==='en'; tutI=Math.max(0,Math.min(T.length-1,i)); const [ic,h,t]=T[tutI];
+  const ti=document.getElementById('tutI'); ti.textContent=ic; ti.style.animation='none'; ti.offsetWidth; ti.style.animation='';
+  document.getElementById('tutH').textContent=h; document.getElementById('tutP').textContent=t;
+  document.getElementById('tutD').innerHTML=T.map((_,k)=>`<i class="${k===tutI?'on':''}"></i>`).join('');
+  const b=document.getElementById('tutBack'); b.textContent=en?'← Back':'← Atpakaļ'; b.style.visibility=tutI?'visible':'hidden';
+  document.getElementById('tutNext').textContent=tutI===T.length-1?(en?'Let\'s play! ▶':'Spēlējam! ▶'):(en?'Next →':'Tālāk →');
+  document.getElementById('tutSkip').textContent=en?'Skip':'Izlaist'; }
+function openTut(){ tutPrev=mode==='pause'?'pause':'world'; if(mode==='world') mode='pause'; pauseOv.classList.remove('on'); document.getElementById('tutOv').classList.add('on'); showTut(0); }
+function closeTut(){ document.getElementById('tutOv').classList.remove('on'); try{ localStorage.setItem('grafitiTut','1'); }catch(e){} if(tutPrev==='pause') openPauseAgain(); else mode='world'; }
+function openPauseAgain(){ mode='world'; openPause(); }
+document.getElementById('tutNext').onclick=()=>{ const T=window.TW_LANG==='en'?TUT_EN:TUT_LV; if(tutI>=T.length-1) closeTut(); else { showTut(tutI+1); buzz(8); } };
+document.getElementById('tutBack').onclick=()=>showTut(tutI-1);
+document.getElementById('tutSkip').onclick=closeTut;
+document.getElementById('pzHelp').onclick=openTut;
+{ let sx=null; const ov=document.getElementById('tutOv'); ov.addEventListener('pointerdown',e=>{ sx=e.clientX; }); ov.addEventListener('pointerup',e=>{ if(sx==null) return; const dx=e.clientX-sx; sx=null; if(Math.abs(dx)>50){ if(dx<0) document.getElementById('tutNext').click(); else showTut(tutI-1); } }); }
+const GUIDE=[
+  {t:isTouch?'👉 Walk to the brick wall with ◀ ▶ – or just tap the wall':'👉 Walk to the brick wall (A / D)', done:()=>nearLot&&nearLot.kind==='wall'&&!locked(nearLot)||mode==='entering'||mode==='draw'},
+  {t:isTouch?'🎨 Tap the big Paint button':'🎨 Press E to paint', done:()=>mode==='entering'||mode==='draw'},
+  {t:isTouch?'✏️ Trace the dashed shape with your finger, then tap ✔ Done':'✏️ Trace the dashed shape with the mouse, then press ✔ Done', done:()=>(save.painted||0)>guide.p0},
+  {t:'💰 Great! Walls give money and XP. If many people see you 👀, the police come – hide in a dumpster 🫣!', time:11},
+  {t:'🪣 Paint runs out – refill it at the Paint Depot (pink sign). 🍔 Eat at a café. Have fun! 🎉', time:7},
+];
+const guide={i:-1,t:0,p0:0};
+function startGuide(){ guide.i=0; guide.t=0; guide.p0=save.painted||0; showGuide(); }
+function showGuide(){ const el=document.getElementById('guide'); if(guide.i<0||guide.i>=GUIDE.length){ el.classList.remove('on'); return; } el.textContent=GUIDE[guide.i].t; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); buzz(10); }
+function guideTick(dt){ if(guide.i<0) return; const g=GUIDE[guide.i]; guide.t+=dt; const el=document.getElementById('guide');
+  el.style.visibility=mode==='draw'||mode==='entering'||mode==='exiting'?'hidden':'visible';
+  if(mode==='draw'&&guide.i===2){ const dt_=document.getElementById('drawTitle'), want=window.tr?window.tr(g.t):g.t; if(dt_.textContent!==want) dt_.textContent=want; }
+  if(g.done?g.done():guide.t>g.time){ guide.i++; guide.t=0; if(guide.i>=GUIDE.length){ guide.i=-1; try{ localStorage.setItem('grafitiTut','1'); }catch(e){} } else ding([784,1047]); showGuide(); } }
+// pulsējoša bultiņa virs sienas, uz kuru jāiet
+function drawGuideArrow(){ if(guide.i<0||guide.i>1||mode!=='world') return; let b=null,bd=1e9; walls.forEach(w=>{ if(w.city===curCity&&!locked(w)&&w.cool<=0){ const d=Math.abs(w.cx-player.x); if(d<bd){bd=d;b=w;} } }); if(!b) return;
+  const y=b.py-70+Math.sin(time*6)*10; ctx.save(); ctx.fillStyle='#ffd34d'; ctx.strokeStyle='#000'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(b.cx-26,y); ctx.lineTo(b.cx+26,y); ctx.lineTo(b.cx,y+34); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.fillRect(b.cx-10,y-30,20,32); ctx.restore(); }
+let tutSeen=false; try{ tutSeen=localStorage.getItem('grafitiTut')==='1'; }catch(e){}
+// Pirmajā reizē – mācības darot (bultiņa uz sienu, uzzīmē pirmo sienu). 10 lapu instrukcija paliek pauzē: ❓ Kā spēlēt.
+if(!tutSeen) startGuide(); else
+toast(isTouch?'Tap a brick wall to paint 🎨. People with 📱 can call the police – hide in a dumpster 🫣.':'Run along the street with <b>A / D</b>. Press <b>E</b> at a brick wall and paint. The Paint Depot (pink sign) sells colors and vehicles. People with 📱 can report you to the police – hide with <b>S</b>.');
+requestAnimationFrame(frame);

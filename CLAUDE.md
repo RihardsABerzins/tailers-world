@@ -14,6 +14,10 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Publiskajā repo drīkst būt **tikai izdotās** Papīra Lidmašīnu dziesmas (Spotify singli + albums "Turbulence"), 128 kbps MP3. Neizdotās glabājas `~/Documents/Tclaude/music-archive/`.
 
 ## Struktūra
+- **Katrai spēlei sava mape** (`/grafiti/`, nākamā – `/<spēle>/`): `index.html` (iezīmējums), `style.css`, `game.js`, `lang.js` (tulkojumi), mūzika/attēli tajā pašā mapē. Kopīgi tikai `tw-*.js`, `firebase-config.js` un sākumlapa.
+- **Katrai spēlei savs Firebase zars**: `grafiti/saves/{uid}`, `grafiti/walls/...` utt. – lai spēļu dati nesajaucas. Kopīgs: `users/`, `stats/`, `ach/`, `presence/`, čats.
+- **Katrai spēlei savas medaļas** atbilstoši tās spēles procesiem (grupa `TWA.GROUPS` + `TWA.LIST`), piešķir ar `TWA.sync`.
+- **Spēlētāja tēls (izskats) ir viens visās spēlēs**: `users/{uid}/look` = {skin, hood ('auto'|krāsa), hat ('cap'|'beanie'|'hair'), cap, mask ('none'|krāsa), pants}. Jaunā spēlē tēlu zīmē no šī.
 - `index.html` – sākumlapa ("Labdien!", spēļu kartītes). Jaunu spēli pievieno `GAMES` sarakstā.
 - `grafiti/` – Graffiti RPG. Kods raksta tekstus angliski; valodas slānis (skripts `<head>` sākumā, `PHRASES`/`WORDS`) pārtulko visu redzamo latviski. Noklusējums – latviešu; iestatījumos LV/EN slēdzis (localStorage `twLang`). Jaunam tekstam pievieno tulkojumu `PHRASES` sarakstā.
 
@@ -45,17 +49,22 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Pēc ielogošanās var pievienot e-pastu (privāts, `users/{uid}/email`, `news` = piekrīt jaunumiem). E-pastu sūtīšanai un paroles atjaunošanai vajag servera funkciju (Firebase Blaze plāns) – vēl nav.
 - Čats: `tw-social.js` (`TWS`) – čuksti (`dm/`, `inbox/`), draugi (`friendReq/`, `friends/`), bloķēšana (`blocks/`), sūdzības (`reports/`, redz admin.html), pilsētas frāzes (`chat/{pilsēta}`, `TWS.PHRASES`). Spēlē: pieskaries citam spēlētājam → kartīte; 💬 poga radio joslā; frāzes parādās burbulī virs galvas. Filtrs: `TWS.clean()` (EXACT/START saraksti).
 - Tiešsaiste: `TW.active()` (tw-common.js) – lapa redzama un pēdējās 5 min kaut kas spiests. Fonā savienojums tiek atslēgts (`goOffline`), tāpēc spēlētājs pazūd no saraksta; neaktīvs → ieraksti `online/` un `presence/` tiek izdzēsti.
+- Admina vārds – zelta krāsā bez spīduma mākoņa.
 - Spēlē blakus vārdam mazs 🏅 medaļu skaits (`presence/.../m`).
 - Mainot `firebase-config.js`, palielini `?v=` numuru visās lapās (kešatmiņa).
 
 - Medaļas: `tw-ach.js` (`TWA`) – saraksts `TWA.LIST`, grupas `TWA.GROUPS` (profils + katra spēle). Glabājas `ach/{uid}` (publiski), apskatāmas sākumlapā, citu medaļas redz "Citi spēlētāji". Spēle piešķir ar `TWA.sync(uid,ctx)` (Graffiti skaitītāji `save.st`: kastes, bēgšanas, šedevri, ēšana, metro u.c.). Dienas pēc kārtas: `TWA.visit` → `users/{uid}/visits`. Ar 50 medaļām vārds sarkani spīd, ar 100 – zili (`TW.nameHTML(teksts,uid,medaļas)`, spēlē `drawNameTag`). Jaunai spēlei pievieno grupu un medaļas.
 - Uzaicini draugu: saite `/?draugs=lietotājvārds`; jaunais spēlētājs pēc profila izveides ieraksta `invites/{uzaicinātājs}/{uid}` un nosūta draudzības pieprasījumu – abi saņem medaļu.
 - Graffiti RPG: katrā līmenī 3 sienas (galvenā līmeņa forma + 2 citas formas).
-- Graffiti progress glabājas kontā `saves/{uid}` (+ kešs `grafitiRPG:{uid}` ierīcē); vecais `grafitiRPG` tiek piešķirts tikai kontam, kura `stats` XP sakrīt.
+- Graffiti progress glabājas kontā `grafiti/saves/{uid}` (vecais `saves/{uid}` tiek nolasīts vienreiz) (+ kešs `grafitiRPG:{uid}` ierīcē); vecais `grafitiRPG` tiek piešķirts tikai kontam, kura `stats` XP sakrīt.
 - Frizētava (💈, `openBarber`): bez maksas maina izskatu `save.look` (āda, jaka/„auto” = krāsas tonis, cepure/adīta/mati, maska vai smaids, bikses); citi to redz (`presence.l`, `lookFrom`). Arkāde, ziedi, velo – tikai dekorācija.
 - Tulkojumi: PHRASES ir apakšvirknes – tulkojums nedrīkst saturēt pašu avotu (piem. Mask→Maska), citādi bezgalīgs cikls; tādus liek WORDS.
 - Apavu veikals (`SHOES`, `save.shoes/shoe`): ātrums kājām līdz ×1,5. Kafejnīca arī pie paša sākuma; norāde „🍔 Kafejnīca”, kad ēdiens < 50 %.
 - Vertikālā telefonā iela ~63 % augstumā (`camY0`), zem ceļa pretējā ietve. Ceļa svītras piesaistītas pasaulei.
+- Kopīgas sienas: katrs zīmējums ir vektoru slānis (`encodeLayer`, 720×440), glabājas `grafiti/walls/{pilsēta}/w{lot}` (pēdējie 6), citi spēlētāji redz un zīmē pa virsu; žūšana ir tikai savējā (20 s).
+- Freestyle (BRĪVĀ SIENA) katras pilsētas sākumā: zīmē ko grib, var „Vispirms notīrīt sienu”. ⚠️ Bērnu drošība: citi redz brīvos zīmējumus – vajadzības gadījumā var notīrīt jebkurš.
+- Policija: auto brauc līdzi un apsteidz, izlaiž policistu priekšā; pie 2+★ pastiprinājums no otras puses (`police.extra`). Policists satver (palēnina), izlec, lai izrautos. Kājām noķer, ar skrejriteni/auto var aizbēgt.
+- XP: `LV` = 60·n^1.15, `xpFor` = 20+14·(līm.).
 - Formas: 1. līmenis – 4 vienkāršās, no 2. līmeņa plašs klāsts (smaidiņš, lidmašīna…), no 4. – visas 18 (`pickShape`).
 - Krāsas iztērējas (`save.paint[id]` 0–100 %, ~20 % par apli); uzpilda Krāsu depo (melnā €20, sarkanā €25, citas 40 % no cenas). Katru nakti 02:00 (servera laiks) +€20 dāvana (`save.daily`, `dailyGift`).
 - Zīmēšana aizņem visu ekrānu; pielaide ekrāna pikseļos (min 12 px). Izsalcis tēls (🍔 burbulis) iet lēnāk, un rokas trīc (līnija raustās → mazāk precīzi), bet zīmēt var.

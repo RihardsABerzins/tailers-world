@@ -15,6 +15,26 @@
         ".write": "auth != null && auth.uid === $uid"
       }
     },
+    "grafiti": {
+      "saves": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChildren(['xp','money']) && newData.child('xp').isNumber() && newData.child('money').isNumber()"
+        }
+      },
+      "walls": {
+        ".read": "auth != null",
+        "$city": {
+          "$wall": {
+            ".write": "auth != null",
+            "$id": {
+              ".validate": "newData.hasChildren(['u','s','t']) && newData.child('u').val() === auth.uid && newData.child('s').isString() && newData.child('s').val().length <= 24000"
+            }
+          }
+        }
+      }
+    },
     "saves": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
