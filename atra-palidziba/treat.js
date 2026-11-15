@@ -111,6 +111,11 @@
   // ---- fons ar dziļumu: viena apvāršņa punkta perspektīva, tālās kārtas izbalē (gaisa perspektīva) ----
   // statiskā daļa tiek uzzīmēta vienreiz (kešs katrai vietai/diennaktij), virsū – kustīgās lietas (saule, prožektori)
   const BGC = {}, VX = 230;
+  // uzrenderētie foni (Blender, atra-palidziba/bg/<vieta>_d|_n.png); kamēr nav ielādēti vai nav – zīmē paši
+  const BGBASE = new URL('bg/', document.currentScript ? document.currentScript.src : location.href).href, BGV = 1, IMG = {}, HAS = { street: 1, park: 1, garden: 1, playground: 1, school: 1, concert: 1, kitchen: 1 };
+  function bgImg(pl, night) { const k = pl + (night ? '_n' : '_d'); if (!HAS[pl]) return null;
+    if (!(k in IMG)) { const im = IMG[k] = new Image(); im.onload = () => { delete BGC[pl + (night ? 'N' : 'D')]; }; im.onerror = () => { IMG[k] = null; }; im.src = BGBASE + k + '.webp?v=' + BGV; }
+    const im = IMG[k]; return im && im.complete && im.naturalWidth ? im : null; }
   const hx = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
   const mixc = (a, b, t) => { const A = hx(a), B = hx(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
   const rnd = s => () => (s = (s * 16807) % 2147483647) / 2147483647;
@@ -119,7 +124,7 @@
     let cv = BGC[key]; if (!cv) { cv = BGC[key] = document.createElement('canvas'); cv.width = SW * 2; cv.height = SH * 2; const b = cv.getContext('2d'); b.scale(2, 2); bgStatic(b, c); }
     g.drawImage(cv, 0, 0, SW, SH);
     if (c.sun && !c.night) { g.fillStyle = 'rgba(255,240,150,.35)'; g.beginPath(); g.arc(70, 44, 44 + Math.sin(T.now * 3) * 4, 0, 7); g.fill(); g.fillStyle = '#fff6b0'; g.beginPath(); g.arc(70, 44, 24, 0, 7); g.fill(); }
-    if (c.place === 'concert') { const S = stageG(); ['#ff4fd8', '#5ac8ff', '#ffd34d', '#7dff9a'].forEach((col, i) => { const x = S.x0 + (S.x1 - S.x0) * (i + .5) / 4, sw = Math.sin(T.now * 1.6 + i * 1.7) * 60;
+    if (c.place === 'concert' && !bgImg('concert', c.night)) { const S = stageG(); ['#ff4fd8', '#5ac8ff', '#ffd34d', '#7dff9a'].forEach((col, i) => { const x = S.x0 + (S.x1 - S.x0) * (i + .5) / 4, sw = Math.sin(T.now * 1.6 + i * 1.7) * 60;
       g.globalAlpha = .28 + .18 * Math.sin(T.now * 4 + i); g.fillStyle = col; g.beginPath(); g.moveTo(x, S.top + 4); g.lineTo(x + sw - 34, S.floor + 60); g.lineTo(x + sw + 34, S.floor + 60); g.fill(); g.globalAlpha = 1;
       g.fillStyle = col; g.beginPath(); g.arc(x, S.top + 5, 3.5, 0, 7); g.fill(); }); }
   }
@@ -143,6 +148,7 @@
     if (pl !== 'kitchen') { skyline(14, 34, N ? '#3a4278' : '#9db6d4'); skyline(10, 22, N ? '#2b3266' : '#86a3c4'); }
     // tēlu krāsas: zāle, celiņš u.c.
     const grass = '#79c25f', ground = pl === 'street' ? '#cfc5b6' : pl === 'school' ? '#9ea4ab' : pl === 'playground' ? '#86c86a' : grass;
+    const RI = bgImg(pl, N); if (RI) { g.drawImage(RI, 0, 0, SW, SH); const vg = g.createRadialGradient(240, 190, 120, 240, 190, 330); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.22)'); g.fillStyle = vg; g.fillRect(0, 0, SW, SH); return; }
     if (pl !== 'kitchen') { const gr = g.createLinearGradient(0, VY, 0, SH); gr.addColorStop(0, C(ground, 9)); gr.addColorStop(1, C(sh2(ground, .9), 1)); g.fillStyle = gr; g.fillRect(0, VY, SW, SH - VY); }
     function sh2(h, k) { const [r, gg, b] = hx(h); return '#' + [r, gg, b].map(v => Math.min(255, Math.round(v * k)).toString(16).padStart(2, '0')).join(''); }
     // koks dziļumā (z): ēna, stumbrs, vainags ar vienu ārējo kontūru
@@ -260,8 +266,8 @@
     else if (p === 'ball') { g.fillStyle = '#ff8a3d'; g.beginPath(); g.arc(400, 270, 18, 0, 7); g.fill(); g.strokeStyle = '#7a3a10'; g.lineWidth = 2; g.beginPath(); g.arc(400, 270, 18, 0, 7); g.moveTo(382, 270); g.lineTo(418, 270); g.stroke(); }
     else if (p === 'benchP') { g.fillStyle = '#8e6b47'; g.fillRect(310, 196, 150, 10); g.fillRect(310, 176, 150, 8); g.fillStyle = '#555'; g.fillRect(320, 206, 6, 30); g.fillRect(444, 206, 6, 30); }
     else if (p === 'swing') { g.strokeStyle = '#555'; g.lineWidth = 6; g.beginPath(); g.moveTo(320, 260); g.lineTo(350, 70); g.lineTo(450, 70); g.lineTo(470, 260); g.stroke(); g.lineWidth = 2; const a = Math.sin(T.now * 1.5) * .15; g.save(); g.translate(400, 72); g.rotate(a); g.beginPath(); g.moveTo(-15, 0); g.lineTo(-15, 120); g.moveTo(15, 0); g.lineTo(15, 120); g.stroke(); g.fillStyle = '#e74c3c'; g.fillRect(-20, 118, 40, 8); g.restore(); }
-    else if (p === 'tea') { g.fillStyle = 'rgba(160,90,40,.6)'; g.beginPath(); g.ellipse(372, 160, 26, 5, 0, 0, 7); g.fill(); g.fillRect(392, 160, 3, 14 + (T.now * 10 % 8)); g.save(); g.translate(356, 152); g.rotate(1.35); g.fillStyle = '#fff'; g.strokeStyle = OL; g.lineWidth = 2; g.beginPath(); g.roundRect(-8, -11, 16, 20, 3); g.fill(); g.stroke(); g.restore();
-      g.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(362 + i * 8, 146 - ((T.now * 20 + i * 7) % 20), 3, 0, 7); g.fill(); } }
+    else if (p === 'tea') { g.save(); if (bgImg('kitchen', c.night)) g.translate(-20, 40); g.fillStyle = 'rgba(160,90,40,.6)'; g.beginPath(); g.ellipse(372, 160, 26, 5, 0, 0, 7); g.fill(); g.fillRect(392, 160, 3, 14 + (T.now * 10 % 8)); g.save(); g.translate(356, 152); g.rotate(1.35); g.fillStyle = '#fff'; g.strokeStyle = OL; g.lineWidth = 2; g.beginPath(); g.roundRect(-8, -11, 16, 20, 3); g.fill(); g.stroke(); g.restore();
+      g.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(362 + i * 8, 146 - ((T.now * 20 + i * 7) % 20), 3, 0, 7); g.fill(); } g.restore(); }
     else if (p === 'cones') { g.fillStyle = '#ff7a1a'; [[340, 250], [400, 262], [455, 248]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x, y - 30); g.lineTo(x - 12, y); g.lineTo(x + 12, y); g.fill(); g.fillStyle = '#fff'; g.fillRect(x - 7, y - 16, 14, 4); g.fillStyle = '#ff7a1a'; }); }
     else if (p === 'hive') { g.fillStyle = '#e6b84a'; for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(410, 200 - i * 16, 36 - i * 5, 10, 0, 0, 7); g.fill(); } g.fillStyle = '#3a2a10'; g.beginPath(); g.arc(410, 205, 5, 0, 7); g.fill();
       for (let i = 0; i < 4; i++) { const a = T.now * 2 + i * 1.6, x = 410 + Math.cos(a) * (40 + i * 6), y = 160 + Math.sin(a * 1.3) * 26; g.fillStyle = '#ffd34d'; g.beginPath(); g.ellipse(x, y, 5, 3.5, 0, 0, 7); g.fill(); g.fillStyle = '#222'; g.fillRect(x - 1, y - 3, 2, 6); } }
