@@ -30,7 +30,7 @@
   /* zīmēšana: kanva aizņem visu brīvo ekrānu, vadība apakšā (vertikāli) vai labajā malā (horizontāli) – izmērus liek layoutDraw() */
   #drawOv{touch-action:none}
   #draw{position:fixed;border-radius:10px;cursor:crosshair;touch-action:none;transition:box-shadow .2s}
-  #drawTitle{position:fixed;left:0;right:0;top:calc(6px + env(safe-area-inset-top));text-align:center;font-size:16px;font-weight:700;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 6px #000}
+  #drawTitle{position:fixed;left:0;right:0;top:calc(6px + env(safe-area-inset-top));text-align:center;font-size:clamp(13px,3.8vw,16px);line-height:1.2;font-weight:700;padding:0 10px;text-shadow:0 2px 6px #000}
   #drawInfo{position:fixed;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;z-index:2}
   #drawInfo span{background:#000b;border:1px solid #fff3;border-radius:999px;padding:4px 10px;font-size:14px;font-weight:700}
   #drawInfo .hot{background:#b71c1ccc}

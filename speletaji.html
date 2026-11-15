@@ -32,13 +32,14 @@
   .rank{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:900;background:#ffffff14;flex:0 0 auto}
   .r1{background:#ffd34d;color:#1a1300}.r2{background:#d8dee9;color:#1a1d24}.r3{background:#e09a5b;color:#24140a}
   .name{flex:1;font-weight:800;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .meta{color:var(--muted);font-size:13px}
+  .meta{color:var(--muted);font-size:13px;white-space:normal}
+  #list.loaded .row{animation:none}
   .lvl{font-weight:900;font-size:18px;color:var(--yellow);text-align:right}
   .empty{color:var(--muted);text-align:center;padding:30px}
   @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   .neon{color:#7fdcff;text-shadow:0 0 6px #2ec5ff,0 0 14px #2ec5ff,0 0 24px #0a84ff;font-weight:900}
   .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 6px #ffcc3399);animation:shine 2.6s linear infinite;font-weight:900}
-  @keyframes shine{to{background-position:-250% 0}}
+  @keyframes shine{to{background-position:-166.667% 0}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
@@ -53,7 +54,9 @@
 <script>
 const db=firebase.database(), auth=firebase.auth(), $=id=>document.getElementById(id);
 let myUid=null;
-const CITY=['Old Town','Harbor','Neon Heights','Parkside','Market Quarter','Art Block','Skyline','Riverside','Uptown','Crown Hill'];
+const CITY=['Vecpilsēta','Osta','Neona kalni','Parka mala','Tirgus kvartāls','Mākslas kvartāls','Debesskrāpji','Upmala','Augšpilsēta','Kroņkalns'];
+const walls=n=>n%10===1&&n%100!==11?'siena':'sienas';
+let lastHTML='';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function load(){
   await TW.ready;
@@ -63,9 +66,11 @@ async function load(){
     rows.sort((a,b)=>(b.level-a.level)||((b.xp||0)-(a.xp||0)));
     const achs=await Promise.all(rows.map(r=>db.ref('ach/'+r.uid).get().then(s=>s.val()||{}).catch(()=>({}))));
     rows.forEach((r,i)=>{ const own=achs[i]; r.medals=TWA.LIST.filter(m=>own[m.id]); });
-    $('list').innerHTML=rows.length?rows.map((r,i)=>`<div class="row${r.uid===myUid?' me':''}" style="animation-delay:${i*.04}s"><div class="rank${i<3?' r'+(i+1):''}">${i+1}</div>
-      <div class="name">${TW.nameHTML(TW.display(r.name,r.nick),r.uid,r.medals.length)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ City ${r.city||1}${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} sienas${r.medals.length?`<br><span title="Medaļas">${r.medals.slice(-6).map(m=>m.i).join('')}${r.medals.length>6?' +'+(r.medals.length-6):''}</span> ${r.medals.length} 🏅`:''}</div></div>
+    const html=rows.length?rows.map((r,i)=>`<div class="row${r.uid===myUid?' me':''}" style="animation-delay:${i*.04}s"><div class="rank${i<3?' r'+(i+1):''}">${i+1}</div>
+      <div class="name">${TW.nameHTML(TW.display(r.name,r.nick),r.uid,r.medals.length)}${r.uid===myUid?' (tu)':''}<div class="meta">🏙️ ${r.city||1}. pilsēta${CITY[(r.city||1)-1]?' · '+CITY[(r.city||1)-1]:''} · 🎨 ${r.painted||0} ${walls(r.painted||0)}${r.medals.length?`<br><span title="Medaļas">${r.medals.slice(-6).map(m=>m.i).join('')}${r.medals.length>6?' +'+(r.medals.length-6):''}</span> ${r.medals.length} 🏅`:''}</div></div>
       <div class="lvl">Līm. ${r.level}<div class="meta">${r.xp||0} XP</div></div></div>`).join(''):'<div class="empty">Vēl neviena spēlētāja – esi pirmais!</div>';
+    // pārzīmē tikai, ja kaut kas mainījies; ienākšanas animācija tikai pirmajā reizē
+    if(html!==lastHTML){ if(lastHTML) $('list').classList.add('loaded'); $('list').innerHTML=html; lastHTML=html; }
   }catch(e){ $('list').innerHTML='<div class="empty">Neizdevās ielādēt sarakstu.</div>'; }
   try{
     let off=0; try{ off=(await db.ref('.info/serverTimeOffset').get()).val()||0; }catch(e){}

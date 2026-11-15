@@ -14,7 +14,7 @@
   S.isBad = text => S.clean(text) !== String(text || '');
 
   // ---------- frāzes pilsētas čatam ----------
-  S.PHRASES = ['Čau! 👋','Sveiki visiem!','Kā iet? 🙂','Super! 🔥','Forši zīmē! 🎨','Paldies! 🙏','Nāc šurp!','Ejam uz metro 🚇','Policija! 🚓','Slēpjamies! 🫣','Kur ir kafejnīca? 🍔','Kāds tev līmenis?','Uzzīmēsim kopā?','Esmu jauns te 🆕','Labs darbs! 👍','Ha ha! 😂','Uz redzi! 👋','Atā! ✌️','Wow! 😮','Ups! 😅','Tu esi forša/s! ⭐','Vai būsi mans draugs? 🤝','Drīz atgriezīšos ⏳','Labu nakti! 🌙'];
+  S.PHRASES = ['Čau! 👋','Sveiki visiem!','Kā iet? 🙂','Super! 🔥','Forši zīmē! 🎨','Paldies! 🙏','Nāc šurp!','Ejam uz metro 🚇','Policija! 🚓','Slēpjamies! 🙈','Kur ir kafejnīca? 🍔','Kāds tev līmenis?','Uzzīmēsim kopā?','Esmu jauns te 🆕','Labs darbs! 👍','Ha ha! 😂','Uz redzi! 👋','Atā! ✌️','Wow! 😮','Ups! 😅','Tu esi forša/s! ⭐','Vai būsi mans draugs? 🤝','Drīz atgriezīšos ⏳','Labu nakti! 🌙'];
 
   // ---------- palīgi ----------
   const $ = id => document.getElementById(id);
@@ -207,7 +207,7 @@
     db.ref('inbox/' + me.uid).on('value', s => { const prev = S.inbox; S.inbox = s.val() || {};
       Object.entries(S.inbox).forEach(([u, v]) => { const p = prev[u];
         if (v.u && (v.t || 0) > t0 && (!p || (v.t || 0) > (p.t || 0)) && S.conv !== u && !S.blocks[u]) {
-          buzz(); toast(`💬 <b>${esc(v.n)}</b>: ${esc(S.clean(v.x || '').slice(0, 60))}`, () => S.openDM(u)); } });
+          buzz(); toast(`💬 <b>${esc(v.n)}</b>: ${esc(Array.from(S.clean(v.x || '')).slice(0, 60).join(''))}`, () => S.openDM(u)); } });
       paintDots(); renderInbox(); }, () => {});
     db.ref('friendReq/' + me.uid).on('value', s => { const prev = S.reqs; S.reqs = s.val() || {};
       if (!firstReq) Object.entries(S.reqs).forEach(([u, v]) => { if (!prev[u]) { buzz(); toast(`🤝 <b>${esc(v.n)}</b> grib būt tavs draugs!`, () => S.openPanel('fr')); } });

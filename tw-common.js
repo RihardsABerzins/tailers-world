@@ -32,7 +32,7 @@
     .mred{color:#ff5d6c;font-weight:900;text-shadow:0 0 6px #ff1f3d,0 0 14px #ff1f3d;animation:twRed 1.8s ease-in-out infinite}
     @keyframes twRed{50%{text-shadow:0 0 10px #ff1f3d,0 0 24px #ff4d6a,0 0 34px #ff1f3d88}}
     .mblue{background:linear-gradient(100deg,#2f6bff 0%,#8fd0ff 30%,#ffffff 45%,#8fd0ff 60%,#2f6bff 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900;filter:drop-shadow(0 0 6px #3d8bffcc) drop-shadow(0 0 14px #2f6bff88);animation:twBlue 2.4s linear infinite}
-    @keyframes twBlue{to{background-position:-250% 0}}
+    @keyframes twBlue{to{background-position:-166.667% 0}}
     @media (prefers-reduced-motion:reduce){.mred,.mblue{animation:none}}`; document.head.appendChild(st); }
   // Aktīvs = lapa redzama un pēdējās 5 min kaut kas spiests. Fonā (lietotne nolaista/aizvērta) atslēdzam
   // savienojumu – serveris uzreiz izdzēš online/ un presence/ ierakstus (onDisconnect). Neaktīvs → tikai izdzēšam ierakstus.

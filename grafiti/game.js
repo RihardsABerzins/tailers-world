@@ -134,7 +134,7 @@ LOT_DEFS.forEach((d,i)=>{
 const WORLD_W=cursorX+520;
 const stations=lots.filter(l=>l.kind==='metro');
 const signLots=lots.filter((l,i)=>i===0||lots[i-1].dist!==l.dist);
-const CITY_NAMES=['Old Town','Harbor','Neon Heights','Parkside','Market Quarter','Art Block','Skyline','Riverside','Uptown','Crown Hill'];
+const CITY_NAMES=['Old Town','Harbour','Neon Heights','Parkside','Market Quarter','Art Block','Skyline','Riverside','Uptown','Crown Hill'];
 const cityRange=Array.from({length:10},(_,c)=>{ const ls=lots.filter(l=>l.city===c); const last=ls[ls.length-1]; return [c===0?0:ls[0].x-40,last.x+last.w+40]; });
 const hideSpots=lots.filter(l=>l.hide).map(l=>({x:l.kind==='wall'?l.x+64:l.x+50,kind:l.kind==='wall'?'dumpster':'crates',lot:l}));
 const lampXs=[]; for(let x=300;x<WORLD_W;x+=410) lampXs.push(x);
@@ -566,7 +566,7 @@ function newCop(x,dir,state){ return {x,y:GROUND,state,lastX:player.x,t:0,wd:1,w
   hood:'#2a49a8',skin:'#f0c8a0',cap:'#0e1a3d',pants:'#0b1230',mask:'#f0c8a0'}; }
 function spawnPolice(){ const side=Math.random()<.5?-1:1, x=clamp(player.x+side*(W/(2*baseZoom())+1800),-200,WORLD_W+200), dir=-side;
   police.active=true; police.car={x,dir,y:dir<0?662:700,state:'drive',siren:0}; police.extra=[]; police.reinfCar=14; police.offs=[]; police.reinf=0;
-  toast(isTouch?'🚨 <b>Police on the way!</b> Hide 🫣 or run!':'🚨 <b>Police on the way!</b> Hide (↓ / S) or run!'); }
+  toast(isTouch?'🚨 <b>Police on the way!</b> Hide 🙈 or run!':'🚨 <b>Police on the way!</b> Hide (↓ / S) or run!'); }
 function walkTo(o,tx,sp,dt){ const d=Math.sign(tx-o.x); o.x+=d*sp*dt; if(d) o.flip=d; o.step+=sp*dt*.05; o.face='side'; }
 const foodPrice=()=>8+4*curCity;
 // Ēdiens līdzņemšanai: kafejnīcā/picērijā nopērk, tas ieiet somā; ēd no somas, kad gribas. Lielāks ēdiens = vairāk % un dārgāks.
@@ -959,7 +959,7 @@ function render(){
     if(police.off) tg.push({x:police.off.x,t:'Officer',c:'#ff5252'}); else if(police.car) tg.push({x:police.car.x,t:'Police',c:'#ff5252'});
     const afford=Math.min(Infinity,...COLORS.filter(c=>!save.colors.includes(c.id)).map(c=>c.price),...CARS.filter(c=>!save.cars.includes(c.id)).map(c=>c.price));
     if(!wanted&&save.food<50){ let b=null,bd=1e9; lots.forEach(l=>{ if((l.kind==='cafe'||l.kind==='pizza')&&l.city===curCity){ const d=Math.abs(l.door+34-player.x); if(d<bd){bd=d;b=l;} } }); if(b) tg.push({x:b.door+34,t:'🍔 Café',c:'#ffb347'}); }
-    if(!wanted&&save.colors.some(id=>paintOf(id)<15)&&save.money>=20){ const p=lots.find(l=>l.kind==='paint'&&l.city===curCity); if(p) tg.push({x:p.door+34,t:'🪣 Paint Depot',c:'#ff4fd8'}); } else
+    if(!wanted&&save.colors.some(id=>paintOf(id)<15)&&save.money>=20){ const p=lots.find(l=>l.kind==='paint'&&l.city===curCity); if(p) tg.push({x:p.door+34,t:'🎨 Paint Depot',c:'#ff4fd8'}); } else
     if(!wanted&&save.money>=afford){ const p=lots.find(l=>l.kind==='paint'&&l.city===curCity); if(p) tg.push({x:p.door+34,t:'Paint Depot',c:'#ff4fd8'}); }
     if(!wanted){ let b=null,bd=1e9; stations.filter(st=>st.city===curCity).forEach(st=>{ const d=Math.abs(st.cx-player.x); if(d>350&&d<bd){ bd=d; b=st; } }); if(b) tg.push({x:b.cx,t:'Metro',c:'#5aa8e8'}); }
     if(!wanted){ let b=null,bd=1e9; walls.forEach(w=>{ if(w.city===curCity&&w.cool<=0&&!locked(w)){ const d=Math.abs(w.cx-player.x); if(d>350&&d<bd){bd=d;b=w;} } }); if(b) tg.push({x:b.cx,t:'Wall (lvl '+(b.tier+1)+')',c:TIER_COL[b.tier]}); }
@@ -1018,7 +1018,7 @@ addEventListener('pointermove',e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
 const panelK=()=>Math.min(1,(W-24)/720,(H-180)/440); // tikai kameras pietuvinājumam, ieejot zīmēšanā
 // Zīmēšanas kanva aizņem visu brīvo ekrānu. Koordinātas kanvā = CSS pikseļi (pielaide un līnijas biezums ekrāna pikseļos).
 const DR={x:0,y:0,w:720,h:440}; let shapeR=150, shapeBox=null, pen=null, penT=null;
-function layoutDraw(){ const land=W>H*1.15, m=8, top=36+m, el=id=>document.getElementById(id), pal=el('palette'), btns=el('drawBtns'), hint=el('drawHint');
+function layoutDraw(){ const land=W>H*1.15, m=8, top=Math.max(36,document.getElementById('drawTitle').offsetHeight+10)+m, /* garš virsraksts aplaužas, kanva zem tā */ el=id=>document.getElementById(id), pal=el('palette'), btns=el('drawBtns'), hint=el('drawHint');
   if(land){ const cw=Math.min(230,Math.max(150,W*.24)); DR.x=m; DR.y=top; DR.w=W-cw-m*3; DR.h=H-top-m;
     Object.assign(pal.style,{left:(W-cw-m)+'px',width:cw+'px',top:top+'px',height:'auto',transform:'none'});
     Object.assign(btns.style,{left:(W-cw-m)+'px',width:cw+'px',top:'auto',bottom:m+'px'}); btns.classList.add('col'); hint.style.display='none'; }
@@ -1054,6 +1054,7 @@ function showDraw(){
   wipePrev=false; layoutDraw(); fitShape(); syncWipe();
   document.getElementById('drawTitle').textContent=w.free?'🎨 Freestyle – draw anything you like!':w.isBonus?`🎁 Bonus wall – more accurate = better box!`:w.need?`Level ${w.tier+1} · paint: ${colorById(w.need).name}!`:`Wall – level ${w.tier+1}. Draw the outline!`;
   buildPalette(); redraw(); dOv.classList.add('on'); updateDrawInfo(true);
+  if(document.getElementById('drawTitle').offsetHeight>26){ layoutDraw(); fitShape(); redraw(); } // virsraksts 2 rindās
 }
 // krāsas pogā redzams, cik krāsas palicis (kā bundžā)
 function swFill(d,id){ const c=colorById(id), p=Math.ceil(paintOf(id)); d.style.background=`linear-gradient(to top,${c.hex} ${p}%,#2a2a33 ${p}%)`; d._p=p; }
@@ -1061,7 +1062,7 @@ function buildPalette(){
   const p=document.getElementById('palette'); p.innerHTML='';
   save.colors.forEach((id,i)=>{ const c=colorById(id), d=document.createElement('div');
     d.className='sw'+(id===drawColor?' sel':'')+(paintOf(id)<=0?' empty':''); d.dataset.id=id; swFill(d,id); d.style.color=c.hex; d.title=`${c.name} x${c.mult}`;
-    d.innerHTML=`<span style="color:#fff;mix-blend-mode:difference">${!isTouch&&i<9?i+1:''}</span>`; d.onclick=()=>{ if(paintOf(id)<=0){ toast(`🪣 ${c.name} is empty – refill it at the Paint Depot (€ ${refillPrice(id)}).`); return; } drawColor=id; buildPalette(); }; p.appendChild(d); });
+    d.innerHTML=`<span style="color:#fff;mix-blend-mode:difference">${!isTouch&&i<9?i+1:''}</span>`; d.onclick=()=>{ if(paintOf(id)<=0){ toast(`🎨 ${c.name} is empty – refill it at the Paint Depot (€ ${refillPrice(id)}).`); return; } drawColor=id; buildPalette(); }; p.appendChild(d); });
   const hx=colorById(drawColor).hex; dc.style.boxShadow=`0 0 40px ${hx==='#111111'?'#889':hx}99`;
 }
 function brickCover(g,w,h){ const k=Math.max(w/720,h/440); g.drawImage(bgBrick,(w-720*k)/2,(h-440*k)/2,720*k,440*k); }
@@ -1116,10 +1117,10 @@ const PAINT_USE=3.2; // % uz formas rādiusu: aplis ≈ 20 % bundžas
 function addPt(p){ const s=strokes[strokes.length-1], l=s.pts[s.pts.length-1];
   const seg=Math.hypot(p.x-l.x,p.y-l.y); save.paint[s.color]=Math.max(0,paintOf(s.color)-seg/shapeR*PAINT_USE);
   const sw_=document.querySelector(`#palette .sw[data-id="${s.color}"]`); if(sw_&&sw_._p!==Math.ceil(paintOf(s.color))) swFill(sw_,s.color);
-  if(paintOf(s.color)<=0){ stopPaint(); buildPalette(); toast(`🪣 ${colorById(s.color).name} paint ran out! Pick another color or refill at the Paint Depot.`); sfx('bust'); return; }
+  if(paintOf(s.color)<=0){ stopPaint(); buildPalette(); toast(`🎨 ${colorById(s.color).name} paint ran out! Pick another color or refill at the Paint Depot.`); sfx('bust'); return; }
   s.pts.push(p);
   if(Math.hypot(p.x-l.x,p.y-l.y)<4&&Math.random()<.12) drips.push({x:p.x,y:p.y+2,len:0,max:rnd(8,30),color:drawColor}); dirty=true; }
-dc.addEventListener('pointerdown',e=>{ audioInit(); if(paintOf(drawColor)<=0){ toast(`🪣 ${colorById(drawColor).name} is empty – pick another color.`); return; } painting=true; dc.setPointerCapture(e.pointerId); const p=pos(e); strokes.push({color:drawColor,pts:[p]}); pen={x:p.x,y:p.y}; penT={x:p.x,y:p.y}; dirty=true; spraySound(true); });
+dc.addEventListener('pointerdown',e=>{ audioInit(); if(paintOf(drawColor)<=0){ toast(`🎨 ${colorById(drawColor).name} is empty – pick another color.`); return; } painting=true; dc.setPointerCapture(e.pointerId); const p=pos(e); strokes.push({color:drawColor,pts:[p]}); pen={x:p.x,y:p.y}; penT={x:p.x,y:p.y}; dirty=true; spraySound(true); });
 // izsalcis: rokas trīc – līnija raustās, tāpēc zīmējums sanāk mazāk precīzs
 const shake=p=>{ if(!starving()) return p; const t=performance.now()/1000, A=Math.max(6,shapeR*.045); return {x:p.x+Math.sin(t*23)*A+Math.sin(t*61)*A*.5+rnd(-2,2),y:p.y+Math.cos(t*19)*A+Math.sin(t*53)*A*.5+rnd(-2,2)}; };
 dc.addEventListener('pointermove',e=>{ if(!painting) return; const p=shake(pos(e)); pen={x:p.x,y:p.y}; addPt(p); });
@@ -1128,7 +1129,8 @@ dc.addEventListener('pointerup',stopPaint); dc.addEventListener('pointercancel',
 // zīmēšanas augšējā josla: badā un cik cilvēku redz
 let drawInfoKey='', wipePrev=false;
 const bWipe=document.getElementById('bWipe');
-function syncWipe(){ const show=curWall&&curWall.free&&curWall.layers&&curWall.layers.length; bWipe.style.display=show?'':'none'; bWipe.textContent=wipePrev?'↩️ Keep the old drawing':'🧽 Clean the wall first'; }
+function syncWipe(){ const show=curWall&&curWall.free&&curWall.layers&&curWall.layers.length; bWipe.style.display=show?'':'none'; bWipe.textContent=wipePrev?'↩️ Keep the old drawing':'🧽 Clean the wall first';
+  document.getElementById('drawInfo').style.maxWidth=show?Math.max(90,DR.w-24-bWipe.offsetWidth)+'px':''; } // čipi neiet zem pogas
 bWipe.onclick=()=>{ wipePrev=!wipePrev; syncWipe(); dirty=true; buzz(10); };
 function updateDrawInfo(force){ if(mode!=='draw'&&!force) return; const w_=npcs.filter(n=>n.seen&&!n.called).length, c_=npcs.filter(n=>n.called&&time-n.callT<40&&Math.abs(n.x-player.x)<900).length;
   const key=`${w_}|${c_}|${starving()}|${curWall&&curWall.isBonus}`; if(key===drawInfoKey&&!force) return; drawInfoKey=key;
@@ -1423,7 +1425,7 @@ function renderShoes(){ save.shoes=save.shoes||['old'];
 function renderShop(){
   const colorRows=COLORS.map(c=>{ const own=save.colors.includes(c.id);
     return `<div class="row"><div class="dot" style="background:${c.hex};color:${c.hex}"></div><div class="n">${c.name} <small>– bonus x${c.mult}</small></div>`+
-      (own?`<span class="paintCtl"><small class="can" style="color:${paintOf(c.id)<=0?'#ff5252':paintOf(c.id)<25?'#ffca28':'#9e9'}">🪣 ${Math.ceil(paintOf(c.id))}%</small>${paintOf(c.id)<100?`<button data-act="fill" data-id="${c.id}" ${save.money<refillCost(c.id)?'disabled':''}>Refill € ${refillCost(c.id)}</button>`:''}${save.color===c.id?' ✔':`<button data-act="col" data-id="${c.id}" class="sec">Select</button>`}</span>`:`<button data-act="buyc" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
+      (own?`<span class="paintCtl"><small class="can" style="color:${paintOf(c.id)<=0?'#ff5252':paintOf(c.id)<25?'#ffca28':'#9e9'}">🎨 ${Math.ceil(paintOf(c.id))}%</small>${paintOf(c.id)<100?`<button data-act="fill" data-id="${c.id}" ${save.money<refillCost(c.id)?'disabled':''}>Refill € ${refillCost(c.id)}</button>`:''}${save.color===c.id?' ✔':`<button data-act="col" data-id="${c.id}" class="sec">Select</button>`}</span>`:`<button data-act="buyc" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
   const carRows=CARS.map(c=>{ const own=save.cars.includes(c.id);
     return `<div class="row"><div class="dot" style="background:${c.color};color:${c.color}"></div><div class="n">${c.name} <small>– speed ${c.speed}</small></div>`+
       (own?`<span>${save.car===c.id?'✔ in use':`<button data-act="car" data-id="${c.id}" class="sec">Use</button>`}</span>`:`<button data-act="buyk" data-id="${c.id}" ${save.money<c.price?'disabled':''}>€ ${c.price}</button>`)+`</div>`; }).join('');
@@ -1474,12 +1476,12 @@ function ctxInfo(){ if(mode!=='world') return null;
 function updateCtx(){ if(!isTouch) return; const c=ctxInfo(), hs=hidden?'out':nearHide?'in':'';
   const key=(c?c.i+c.t:'-')+'|'+hs; if(key===ctxShown) return; ctxShown=key;
   const b=document.getElementById('tAct'); b.classList.toggle('off',!c); if(c){ document.getElementById('tActI').textContent=c.i; document.getElementById('tActL').textContent=c.t; }
-  const h=document.getElementById('tS'); h.classList.toggle('off',!hs); h.innerHTML=hidden?'↩️<small>Out</small>':'🫣<small>Hide</small>'; }
+  const h=document.getElementById('tS'); h.classList.toggle('off',!hs); h.innerHTML=hidden?'↩️<small>Out</small>':'🙈<small>Hide</small>'; }
 function actionE(){
   if(mode!=='world'||!nearLot||hidden) return;
   if(nearLot.kind==='cafe'||nearLot.kind==='pizza'){ openFoodShop(nearLot.kind); return; }
-  if((nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.cool<=0||nearLot.kind==='mwall'&&nearLot.cool<=0)&&!save.colors.some(id=>paintOf(id)>0)){ toast('🪣 All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.'); return; }
-  if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&save.colors.includes(nearLot.need)&&paintOf(nearLot.need)<=0){ const c=colorById(nearLot.need); toast(`🪣 This wall needs ${c.name} paint, but your can is empty – refill at the Paint Depot (€ ${refillPrice(c.id)}).`); return; }
+  if((nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.cool<=0||nearLot.kind==='mwall'&&nearLot.cool<=0)&&!save.colors.some(id=>paintOf(id)>0)){ toast('🎨 All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.'); return; }
+  if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&save.colors.includes(nearLot.need)&&paintOf(nearLot.need)<=0){ const c=colorById(nearLot.need); toast(`🎨 This wall needs ${c.name} paint, but your can is empty – refill at the Paint Depot (€ ${refillPrice(c.id)}).`); return; }
   if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&!save.colors.includes(nearLot.need)){ const c=colorById(nearLot.need); toast(`🎨 This wall needs this paint: <b style="color:${c.hex}">${c.name}</b> – buy it at the Paint Depot (€ ${c.price}).`); return; }
   if(nearLot.kind==='wall') locked(nearLot)?toast(`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()}). Paint easier walls and earn XP.`):nearLot.cool>0?toast('Paint still drying – come back later or find another wall!'):openDraw(nearLot);
   else if(nearLot.kind==='paint') openShop();
@@ -1540,7 +1542,7 @@ if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
       if(window.TW) await TW.ready;
       await loadSave(u.uid);
       if(window.TWA){ const v=await TWA.visit(u.uid); NET.visits={streak:v.best||0,days:v.days||0}; }
-      NET.on=true; netStats(true); toast(`👋 Sveiks, ${TW.display(NET.name,NET.nick)}${TW.badge(TW.role(NET.uid))?' '+TW.badge(TW.role(NET.uid)):''}!`);
+      NET.on=true; netStats(true); toast(`👋 ${window.TW_LANG==='en'?'Hi':'Sveiks'}, <span data-notr>${String(TW.display(NET.name,NET.nick)).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';')}</span>${TW.badge(TW.role(NET.uid))?' '+TW.badge(TW.role(NET.uid)):''}!`);
       TW.heartbeat(NET.uid,()=>({game:'Graffiti RPG',where:inMetro?'Metro':`City ${curCity+1} · Līm. ${level()}`,name:NET.name,nick:NET.nick||''}));
       NET.db.ref('kicks/'+NET.uid).on('value',s=>{ const k=s.val(); if(k&&k.until>TW.now()) kickedOut(k); },()=>{});
       let st=''; try{ st=sessionStorage.getItem('twMode'); }catch(e){}
@@ -1654,8 +1656,8 @@ const TUT_LV=[
   ['🕹️','Kustība',isTouch?'Staigā ar ◀ ▶ bultiņām un lec ar ⤒. Uzspied uz veikala, sienas vai miskastes – tēls pats aizies un izdarīs.':'Skrien ar A / D, lec ar W. Pie sienas, veikala vai metro spied E.'],
   ['🎨','Zīmēšana',isTouch?'Pie sienas spied 🎨 Zīmēt un ar pirkstu apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.':'Pie sienas spied E un ar peli apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.'],
   ['🧱','Līmeņi','Katrā līmenī ir 3 sienas. Sakrāj XP, un atveras nākamā līmeņa sienas – grūtākas, bet maksā vairāk.'],
-  ['🚓','Policija','Grafiti ir aizliegts! Jo vairāk cilvēku redz, kā tu zīmē (👀), jo ātrāk ierodas policija. Zīmē, kad neviens neskatās, bēdz vai paslēpies miskastē 🫣.'],
-  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Krāsa zīmējot iztērējas 🪣 – uzpildi to depo (melnā lētākā, €20). Katru nakti 02:00 saņem €20 dāvanā!'],
+  ['🚓','Policija','Grafiti ir aizliegts! Jo vairāk cilvēku redz, kā tu zīmē (👀), jo ātrāk ierodas policija. Zīmē, kad neviens neskatās, bēdz vai paslēpies miskastē 🙈.'],
+  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Krāsa zīmējot iztērējas 🎨 – uzpildi to depo (melnā lētākā, €20). Katru nakti 02:00 saņem €20 dāvanā!'],
   ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet lēnāk, un rokas trīc. Kafejnīcā vai picērijā pērc ēdienu līdzņemšanai – tas ieiet somā 🎒, un ēd, kad gribi.'],
   ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
   ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
@@ -1666,8 +1668,8 @@ const TUT_EN=[
   ['🕹️','Moving',isTouch?'Walk with the ◀ ▶ arrows and jump with ⤒. Tap a shop, wall or dumpster – your character walks there and does it.':'Run with A / D, jump with W. Press E at a wall, shop or metro.'],
   ['🎨','Painting',isTouch?'At a wall tap 🎨 Paint and trace the shape with your finger. The more accurate, the more money and XP.':'Press E at a wall and trace the shape with the mouse. The more accurate, the more money and XP.'],
   ['🧱','Levels','Every level has 3 walls. Earn XP to unlock the next level\'s walls – harder, but they pay more.'],
-  ['🚓','Police','Graffiti is illegal! The more people see you paint (👀), the faster the police come. Paint when nobody is looking, run or hide in a dumpster 🫣.'],
-  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Paint runs out as you draw 🪣 – refill it there (black is cheapest, €20). Every night at 02:00 you get €20 as a gift!'],
+  ['🚓','Police','Graffiti is illegal! The more people see you paint (👀), the faster the police come. Paint when nobody is looking, run or hide in a dumpster 🙈.'],
+  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Paint runs out as you draw 🎨 – refill it there (black is cheapest, €20). Every night at 02:00 you get €20 as a gift!'],
   ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks slower and their hands shake. Buy takeaway food at a café or pizzeria – it goes into your backpack 🎒, eat it whenever you like.'],
   ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
   ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
@@ -1693,21 +1695,21 @@ const GUIDE=[
   {t:isTouch?'👉 Walk to the brick wall with ◀ ▶ – or just tap the wall':'👉 Walk to the brick wall (A / D)', done:()=>nearLot&&nearLot.kind==='wall'&&!locked(nearLot)||mode==='entering'||mode==='draw'},
   {t:isTouch?'🎨 Tap the big Paint button':'🎨 Press E to paint', done:()=>mode==='entering'||mode==='draw'},
   {t:isTouch?'✏️ Trace the dashed shape with your finger, then tap ✔ Done':'✏️ Trace the dashed shape with the mouse, then press ✔ Done', done:()=>(save.painted||0)>guide.p0},
-  {t:'💰 Great! Walls give money and XP. If many people see you 👀, the police come – hide in a dumpster 🫣!', time:11},
-  {t:'🪣 Paint runs out – refill it at the Paint Depot (pink sign). 🍔 Eat at a café. Have fun! 🎉', time:7},
+  {t:'💰 Great! Walls give money and XP. If many people see you 👀, the police come – hide in a dumpster 🙈!', time:11},
+  {t:'🎨 Paint runs out – refill it at the Paint Depot (pink sign). 🍔 Eat at a café. Have fun! 🎉', time:7},
 ];
 const guide={i:-1,t:0,p0:0};
 function startGuide(){ guide.i=0; guide.t=0; guide.p0=save.painted||0; showGuide(); }
 function showGuide(){ const el=document.getElementById('guide'); if(guide.i<0||guide.i>=GUIDE.length){ el.classList.remove('on'); return; } el.textContent=GUIDE[guide.i].t; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); buzz(10); }
 function guideTick(dt){ if(guide.i<0) return; const g=GUIDE[guide.i]; guide.t+=dt; const el=document.getElementById('guide');
   el.style.visibility=mode==='draw'||mode==='entering'||mode==='exiting'?'hidden':'visible';
-  if(mode==='draw'&&guide.i===2){ const dt_=document.getElementById('drawTitle'), want=window.tr?window.tr(g.t):g.t; if(dt_.textContent!==want) dt_.textContent=want; }
+  if(mode==='draw'&&guide.i===2){ const dt_=document.getElementById('drawTitle'), want=window.tr?window.tr(g.t):g.t; if(dt_.textContent!==want){ dt_.textContent=want; layoutDraw(); } }
   if(g.done?g.done():guide.t>g.time){ guide.i++; guide.t=0; if(guide.i>=GUIDE.length){ guide.i=-1; try{ localStorage.setItem('grafitiTut','1'); }catch(e){} } else ding([784,1047]); showGuide(); } }
 // pulsējoša bultiņa virs sienas, uz kuru jāiet
 function drawGuideArrow(){ if(guide.i<0||guide.i>1||mode!=='world') return; let b=null,bd=1e9; walls.forEach(w=>{ if(w.city===curCity&&!locked(w)&&w.cool<=0){ const d=Math.abs(w.cx-player.x); if(d<bd){bd=d;b=w;} } }); if(!b) return;
-  const y=b.py-70+Math.sin(time*6)*10; ctx.save(); ctx.fillStyle='#ffd34d'; ctx.strokeStyle='#000'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(b.cx-26,y); ctx.lineTo(b.cx+26,y); ctx.lineTo(b.cx,y+34); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.fillRect(b.cx-10,y-30,20,32); ctx.restore(); }
+  const y=b.py-112+Math.sin(time*6)*8; /* virs LEVEL plāksnītes, lai burti neraustās */ ctx.save(); ctx.fillStyle='#ffd34d'; ctx.strokeStyle='#000'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(b.cx-26,y); ctx.lineTo(b.cx+26,y); ctx.lineTo(b.cx,y+34); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.fillRect(b.cx-10,y-30,20,32); ctx.restore(); }
 let tutSeen=false; try{ tutSeen=localStorage.getItem('grafitiTut')==='1'; }catch(e){}
 // Pirmajā reizē – mācības darot (bultiņa uz sienu, uzzīmē pirmo sienu). 10 lapu instrukcija paliek pauzē: ❓ Kā spēlēt.
 if(!tutSeen) startGuide(); else
-toast(isTouch?'Tap a brick wall to paint 🎨. People with 📱 can call the police – hide in a dumpster 🫣.':'Run along the street with <b>A / D</b>. Press <b>E</b> at a brick wall and paint. The Paint Depot (pink sign) sells colors and vehicles. People with 📱 can report you to the police – hide with <b>S</b>.');
+toast(isTouch?'Tap a brick wall to paint 🎨. People with 📱 can call the police – hide in a dumpster 🙈.':'Run along the street with <b>A / D</b>. Press <b>E</b> at a brick wall and paint. The Paint Depot (pink sign) sells colors and vehicles. People with 📱 can report you to the police – hide with <b>S</b>.');
 requestAnimationFrame(frame);

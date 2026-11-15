@@ -50,7 +50,7 @@
     n => n === 1 ? 'Aizbēgi no policijas' : `Aizbēgi no policijas ${n} reizes`, n => `Escaped the police ${n} time${n > 1 ? 's' : ''}`);
   add('grafiti', 'esc5', '🚁', 'Neuzvaramais', 'Untouchable', 'Aizbēgi ar 5 zvaigznēm', 'Escaped with 5 stars', c => (c.esc5 || 0) >= 1);
   add('grafiti', 'busted', '🚓', 'Noķerts!', 'Busted!', 'Policija tevi noķēra (gadās!)', 'The police caught you (it happens!)', c => (c.busted || 0) >= 1);
-  tiers('grafiti', 'hide', 'hide', [[10, '🗑️', 'Paslēpies', 'Hide and seek'], [100, '🫣', 'Slēpšanās meistars', 'Hiding master'], [500, '🕳️', 'Neredzamais', 'Invisible']],
+  tiers('grafiti', 'hide', 'hide', [[10, '🗑️', 'Paslēpies', 'Hide and seek'], [100, '🙈', 'Slēpšanās meistars', 'Hiding master'], [500, '🕳️', 'Neredzamais', 'Invisible']],
     n => `Paslēpies ${n} reizes`, n => `Hid ${n} times`);
   tiers('grafiti', 'eat', 'eat', [[10, '🍔', 'Gardēdis', 'Foodie'], [50, '🍕', '50 maltītes', '50 meals'], [100, '🍰', '100 maltītes', '100 meals'], [250, '🍽️', 'Šefpavārs', 'Chef']],
     n => `Paēdi kafejnīcā ${n} reizes`, n => `Ate at the café ${n} times`);

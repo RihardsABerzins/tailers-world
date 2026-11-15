@@ -53,7 +53,17 @@
   @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 
   /* ielogošanās */
-  .auth{display:none;grid-template-columns:1fr 1fr;gap:16px;animation:rise .6s .1s both}
+  .auth{display:none;grid-template-columns:1fr;gap:12px;animation:rise .6s .1s both}
+  /* divas pogas blakus; uzspiežot – zem tās izveras forma (dropdown) */
+  .authBtns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  #loginForm h3,#regForm h3{display:none}
+  .authBtns .btn{width:100%;font-size:16px;white-space:nowrap;padding:16px 6px;display:flex;align-items:center;justify-content:center;gap:8px}
+  .authBtns .btn span{transition:transform .25s;font-size:14px}
+  .authBtns .btn.on span{transform:rotate(180deg)}
+  .authBtns .btn.on{box-shadow:0 0 0 3px #fff6}
+  #loginForm,#regForm{display:none}
+  #loginForm.open,#regForm.open{display:block;animation:drop .3s ease-out both}
+  @keyframes drop{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 14px 34px #0006}
   .panel h3{margin:0 0 12px;font-size:21px}
   .panel.new{border-color:#ff5fa266}
@@ -69,7 +79,7 @@
   .play{background:var(--yellow);color:#1a1300;box-shadow:0 6px 0 #c49a1b}
   .pinkb{background:var(--pink);color:#fff;box-shadow:0 6px 0 #b8336e}
   .ghost{background:#ffffff1a;color:var(--text);border:2px solid #ffffff33}
-  @media (max-width:640px){.auth{grid-template-columns:1fr}}
+
 
   /* paziņojumi */
   .notify{display:none;margin:0 0 20px;background:linear-gradient(135deg,#5ac8ff33,#7cff8a22);border:2px solid #5ac8ff66;border-radius:22px;padding:16px;gap:14px;align-items:center;flex-wrap:wrap;animation:rise .6s both}
@@ -113,7 +123,7 @@
   textarea{width:100%;font:inherit;font-size:17px;padding:12px 14px;border-radius:14px;border:2px solid #ffffff2a;background:#0f0c20;color:var(--text);outline:none;resize:vertical;min-height:90px}
   textarea:focus{border-color:var(--yellow)}
   .gold{background:linear-gradient(100deg,#b07a12 0%,#ffd34d 25%,#fff8d0 45%,#ffd34d 60%,#b07a12 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 2.6s linear infinite;font-weight:900}
-  @keyframes shine{to{background-position:-250% 0}}
+  @keyframes shine{to{background-position:-166.667% 0}}
   /* uzaicini draugu + medaļas */
   .invite{margin:0 0 22px;background:linear-gradient(135deg,#ff5fa233,#5ac8ff22);border:2px solid #ff5fa266;border-radius:22px;padding:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;animation:rise .6s both}
   .invite .ico{font-size:44px;animation:bob 2.4s ease-in-out infinite}
@@ -130,7 +140,8 @@
   .mgroup summary::after{content:'▾';margin-left:auto;color:var(--muted);transition:transform .2s}
   .mgroup[open] summary::after{transform:rotate(180deg)}
   .mgroup .mn{color:var(--muted);font-size:14px}
-  .mgroup .mp{font-size:18px;letter-spacing:2px;overflow:hidden;white-space:nowrap;text-overflow:clip;flex:1;min-width:0;text-align:right}
+  .mgroup .mp{font-size:18px;letter-spacing:2px;overflow:hidden;white-space:nowrap;flex:1;min-width:0;display:flex;justify-content:flex-end;-webkit-mask-image:linear-gradient(90deg,transparent,#000 22px);mask-image:linear-gradient(90deg,transparent,#000 22px)}
+  .mgroup .mp>span{flex:none}
   .mgroup .mgrid{padding:0 12px 14px}
   .medal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 8px;text-align:center;animation:rise .5s both}
   .medal .mi{font-size:38px;line-height:1.1;display:block}
@@ -170,6 +181,7 @@
 
   <!-- Ielogoties / izveidot profilu -->
   <div class="auth" id="auth">
+    <div class="authBtns"><button type="button" class="btn play" id="tabLogin">🔑 Ielogoties <span>▾</span></button><button type="button" class="btn pinkb" id="tabReg">✨ Izveidot kontu <span>▾</span></button></div>
     <form class="panel" id="loginForm" autocomplete="on">
       <h3>🔑 Ielogoties</h3>
       <label for="lName">Lietotājvārds</label>
@@ -306,6 +318,11 @@ const norm=s=>s.trim().toLowerCase();
 function checkName(n){ if(!/^[a-z0-9_]{3,16}$/i.test(n)) return 'Lietotājvārdā drīkst būt tikai latīņu burti (a–z), cipari un _ (3–16 zīmes).'; if(BAD.some(w=>n.toLowerCase().includes(w))) return 'Lūdzu, izvēlies citu, pieklājīgu lietotājvārdu.'; return ''; }
 const authErr=e=>({'auth/invalid-credential':'Nepareizs lietotājvārds vai parole.','auth/wrong-password':'Nepareizs lietotājvārds vai parole.','auth/user-not-found':'Nepareizs lietotājvārds vai parole.','auth/invalid-email':'Nepareizs lietotājvārds.','auth/too-many-requests':'Pārāk daudz mēģinājumu – pagaidi mazliet.','auth/network-request-failed':'Nav interneta savienojuma.','auth/email-already-in-use':'Šis lietotājvārds jau ir aizņemts.','auth/weak-password':'Parolei jābūt vismaz 6 zīmēm.'}[e.code]||'Kaut kas nogāja greizi. Mēģini vēlreiz.');
 
+// ielogoties / izveidot kontu – katra forma izveras zem savas pogas
+function authTab(which){ const lo=which==='login', f=lo?$('loginForm'):$('regForm'), o=lo?$('regForm'):$('loginForm'), b=lo?$('tabLogin'):$('tabReg'), ob=lo?$('tabReg'):$('tabLogin');
+  const open=!f.classList.contains('open'); f.classList.toggle('open',open); b.classList.toggle('on',open); o.classList.remove('open'); ob.classList.remove('on');
+  if(open) setTimeout(()=>{ (lo?$('lName'):$('rName')).focus({preventScroll:true}); f.scrollIntoView({behavior:'smooth',block:'nearest'}); },60); }
+$('tabLogin').onclick=()=>authTab('login'); $('tabReg').onclick=()=>authTab('reg');
 $('loginForm').addEventListener('submit',async e=>{ e.preventDefault(); const b=e.submitter; $('lErr').textContent=''; const n=norm($('lName').value), p=$('lPass').value;
   if(checkName(n)&&!/^[a-z0-9_]{3,16}$/.test(n)){ $('lErr').textContent='Nepareizs lietotājvārds vai parole.'; return; }
   b.disabled=true; try{ await auth.signInWithEmailAndPassword(twUserEmail(n),p); }catch(err){ $('lErr').textContent=authErr(err); } b.disabled=false; });
@@ -338,7 +355,7 @@ $('logout').onclick=async()=>{ if(ME) await db.ref('online/'+ME.uid).remove().ca
 
 auth.onAuthStateChanged(async u=>{
   $('loading').style.display='none';
-  if(!u){ if(INV_BY){ const b=$('invBanner'); b.innerHTML=`🎁 Tevi uzaicināja <b>${INV_BY.replace(/[<>&]/g,'')}</b>! Izveido profilu – un jūs abi saņemsiet medaļu.`; b.style.display='block'; }
+  if(!u){ if(INV_BY){ const b=$('invBanner'); b.innerHTML=`🎁 Tevi uzaicināja <b>${INV_BY.replace(/[<>&]/g,'')}</b>! Izveido profilu – un jūs abi saņemsiet medaļu.`; b.style.display='block'; if(!$('regForm').classList.contains('open')) authTab('reg'); }
     $('emailBox').style.display='none'; $('auth').style.display='grid'; $('games').style.display='none'; $('notify').style.display='none'; $('me').style.display='none'; $('hello').innerHTML='Labdien! <span class="wave">👋</span>'; return; }
   let name=u.email.split('@')[0], prof={}; try{ const s=await db.ref('users/'+u.uid).get(); if(s.exists()){ prof=s.val()||{}; if(prof.name) name=prof.name; } }catch(e){}
   await TW.ready; ME={uid:u.uid,name,nick:prof.nick||''};
@@ -400,7 +417,7 @@ function renderMedals(){ const own=TWA.owned||{}, got=TWA.LIST.filter(m=>own[m.i
   $('mGrid').innerHTML=TWA.GROUPS.map(G=>{ const ms=TWA.LIST.filter(m=>m.g===G.g), n=ms.filter(m=>own[m.id]).length;
     // katra sadaļa sakļauta; virsrakstā – iegūto medaļu ikonas, spied, lai redzētu visas
     const prev=ms.filter(m=>own[m.id]).slice(-8).map(m=>m.i).join('');
-    return `<details class="mgroup" data-g="${G.g}"${MED.openG&&MED.openG[G.g]?' open':''}><summary><span class="mt">${G.t}</span><span class="mn">${n}/${ms.length}</span><span class="mp">${prev||'—'}</span></summary><div class="mgrid">`+ms.map((m,i)=>`<div class="medal ${own[m.id]?'got':'lock'}" style="animation-delay:${i*.03}s"><span class="mi">${m.i}</span><b>${m.t}</b><small>${m.d}</small></div>`).join('')+'</div></details>'; }).join('');
+    return `<details class="mgroup" data-g="${G.g}"${MED.openG&&MED.openG[G.g]?' open':''}><summary><span class="mt">${G.t}</span><span class="mn">${n}/${ms.length}</span><span class="mp"><span>${prev||'—'}</span></span></summary><div class="mgrid">`+ms.map((m,i)=>`<div class="medal ${own[m.id]?'got':'lock'}" style="animation-delay:${i*.03}s"><span class="mi">${m.i}</span><b>${m.t}</b><small>${m.d}</small></div>`).join('')+'</div></details>'; }).join('');
   $('mGrid').querySelectorAll('details').forEach(d=>d.ontoggle=()=>{ MED.openG=MED.openG||{}; MED.openG[d.dataset.g]=d.open; }); }
 function showNextMedal(){ const m=MED.queue.shift(); if(!m){ $('medalModal').classList.remove('on'); return; }
   $('nmIcon').textContent=m.i; $('nmTitle').textContent=m.t; $('nmDesc').textContent=m.d;

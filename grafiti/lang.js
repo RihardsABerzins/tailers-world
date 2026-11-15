@@ -9,6 +9,7 @@
 
   // Garākās frāzes vispirms. [angliski, latviski]
   const PHRASES=[
+    ['Harbour','Osta'],['(dumpster)','(miskaste)'],['(crates)','(kastes)'],
     ['Whole pizza','Vesela pica'],['Croissant','Kruasāns'],['Hot dog','Hotdogs'],['🍕 Pizzeria','🍕 Picērija'],['🍔 Café','🍔 Kafejnīca'],
     ['Takeaway – the food goes into your backpack 🎒. Eat it whenever you are hungry!','Līdzņemšanai – ēdiens ieiet mugursomā 🎒. Ēd, kad sagribas!'],
     ['% food','% ēdiena'],['In bag:','Somā:'],['You are full!','Tu esi paēdis!'],['Yum! Food','Ņam! Ēdiens'],
@@ -32,14 +33,14 @@
     ['👉 Walk to the brick wall with ◀ ▶ – or just tap the wall','👉 Aizej līdz ķieģeļu sienai ar ◀ ▶ – vai vienkārši uzspied uz sienas'],['👉 Walk to the brick wall (A / D)','👉 Aizej līdz ķieģeļu sienai (A / D)'],
     ['🎨 Tap the big Paint button','🎨 Spied lielo pogu Zīmēt'],['🎨 Press E to paint','🎨 Spied E, lai zīmētu'],
     ['✏️ Trace the dashed shape with your finger, then tap ✔ Done','✏️ Apvelc punktoto formu ar pirkstu un spied ✔ Gatavs'],['✏️ Trace the dashed shape with the mouse, then press ✔ Done','✏️ Apvelc punktoto formu ar peli un spied ✔ Gatavs'],
-    ['💰 Great! Walls give money and XP. If many people see you 👀, the police come – hide in a dumpster 🫣!','💰 Super! Sienas dod naudu un XP. Ja daudzi redz 👀, ierodas policija – slēpies miskastē 🫣!'],
-    ['🪣 Paint runs out – refill it at the Paint Depot (pink sign). 🍔 Eat at a café. Have fun! 🎉','🪣 Krāsa iztērējas – uzpildi Krāsu depo (rozā izkārtne). 🍔 Ēd kafejnīcā. Lai jautri! 🎉'],
+    ['💰 Great! Walls give money and XP. If many people see you 👀, the police come – hide in a dumpster 🙈!','💰 Super! Sienas dod naudu un XP. Ja daudzi redz 👀, ierodas policija – slēpies miskastē 🙈!'],
+    ['🎨 Paint runs out – refill it at the Paint Depot (pink sign). 🍔 Eat at a café. Have fun! 🎉','🎨 Krāsa iztērējas – uzpildi Krāsu depo (rozā izkārtne). 🍔 Ēd kafejnīcā. Lai jautri! 🎉'],
     ['Old sneakers','Vecās kedas'],['Running shoes','Skriešanas apavi'],['Sport boots','Sporta zābaki'],['Rocket sneakers','Raķešu kedas'],
     ['👟 Shoe shop','👟 Apavu veikals'],['Faster shoes = run faster on foot (escape the police!).','Ātrāki apavi = ātrāk skrien kājām (aizbēgt no policijas!).'],
     ['E – shoe shop (faster running)','E – apavu veikals (ātrāka skriešana)'],['jump ×','lēciens ×'],['🍔 Café','🍔 Kafejnīca'],
     ['Try again!','Mēģini vēlreiz!'],
-    ['▶ Resume','▶ Turpināt'],['Hide 🫣 or run!','Slēpies 🫣 vai bēdz!'],['The train stands in the middle of the station – tap it.','Vilciens stāv stacijas vidū – uzspied uz tā.'],
-    ['Tap a brick wall to paint 🎨. People with 📱 can call the police – hide in a dumpster 🫣.','Uzspied uz ķieģeļu sienas, lai zīmētu 🎨. Cilvēki ar 📱 var izsaukt policiju – slēpies miskastē 🫣.'],
+    ['▶ Resume','▶ Turpināt'],['Hide 🙈 or run!','Slēpies 🙈 vai bēdz!'],['The train stands in the middle of the station – tap it.','Vilciens stāv stacijas vidū – uzspied uz tā.'],
+    ['Tap a brick wall to paint 🎨. People with 📱 can call the police – hide in a dumpster 🙈.','Uzspied uz ķieģeļu sienas, lai zīmētu 🎨. Cilvēki ar 📱 var izsaukt policiju – slēpies miskastē 🙈.'],
     ['is empty – refill it at the Paint Depot','ir tukša – uzpildi to Krāsu depo'],['is empty – pick another color.','ir tukša – izvēlies citu krāsu.'],
     ['paint ran out! Pick another color or refill at the Paint Depot.','krāsa beigusies! Izvēlies citu vai uzpildi Krāsu depo.'],
     ['All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.','Visas krāsas ir tukšas! Uzpildi Krāsu depo (melnā € 20). Katru nakti 02:00 saņem € 20.'],
@@ -141,7 +142,8 @@
     ['Press','Spied'],['Burger','Burgers'],['Eat','Ēst'],['Buy','Pirkt'],['Helicopter','Helikopters'],['Skin','Āda'],['Mask','Maska'],['Settings','Iestatījumi'],['Done','Gatavs'],['Undo','Atcelt'],['Clear','Notīrīt'],['Leave','Aiziet'],['Paint','Zīmēt'],['Shop','Veikals'],['Eat','Ēst'],['Travel','Braukt'],['Bonus','Bonuss'],['Hide','Slēpties'],['Out','Iznākt'],['Soon','Drīz'],['Hungry','Izsalcis'],['Exit','Izeja'],['DISTRICT','RAJONS'],['LEVEL','LĪMENIS'],['OPEN','ATVĒRTS'],
   ];
   const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const RULES=[...PHRASES.sort((a,b)=>b[0].length-a[0].length).map(([e,l])=>[new RegExp(esc(e),'g'),l]),
+  const RULES=[...PHRASES.sort((a,b)=>b[0].length-a[0].length).map(([e,l])=>{ const a=/^[A-Za-z]/.test(e), z=/[A-Za-z]$/.test(e); // frāze neķer vārda vidu (NightFury ≠ NaktsFury)
+                 return [new RegExp((a?'(^|[^A-Za-zĀ-ž])':'()')+esc(e)+(z?'(?=$|[^A-Za-zĀ-ž])':''),'g'),'$1'+l.replace(/\$/g,'$$$$')]; }),
                ...WORDS.map(([e,l])=>[new RegExp('(^|[^A-Za-zĀ-ž])'+esc(e)+'(?=$|[^A-Za-zĀ-ž])','g'),'$1'+l])];
   const cache=new Map();
   const tr=s=>{ if(typeof s!=='string'||!/[A-Za-z]/.test(s)) return s; let r=cache.get(s); if(r!==undefined) return r;
