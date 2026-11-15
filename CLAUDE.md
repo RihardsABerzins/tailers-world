@@ -31,6 +31,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 ## Mobilā vadība (principi)
 - **Spied uz objekta pasaulē**: durvis, siena, miskaste, metro, vilciens → tēls pats aiziet un izdara darbību. Staigāšana un lēkšana – tikai ar bultiņām (spiediens uz tukšas vietas neko nedara).
 - **Viena kontekstuālā poga** labajā apakšā (īkšķa zonā) rāda, ko tieši var izdarīt (🎨 Zīmēt, 🛒 Veikals, 🍔 Ēst, 🚇 Metro…); paslēpta, ja nav ko darīt. 🫣 poga parādās tikai pie slēptuves.
+- Zem līmeņa lodziņa (ārpus tā) – 🎒 soma un 🍔 ēdiens % (+ aktīvie efekti); spiežot – logs ar paskaidrojumu un pogu „Lietot”.
 - **Tīrs ekrāns**: HUD sakļauts (nauda + līmenis; aizdomas un ēdiens parādās tikai, kad svarīgi; spied, lai izvērstu), radio sakļauts līdz 🎵, priekšmeti sakļauti līdz 🎒.
 - Ikonas virs objektiem ar ko var darboties; tuvumā tās pulsē.
 - Pogas ≥ 50 px, svarīgākās lielākas; vibrācija (Android) pie darbībām.

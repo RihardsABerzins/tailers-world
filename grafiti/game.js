@@ -1233,16 +1233,31 @@ const paintOf=id=>Math.max(0,(save.paint&&save.paint[id])||0);
 function ensurePaint(){ save.paint=save.paint||{}; save.colors.forEach(id=>{ if(save.paint[id]==null) save.paint[id]=100; }); }
 ensurePaint();
 save.st=save.st||{}; const stat=(k,v=1)=>{ save.st[k]=(save.st[k]||0)+v; }; // skaitītāji medaļām
-const ITEMS={ smoke:{n:'Smoke bomb',i:'💨',k:'Z',d:'police lose you, suspicion −35'}, energy:{n:'Energy drink',i:'⚡',k:'X',d:'+40% speed for 40 s'}, xp2:{n:'Double XP',i:'📈',k:'C',d:'XP ×2 for 5 min'}, mask:{n:'Mask',i:'🎭',k:'V',d:'witnesses will not call for 3 min'} };
+const ITEMS={ smoke:{n:'Smoke bomb',i:'💨',k:'Z',d:'police lose you, suspicion −35',L:'Use it when the police are chasing you – they lose sight of you and suspicion drops.'},
+  energy:{n:'Energy drink',i:'⚡',k:'X',d:'+40% speed for 40 s',L:'You run 40% faster for 40 seconds. Great for escaping!'},
+  xp2:{n:'Double XP',i:'📈',k:'C',d:'XP ×2 for 5 min',L:'For 5 minutes every wall gives double XP – level up faster.'},
+  mask:{n:'Mask',i:'🎭',k:'V',d:'witnesses will not call for 3 min',L:'For 3 minutes people who see you will not call the police.'} };
 const BOXES=[{n:'Bronze box',c:'#cd7f32',i:'📦'},{n:'Silver box',c:'#c0c8d4',i:'🎁'},{n:'Gold box',c:'#ffd34d',i:'🎁'},{n:'Diamond box',c:'#7ee8ff',i:'💎'}];
 const buff={energy:0,xp2:0,mask:0};
 const invEl=document.getElementById('inv'); let invShown='';
-function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.items[id]||0),0), anyBuff=Object.values(buff).some(v=>v>0);
-  const s_=(total||anyBuff?`<button class="bag" data-bag="1">🎒 ${total}</button>`:'')+(!invOpen?'':Object.keys(ITEMS).filter(id=>(save.items[id]||0)>0||buff[id]>0||!isTouch).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">${Math.ceil(buff[id])}s</span>`:''; return `<button data-it="${id}" ${n?'':'disabled'} title="${it.n}: ${it.d} (${it.k})">${it.i} ×${n}${isTouch?'':` <small>${it.k}</small>`}${b}</button>`; }).join(''));
-  if(s_!==invShown){ invShown=s_; invEl.innerHTML=s_; invEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(b.dataset.bag){ invOpen=!invOpen; renderInv(); } else useItem(b.dataset.it); }); } }
-let invOpen=!isTouch;
+// Zem līmeņa lodziņa (ārpus tā): 🎒 soma un 🍔 ēdiens + aktīvie efekti. Spiežot – logs ar paskaidrojumu.
+function renderInv(){ const total=Object.keys(ITEMS).reduce((a,id)=>a+(save.items[id]||0),0), f=Math.round(save.food||0);
+  const buffs=Object.keys(buff).filter(id=>buff[id]>0).map(id=>`<span class="buff">${ITEMS[id].i} ${Math.ceil(buff[id])}s</span>`).join('');
+  const s_=`<button class="bag" data-bag="1">🎒 ${total}</button><button class="food${f<=0?' bad':f<25?' warn':''}" data-food="1">🍔 ${f}%</button>${buffs}`;
+  const r=hudBox.getBoundingClientRect(); invEl.style.setProperty('--invTop',(r.bottom+6)+'px'); invEl.style.setProperty('--invLeft',r.left+'px');
+  if(s_!==invShown){ invShown=s_; invEl.innerHTML=s_; invEl.querySelectorAll('button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); if(b.dataset.bag) openBag(); else if(b.dataset.food) openFoodInfo(); }); } }
+function openBag(){ if(mode!=='world') return; mode='shop'; promptEl.style.display='none'; renderBag(); shopOv.classList.add('on'); }
+function renderBag(){ const rows=Object.keys(ITEMS).map(id=>{ const it=ITEMS[id], n=save.items[id]||0, b=buff[id]>0?` <span style="color:#7cff8a">(${Math.ceil(buff[id])} s)</span>`:'';
+    return `<div class="row bagRow"><div class="bi">${it.i}</div><div class="n"><b>${it.n}</b> ×${n}${b}<br><small>${it.L}</small></div><button data-use="${id}" ${n?'':'disabled'}>Use</button></div>`; }).join('');
+  shopEl.innerHTML=`<h2>🎒 Backpack</h2>${rows}<p style="color:#aab;font-size:14px">Items are found in loot boxes – in dumpsters 🗑️ and on bonus walls in the metro 🎁.</p><button id="shopClose">Close<span class="kh"> (Esc)</span></button>`;
+  shopEl.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{ const id=b.dataset.use; closeShop(); useItem(id); renderInv(); });
+  document.getElementById('shopClose').onclick=closeShop; }
+function openFoodInfo(){ if(mode!=='world') return; mode='shop'; promptEl.style.display='none'; const f=Math.round(save.food||0);
+  shopEl.innerHTML=`<h2>🍔 Food ${f}%</h2><div class="foodBar"><div style="width:${Math.max(0,Math.min(100,f))}%;background:${f<=0?'#ff5252':f<25?'#ffca28':'#7cff8a'}"></div></div>
+    <p>Your character gets hungry over time. When food is 0%, you walk slower and your hands shake – drawings get wobbly.</p><p>Eat at a café 🍔 or a pizzeria 🍕 (€ ${foodPrice()}). When you are hungry, an arrow shows the way to the nearest café.</p><button id="shopClose">OK</button>`;
+  document.getElementById('shopClose').onclick=closeShop; shopOv.classList.add('on'); }
 setInterval(renderInv,400); renderInv();
-hudBox.classList.toggle('open',!isTouch); hudBox.addEventListener('pointerdown',e=>{ hudBox.classList.toggle('open'); e.stopPropagation(); });
+hudBox.classList.toggle('open',!isTouch); hudBox.addEventListener('pointerdown',e=>{ hudBox.classList.toggle('open'); e.stopPropagation(); setTimeout(renderInv,0); });
 { const pl=document.getElementById('player'); let plT=0; pl.classList.toggle('open',!isTouch);
   document.getElementById('pToggle').onclick=()=>{ pl.classList.toggle('open'); clearTimeout(plT); if(isTouch&&pl.classList.contains('open')) plT=setTimeout(()=>pl.classList.remove('open'),8000); }; }
 function useItem(id){ if(mode!=='world'||!(save.items[id]>0)) return; save.items[id]--; stat('items'); persist();

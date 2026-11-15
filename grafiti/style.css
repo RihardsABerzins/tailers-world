@@ -178,3 +178,13 @@
   body.touch #prompt{display:none!important}
   @media (orientation:portrait) and (max-width:760px){ #touch .ctx{width:72px;height:72px;font-size:26px} }
   @media (prefers-reduced-motion:reduce){ #touch .ctx{animation:none} }
+
+/* soma + ēdiens zem līmeņa lodziņa (ārpus tā) */
+#inv,body.touch #inv{left:var(--invLeft,12px)!important;right:auto!important;transform:none!important;bottom:auto!important;top:var(--invTop,120px)!important;max-width:70vw!important;flex-wrap:wrap!important;gap:6px}
+#inv button,#inv .buff{background:#000b;color:#fff;border:1px solid #fff3;border-radius:999px;padding:6px 12px;font-size:15px;font-weight:800;min-height:38px}
+#inv .buff{display:inline-flex;align-items:center;color:#7cff8a}
+#inv .food.warn{color:#ffca28;border-color:#ffca2888}#inv .food.bad{color:#ff5252;border-color:#ff525288;animation:pulse 1s infinite}
+#foodTxt{display:none!important}
+.bagRow{align-items:center}.bagRow .bi{font-size:30px;width:44px;text-align:center;flex:none}.bagRow small{color:#aab}
+.foodBar{height:14px;background:#333;border-radius:7px;overflow:hidden;margin:6px 0 10px}.foodBar div{height:100%}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}

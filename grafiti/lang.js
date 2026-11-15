@@ -9,6 +9,13 @@
 
   // Garākās frāzes vispirms. [angliski, latviski]
   const PHRASES=[
+    ['Use it when the police are chasing you – they lose sight of you and suspicion drops.','Izmanto, kad policija dzenas pakaļ – viņi tevi pazaudē, un aizdomas samazinās.'],
+    ['You run 40% faster for 40 seconds. Great for escaping!','40 sekundes skrien par 40% ātrāk. Lieliski, lai aizbēgtu!'],
+    ['For 5 minutes every wall gives double XP – level up faster.','5 minūtes katra siena dod dubultu XP – ātrāk kāp līmeņos.'],
+    ['For 3 minutes people who see you will not call the police.','3 minūtes cilvēki, kas tevi redz, neizsauks policiju.'],
+    ['🎒 Backpack','🎒 Mugursoma'],['Items are found in loot boxes – in dumpsters 🗑️ and on bonus walls in the metro 🎁.','Priekšmetus atrodi lootboxos – miskastēs 🗑️ un metro bonusa sienās 🎁.'],
+    ['Your character gets hungry over time. When food is 0%, you walk slower and your hands shake – drawings get wobbly.','Tavs tēls laika gaitā izsalkst. Kad ēdiens ir 0%, tu ej lēnāk, un rokas trīc – zīmējumi sanāk šķībi.'],
+    ['Eat at a café 🍔 or a pizzeria 🍕','Paēd kafejnīcā 🍔 vai picērijā 🍕'],['When you are hungry, an arrow shows the way to the nearest café.','Kad esi izsalcis, bultiņa rāda ceļu uz tuvāko kafejnīcu.'],
     ['🎨 Draw anything!','🎨 Zīmē, ko gribi!'],['FREESTYLE','BRĪVĀ SIENA'],['Freestyle – draw anything you like!','Brīvā siena – zīmē, ko gribi!'],['Freestyle!','Brīvais zīmējums!'],['Draw a bit more!','Uzzīmē mazliet vairāk!'],
     ['Keep the old drawing','Atstāt veco zīmējumu'],['Clean the wall first','Vispirms notīrīt sienu'],
     ['Police backup is coming from the other side!','Policijas pastiprinājums brauc no otras puses!'],
