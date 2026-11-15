@@ -268,59 +268,37 @@ function updateAudio(){ if(!AC||!sirenG||!engG) return; const T=AC.currentTime, 
   trO.frequency.setTargetAtTime(tf,T,.05); trG.gain.setTargetAtTime(fxOn?tv*fxK():0,T,.1); trP.pan.setTargetAtTime(tpan,T,.1);
   let hv=0; if(police.heli&&!police.heli.leave) hv=clamp(1-Math.abs(police.heli.x-player.x)/1600,0,1)*.12;
   heliG.gain.setTargetAtTime(fxOn?hv*fxK():0,T,.2);
-  if(music.el){ const duck=(police.active?.55:1)*(mode==='draw'?.8:1); music.el.volume=clamp(music.vol*masterVol*duck*(music.muted?0:1),0,1); } }
+  if(window.TWRadio) TWRadio.duck(masterVol*(police.active?.55:1)*(mode==='draw'?.8:1)); }
 
-// ---- mūzikas atskaņotājs ----
-const TRACKS=[{t:'Lido Tu',f:'lido-tu.mp3',rank:1},{t:'Tu Vari',f:'tu-vari.mp3',rank:2},{t:'Dejot Laiks',f:'dejot-laiks.mp3',rank:3},{t:'Peļķe ielas galā',f:'pelke-ielas-gala.mp3',rank:4},{t:'Esi reāls',f:'esi-reals.mp3',rank:5},
-  {t:'Mirklis vēsturē',f:'mirklis.mp3'},{t:'Fotomomenti',f:'fotomomenti.mp3'},{t:'Kāpēc nē',f:'kapec-ne.mp3'},{t:'Gravitācija',f:'gravitacija.mp3'},{t:'Dzīve paciņā',f:'dzive-pacina.mp3'},
-  {t:'Dīvainis ar dziesmu',f:'divainis-ar-dziesmu.mp3'},{t:'Saku paldies',f:'saku-paldies.mp3'},{t:'Kad zvaigznes krīt uz galvas',f:'kad-zvaigznes-krit.mp3'},{t:'Neaizej',f:'neaizej.mp3'},
-  {t:'Meklēju sajūtas',f:'mekleju-sajutas.mp3'},{t:'Gaismu lej',f:'gaismu-lej.mp3'}];
-const RADIOS=[{t:'Radio TEV',u:'https://stream.radiotev.lv:8443/radiov'},{t:'Radio SWH',u:'https://live.radioswh.lv:8443/swh_lv'},{t:'Latvijas Radio 5 (Pieci)',u:'https://muste.latvijasradio.lv/pieci/smil:k2.smil/playlist.m3u8',hls:true}];
-const music={radio:0,pl:false,el:null,hls:null,i:Math.floor(Math.random()*5),vol:.6,muted:false,started:false,nextPL:0};
-try{ const m=JSON.parse(localStorage.getItem('grafitiMusic')); if(m){ music.vol=m.vol??.6; fxOn=m.fx??true; fxVol=m.fv??1; masterVol=m.mv??1; brightness=m.br??1; } }catch(e){}
+// ---- mūzika: kopīgais radio (../tw-radio.js, TWRadio; iestatījumi localStorage twMusic) ----
+const R_=window.TWRadio;
+try{ const m=JSON.parse(localStorage.getItem('grafitiMusic')); if(m){ fxOn=m.fx??true; fxVol=m.fv??1; masterVol=m.mv??1; brightness=m.br??1; } }catch(e){}
 const pTitle=document.getElementById('pTitle'), pPlay=document.getElementById('pPlay'), pVol=document.getElementById('pVol'), pFx=document.getElementById('pFx');
-const saveAudioPrefs=()=>{ try{ localStorage.setItem('grafitiMusic',JSON.stringify({vol:music.vol,fx:fxOn,fv:fxVol,mv:masterVol,br:brightness})); }catch(e){} };
-const nowS=()=>performance.now()/1000;
-function syncPlayer(){ const t=TRACKS[music.i];
-  pTitle.textContent=(music.muted?'🔇 ':'')+(music.pl?'✈ Papīra Lidmašīnas – '+t.t:'📻 '+RADIOS[music.radio].t);
-  pPlay.textContent=music.el&&!music.el.paused?'⏸':'▶'; pFx.textContent=fxOn?'🔊':'🔇'; }
-function ensureEl(){ if(music.el) return; music.el=new Audio();
-  music.el.addEventListener('ended',()=>{ if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } });
-  music.el.addEventListener('play',syncPlayer); music.el.addEventListener('pause',syncPlayer);
-  music.el.addEventListener('error',()=>{ if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else pTitle.textContent='📻 '+RADIOS[music.radio].t+' – unavailable, try ⏭'; }); }
-function setSrc(u,isHls){ if(music.hls){ music.hls.destroy(); music.hls=null; }
-  if(isHls&&!music.el.canPlayType('application/vnd.apple.mpegurl')&&window.Hls&&Hls.isSupported()){ music.hls=new Hls(); music.hls.loadSource(u); music.hls.attachMedia(music.el); }
-  else music.el.src=u; }
-const applyVol=()=>{ if(music.el) music.el.volume=clamp(music.vol*masterVol*(music.muted?0:1),0,1); };
-function playRadio(r){ ensureEl(); music.radio=(r+RADIOS.length)%RADIOS.length; music.pl=false; music.nextPL=nowS()+480; const R=RADIOS[music.radio]; setSrc(R.u,R.hls); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
-function playPL(){ ensureEl(); music.pl=true; setSrc('../music/'+TRACKS[music.i].f,false); applyVol(); syncPlayer(); music.el.play().catch(()=>{}); }
-function loadTrack(i,play=true){ music.i=(i+TRACKS.length)%TRACKS.length; if(play) playPL(); }
-function cycleSource(){ audioInit(); if(music.pl) music.i=(music.i+1)%TRACKS.length; playPL(); }
-function startMusic(){ if(music.started) return; music.started=true; playRadio(music.radio); music.nextPL=nowS()+480; }
-setInterval(()=>{ if(music.started&&!music.pl&&music.el&&!music.el.paused&&nowS()>music.nextPL) playPL(); },2000);
-function audioInit(){ if(!AC){ audioInit0(); buildContinuous(); } if(AC&&AC.state==='suspended') AC.resume(); startMusic(); }
-syncPlayer();
+const saveAudioPrefs=()=>{ try{ localStorage.setItem('grafitiMusic',JSON.stringify({fx:fxOn,fv:fxVol,mv:masterVol,br:brightness})); }catch(e){} };
+function syncPlayer(){ pTitle.textContent=R_.title(); pPlay.textContent=R_.playing()?'⏸':'▶'; pFx.textContent=fxOn?'🔊':'🔇'; }
+function audioInit(){ if(!AC){ audioInit0(); buildContinuous(); } if(AC&&AC.state==='suspended') AC.resume(); R_.start(); }
 const pVol2=document.getElementById('pVol2'), pFxVol=document.getElementById('pFxVol'), sMaster=document.getElementById('sMaster'), sBright=document.getElementById('sBright'), pVolTxt=document.getElementById('pVolTxt'), pauseOv=document.getElementById('pauseOv');
 function applyBrightness(){ const f=`brightness(${brightness})`; cv.style.filter=f; fx.style.filter=f; const d_=document.getElementById('draw'); if(d_) d_.style.filter=f; }
-function syncSettings(){ pVol.value=pVol2.value=Math.round(music.vol*100); pVolTxt.textContent=Math.round(music.vol*100)+'%'; pFxVol.value=Math.round(fxVol*100); sMaster.value=Math.round(masterVol*100); sBright.value=Math.round(brightness*100); document.getElementById('pzMute').textContent=music.muted?'🔊 Unmute':'🔇 Mute'; pFx.textContent=fxOn?'🔊':'🔇'; }
-function setVol(v){ music.vol=clamp(v,0,1); if(music.muted&&music.vol>0) music.muted=false; saveAudioPrefs(); syncPlayer(); syncSettings(); }
+function syncSettings(){ pVol.value=pVol2.value=Math.round(R_.vol*100); pVolTxt.textContent=Math.round(R_.vol*100)+'%'; pFxVol.value=Math.round(fxVol*100); sMaster.value=Math.round(masterVol*100); sBright.value=Math.round(brightness*100); document.getElementById('pzMute').textContent=R_.muted?'🔊 Unmute':'🔇 Mute'; pFx.textContent=fxOn?'🔊':'🔇'; }
+function setVol(v){ R_.setVol(v); }
+R_.onChange(()=>{ syncPlayer(); syncSettings(); });
 pVol.addEventListener('input',()=>setVol(pVol.value/100)); pVol2.addEventListener('input',()=>setVol(pVol2.value/100));
-document.getElementById('pVolDn').onclick=()=>setVol(music.vol-.1); document.getElementById('pVolUp').onclick=()=>setVol(music.vol+.1);
+document.getElementById('pVolDn').onclick=()=>setVol(R_.vol-.1); document.getElementById('pVolUp').onclick=()=>setVol(R_.vol+.1);
 pFxVol.addEventListener('input',()=>{ fxVol=pFxVol.value/100; saveAudioPrefs(); sfx('coin'); });
 sMaster.addEventListener('input',()=>{ masterVol=sMaster.value/100; saveAudioPrefs(); });
 sBright.addEventListener('input',()=>{ brightness=sBright.value/100; applyBrightness(); saveAudioPrefs(); });
 document.getElementById('pzPrev').onclick=()=>document.getElementById('pPrev').click(); document.getElementById('pzNext').onclick=()=>document.getElementById('pNext').click(); document.getElementById('pzPlay').onclick=()=>document.getElementById('pPlay').click();
-document.getElementById('pzMute').onclick=()=>{ music.muted=!music.muted; syncPlayer(); syncSettings(); };
+document.getElementById('pzMute').onclick=()=>R_.mute();
 function openPause(){ if(mode!=='world') return; mode='pause'; for(const k in keys) keys[k]=false; promptEl.style.display='none'; syncSettings(); pauseOv.classList.add('on'); if(AC&&AC.state==='running') AC.suspend(); }
 function closePause(){ pauseOv.classList.remove('on'); mode='world'; if(AC&&AC.state==='suspended') AC.resume(); }
 document.getElementById('pzResume').onclick=closePause;
 { const cur=window.TW_LANG||'lv', lv=document.getElementById('lgLv'), en=document.getElementById('lgEn'); (cur==='lv'?lv:en).className=''; lv.onclick=()=>{ if(cur!=='lv') setLang('lv'); }; en.onclick=()=>{ if(cur!=='en') setLang('en'); }; } document.getElementById('pzFs').onclick=()=>toggleFS(); document.getElementById('setBtn').onclick=openPause;
 document.addEventListener('visibilitychange',()=>{ if(document.hidden&&mode==='world') openPause(); });
 applyBrightness(); syncSettings();
-pPlay.onclick=()=>{ audioInit(); if(!music.el) return; music.el.paused?music.el.play().catch(()=>{}):music.el.pause(); };
-document.getElementById('pNext').onclick=()=>{ audioInit(); if(music.pl){ music.i=(music.i+1)%TRACKS.length; playRadio(music.radio); } else playRadio(music.radio+1); };
+pPlay.onclick=()=>{ const s0=R_.started; audioInit(); if(s0) R_.toggle(); };
+document.getElementById('pNext').onclick=()=>{ audioInit(); R_.pl?R_.playRadio(R_.radio):R_.next(); };
 document.getElementById('pSet').onclick=()=>openPause(); document.getElementById('pStaff').onclick=()=>openStaff();
-document.getElementById('pPrev').onclick=()=>{ audioInit(); playRadio(music.pl?music.radio:music.radio-1); };
+document.getElementById('pPrev').onclick=()=>{ audioInit(); R_.pl?R_.playRadio(R_.radio):R_.prev(); };
 pFx.onclick=()=>{ fxOn=!fxOn; saveAudioPrefs(); syncPlayer(); };
 document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('button')) sfx('click'); });
 
@@ -1503,9 +1481,9 @@ addEventListener('keydown',e=>{
   if(mode==='pause'){ if(k==='escape'||k==='p') closePause(); return; }
   if(mode==='chat'){ if(k==='escape') TWS.close(); return; }
   if(mode==='ride') return;
-  if(k==='-'||k==='_'){ setVol(music.vol-.1); return; }
-  if(k==='+'||k==='='){ setVol(music.vol+.1); return; }
-  if(k==='m'&&mode!=='draw'){ music.muted=!music.muted; syncPlayer(); return; }
+  if(k==='-'||k==='_'){ setVol(R_.vol-.1); return; }
+  if(k==='+'||k==='='){ setVol(R_.vol+.1); return; }
+  if(k==='m'&&mode!=='draw'){ R_.mute(); return; }
   if(k==='f'&&mode!=='draw'){ toggleFS(); return; }
   if(mode==='draw'){
     if(k==='enter') finishDraw(); else if(k==='escape') leaveDraw(false);
