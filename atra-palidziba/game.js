@@ -367,7 +367,9 @@ function finish() {
 }
 
 // ---- logi ----
-function sheet(html) { $('sheet').innerHTML = html; $('ov').classList.add('on'); $('sheet').scrollTop = 0; }
+function sheet(html) { const quit = M.state === 'call' || M.state === 'scene';
+  $('sheet').innerHTML = (quit ? '<button class="xBtn" id="xQuit" aria-label="Aizvērt">✕</button>' : '') + html; $('ov').classList.add('on'); $('sheet').scrollTop = 0;
+  if (quit) $('xQuit').onclick = () => { const sc = M.state === 'scene'; if (M.tc && M.tc.destroy) M.tc.destroy(); M.tc = null; closeSheet(); freeDrive(); if (sc) setTimeout(() => toast('🚑 Pacientam palīdzēs cita brigāde. Tu vari braukāt brīvi.'), 50); }; }
 function closeSheet() { $('ov').classList.remove('on'); }
 let toastT = 0; function toast(t) { const e = $('toast'); e.innerHTML = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3200); }
 
