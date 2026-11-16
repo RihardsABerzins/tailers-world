@@ -26,6 +26,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - **Katrai spēlei savas medaļas** atbilstoši tās spēles procesiem (grupa `TWA.GROUPS` + `TWA.LIST`), piešķir ar `TWA.sync`.
 - **Nauda ir kopīga visām spēlēm** un var iet mīnusā (piem. remonts pēc avārijas; nopelnot parāds nosedzas). Pirkumiem spēle pati prasa, lai naudas pietiek: `wallet/{uid}` (`TW.wallet` tw-common.js – get/set/add ar transakciju/watch). Spēle tur savu skaitli un ik pa laikam nosūta starpību (sk. Graffiti `walletSync`). Sākumlapā redzama kopsumma.
 - **Spēlētāja tēls (izskats) ir viens visās spēlēs**: `users/{uid}/look` = {skin, hood ('auto'|krāsa), hat ('cap'|'beanie'|'hair'), cap, mask ('none'|krāsa), pants}. Jaunā spēlē tēlu zīmē no šī.
+- **3D/Blendera modeļi (CC0)** glabājas ārpus repo: `~/Documents/Tclaude/tw-modeli/<nr>-<komplekts>/` (ar License.txt); spēlē liek tikai optimizētus GLB/webp + LICENSE. **Kenney Mini Characters – tikai spēlētāju tēliem un Skolas klasei** (skolēni, skolotājs). **Fona cilvēki** (skatītāji, gājēji, pūlis) – Quaternius Posed Background Characters (`07-posed-humans`).
 - `index.html` – sākumlapa ("Labdien!", spēļu kartītes). Jaunu spēli pievieno `GAMES` sarakstā.
 - `grafiti/` – Graffiti RPG. Kods raksta tekstus angliski; valodas slānis (skripts `<head>` sākumā, `PHRASES`/`WORDS`) pārtulko visu redzamo latviski. Noklusējums – latviešu; iestatījumos LV/EN slēdzis (localStorage `twLang`). Jaunam tekstam pievieno tulkojumu `PHRASES` sarakstā.
 
