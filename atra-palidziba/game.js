@@ -489,6 +489,7 @@ function drawWorld(t) {
   bl.sort((a, b) => Math.hypot((b.x0 + b.x1) / 2 - cam.x, (b.y0 + b.y1) / 2 - cam.y) - Math.hypot((a.x0 + a.x1) / 2 - cam.x, (a.y0 + a.y1) / 2 - cam.y));
   bl.forEach(it => drawBuilding(it, t, dk, lit, neon));
   if (amb.heli) drawHeli(t);
+  drawSky(t, dk, vx0, vy0, vx1, vy1);
   // nakts: tumsa + gaismas (lampas, logi, lukturi, sirēna)
   if (dk > .02) {
     ctx.fillStyle = `rgba(14,10,44,${dk})`; ctx.fillRect(vx0 - 200, vy0 - 200, vx1 - vx0 + 400, vy1 - vy0 + 400);
@@ -504,6 +505,33 @@ function drawWorld(t) {
     if (amb.siren) { const on = Math.sin(t * 16) > 0, g = ctx.createRadialGradient(amb.x, amb.y, 4, amb.x, amb.y, 160); g.addColorStop(0, on ? `rgba(255,40,60,${.6 * nk})` : `rgba(40,110,255,${.6 * nk})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(amb.x, amb.y, 160, 0, 7); ctx.fill(); }
     ctx.restore(); }
 }
+// ---- dekorācija: lēni mākoņi ar ēnām un mazi putnu bariņi (atkārtojas ap kameru SKY.SPAN rūtī; augstāk = nedaudz paralakses) ----
+const SKY = (() => { let s = 7; const R = () => (s = (s * 16807) % 2147483647) / 2147483647, SPAN = 4200;
+  const img = [0, 1, 2].map(() => { const blobs = Array.from({ length: 9 }, () => [48 + R() * 160, 55 + R() * 50, 26 + R() * 32]);
+    return ['255,255,255', '20,30,40'].map(col => { const c = document.createElement('canvas'); c.width = 256; c.height = 160; const g = c.getContext('2d');
+      for (const [x, y, r] of blobs) { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${col},.85)`); gr.addColorStop(.6, `rgba(${col},.55)`); gr.addColorStop(1, `rgba(${col},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+      return c; }); });
+  const clouds = Array.from({ length: 8 }, (_, i) => ({ x: R() * SPAN, y: R() * SPAN, s: .8 + R() * .9, k: i % 3 }));
+  const flocks = Array.from({ length: 3 }, () => { const a = R() * 6.28; return { x: R() * SPAN, y: R() * SPAN, a, n: 3 + ((R() * 3) | 0), sp: 110 + R() * 50 }; });
+  return { SPAN, img, clouds, flocks }; })();
+function drawSky(t, dk, vx0, vy0, vx1, vy1) {
+  const SP = SKY.SPAN, wr = (v, c) => c + (((v - c) % SP) + SP * 1.5) % SP - SP / 2, vis = (x, y, r) => x + r > vx0 && x - r < vx1 && y + r > vy0 && y - r < vy1;
+  // putni (zem mākoņiem): V formas siluets, spārni vicinās; naktī tikai viens bariņš
+  ctx.lineCap = 'round';
+  SKY.flocks.forEach((f, fi) => { if (dk > .3 && fi > 0) return; const fx = Math.cos(f.a), fy = Math.sin(f.a), bx = wr(f.x + fx * f.sp * t - cam.x * .12, cam.x), by = wr(f.y + fy * f.sp * t - cam.y * .12, cam.y);
+    if (!vis(bx, by, 260)) return;
+    for (let i = 0; i < f.n; i++) { const row = (i + 1) >> 1, side = i % 2 ? 1 : -1, ox = -row * 34, oy = i ? side * row * 26 : 0;
+      const x = bx + fx * ox - fy * oy, y = by + fy * ox + fx * oy, fl = Math.sin(t * 9 + i * 1.7) * 5;
+      ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.ellipse(x + 70, y + 100, 9, 4, f.a, 0, 7); ctx.fill();
+      // kaija no augšas: ķermenis pa lidojuma virzienu, spārni uz sāniem (balti ar tumšu kontūru – nesajaucas ar maršruta bultiņām)
+      ctx.save(); ctx.translate(x, y); ctx.rotate(f.a); const wing = () => { ctx.beginPath(); ctx.moveTo(-3, -15 - fl); ctx.quadraticCurveTo(3, -9, 1, 0); ctx.quadraticCurveTo(3, 9, -3, 15 + fl); };
+      ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 5; wing(); ctx.stroke(); ctx.strokeStyle = '#f7f7f2'; ctx.lineWidth = 2.6; wing(); ctx.stroke();
+      ctx.fillStyle = '#f7f7f2'; ctx.strokeStyle = '#3a3a44'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(0, 0, 7, 2.6, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#f2a33a'; ctx.fillRect(6.5, -.8, 2.5, 1.6); ctx.restore(); } });
+  // mākoņi: ēna uz zemes + pats mākonis augstāk (caurspīdīgs, lai neaizsedz ielas)
+  for (const c of SKY.clouds) { const w = 560 * c.s, h = 350 * c.s, gx = c.x + t * 16, gy = c.y + t * 6;
+    const sx = wr(gx, cam.x) + 150, sy = wr(gy, cam.y) + 210; if (vis(sx, sy, w)) { ctx.globalAlpha = .16 * (1 - dk); ctx.drawImage(SKY.img[c.k][1], sx - w / 2, sy - h / 2, w, h); }
+    const cx = wr(gx - cam.x * .3, cam.x), cy = wr(gy - cam.y * .3, cam.y); if (vis(cx, cy, w)) { ctx.globalAlpha = .42 - .3 * dk; ctx.drawImage(SKY.img[c.k][0], cx - w / 2, cy - h / 2, w, h); } }
+  ctx.globalAlpha = 1; }
 // helikopters no augšas: ēna uz zemes (lido augstu), korpuss ar sarkano krustu, astes rotors, galvenais rotors griežas
 function drawHeli(t) { const x = amb.x, y = amb.y, a = amb.a, OLc = '#24222b';
   ctx.save(); ctx.translate(x, y); ctx.scale(1.3, 1.3); ctx.translate(-x, -y);

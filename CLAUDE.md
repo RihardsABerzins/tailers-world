@@ -93,6 +93,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Stūres skatā: mašīnas ar sedana profilu, stikliem, riteņiem, lukturiem (bremžu – spožāki); maršruts – spīdošas bultiņas uz ceļa.
 - 3D modeļi stūres skatā: Kenney CC0 (`atra-palidziba/models/`: cars, nature, roads + LICENSE faili), ielādē ar three.js GLTFLoader (jsdelivr r128), katra modeļa daļa – InstancedMesh.
 - Karte (minikarte 150 px) – uzspiežot atveras liela pa vidu ekrāna.
+- **Debesis (dekorācija)**: `SKY` game.js – 8 lēni slīdoši caurspīdīgi mākoņi ar ēnām uz zemes (paralakse) un 3 kaiju bariņi (balti ar kontūru, lai nesajaucas ar maršruta bultiņām), atkārtojas ap kameru; naktī mākoņi blāvāki, tikai 1 bariņš. Stūres skatā (fp.js) tie paši mākoņi kā sprite (zila apakša, `fog: false`) un tāli putni; dienas debesis zilākas, lai baltie mākoņi redzami.
 - Nakts stils: maigas ielu lampas, krāsaini logi, neona kontūras uz ~1/4 māju jumtiem (`NEON`), nevis spožs dzeltenums. Parki: dzīvžogs, zāles laukumi, līkumoti celiņi ar strūklaku centrā, dīķis ar krastu/niedrēm/ūdensrozēm, puķu dobes, soliņi, lapu koki un egles.
 - **Diena un nakts** (`DAYLEN` 6 min, `hourNow`, `isNight` 21–6): naktī tumsa + ielu lampas, logi, lukturi; ~60% mašīnu nav; luksofori mirgo dzelteni ('f'); izsaukumi grūtāki (līmenis +2) un ×1.5 XP/nauda.
 - Satiksme nedrīkst braukt cauri citai mašīnai: konusa pārbaude priekšā (`fwd/lat`), pagriezienā gaida, ja izbrauktuve aizņemta; pret iestrēgšanu – pēc 3 s cits virziens, pēc 12 s ārpus redzesloka parādās citur.

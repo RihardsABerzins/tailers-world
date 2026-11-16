@@ -79,6 +79,15 @@
     scene.add(poles); FP.poles = poles;
     const bm = c => new R3.Mesh(new R3.CylinderGeometry(26, 26, 900, 16, 1, true), new R3.MeshBasicMaterial({ color: c, transparent: true, opacity: .35, side: R3.DoubleSide, depthWrite: false }));
     beaconP = bm(0xff3b4e); beaconH = bm(0x5ac8ff); beaconP.position.y = beaconH.position.y = 450; scene.add(beaconP); scene.add(beaconH);
+    // debesis: mākoņi (game.js SKY attēli) un tāli putni – sprite bez miglas
+    const ctex = c => new R3.CanvasTexture(c), bc = document.createElement('canvas'); bc.width = 64; bc.height = 32; const bx2 = bc.getContext('2d');
+    bx2.strokeStyle = '#26252d'; bx2.lineWidth = 4; bx2.lineCap = 'round'; bx2.beginPath(); bx2.moveTo(4, 10); bx2.quadraticCurveTo(18, 6, 32, 20); bx2.quadraticCurveTo(46, 6, 60, 10); bx2.stroke();
+    // mākonim pelēcīgi zila apakša – citādi balts uz gaišajām debesīm nav redzams
+    const cTex = SKY.img.map(p => { const c = document.createElement('canvas'); c.width = 256; c.height = 160; const g = c.getContext('2d'); g.drawImage(p[0], 0, 0);
+      g.globalCompositeOperation = 'source-atop'; const lg = g.createLinearGradient(0, 40, 0, 130); lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(120,140,175,.75)'); g.fillStyle = lg; g.fillRect(0, 0, 256, 160); return ctex(c); });
+    FP.clouds = [...SKY.clouds, ...SKY.clouds].map((c, i) => { const sp = new R3.Sprite(new R3.SpriteMaterial({ map: cTex[c.k], transparent: true, depthWrite: false, fog: false, opacity: .9 })); sp.scale.set(1500 * c.s, 940 * c.s, 1); scene.add(sp); return { sp, c, h: 520 + (i % 4) * 90, o: i < SKY.clouds.length ? 0 : 3000 }; });
+    const bMat = new R3.SpriteMaterial({ map: ctex(bc), transparent: true, depthWrite: false, fog: false });
+    FP.birds = []; SKY.flocks.forEach((f, fi) => { for (let i = 0; i < f.n; i++) { const sp = new R3.Sprite(bMat); sp.scale.set(26, 13, 1); scene.add(sp); FP.birds.push({ sp, f, fi, i }); } });
     FP.ready = true; loadModels();
   }
   // ---- Kenney CC0 3D modeļi (models/): mašīnas, koki, luksofori, ielu lampas. Katras modeļa daļas – InstancedMesh ----
@@ -118,8 +127,14 @@
     if (!FP.ready) return; const w = innerWidth, h = innerHeight;
     if (glCv.width !== Math.round(w * renderer.getPixelRatio())) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); dash.width = w * 2; dash.height = h * 2; }
     // diena / nakts
-    const dk = darkness() / .62, day = 1 - dk, sky = new R3.Color().setRGB(.75 * day + .06 * dk, .89 * day + .06 * dk, 1 * day + .16 * dk);
+    const dk = darkness() / .62, day = 1 - dk, sky = new R3.Color().setRGB(.5 * day + .06 * dk, .72 * day + .06 * dk, 1 * day + .16 * dk);
     scene.background = sky; scene.fog.color = sky; hemi.intensity = .25 + .65 * day; sun.intensity = .1 + .6 * day; winMat.emissive.setRGB(dk * .9, dk * .9, dk * .9);
+    // mākoņi slīd lēni (atkārtojas ap mašīnu), naktī tumši; putnu bariņi pārlido augstu
+    const SP = 6000, wr = (v, c) => c + (((v - c) % SP) + SP * 1.5) % SP - SP / 2, cv = .35 + .65 * day;
+    FP.clouds.forEach(({ sp, c, h, o }) => { sp.position.set(wr(c.x + o + t * 16, amb.x), h, wr(c.y + o * .6 + t * 6, amb.y)); sp.material.color.setRGB(cv, cv, cv); sp.material.opacity = .9 - .35 * dk; });
+    FP.birds.forEach(({ sp, f, fi, i }) => { const fx = Math.cos(f.a), fy = Math.sin(f.a), row = (i + 1) >> 1, side = i % 2 ? 1 : -1, ox = -row * 30, oy = i ? side * row * 22 : 0;
+      sp.visible = !(dk > .3 && fi > 0); const wb = (v, c) => c + (((v - c) % 3000) + 4500) % 3000 - 1500, bx = wb(f.x + fx * f.sp * t, amb.x), by = wb(f.y + fy * f.sp * t, amb.y);
+      sp.position.set(bx + fx * ox - fy * oy, 260 + fi * 70 + Math.sin(t * .7 + i) * 6, by + fy * ox + fx * oy); sp.scale.y = 13 * (.55 + .45 * Math.abs(Math.sin(t * 8 + i * 1.7))); });
     // mašīnas
     const m4 = new R3.Matrix4(), q = new R3.Quaternion(), up = new R3.Vector3(0, 1, 0);
     const zero = new R3.Matrix4().makeScale(0, 0, 0), cm = new R3.Matrix4(), part = new R3.Matrix4(), col2 = new R3.Color();
