@@ -277,17 +277,30 @@ function buildVehicle2(vid, sel, st) {
   const put = (o, x, y, z, kind) => { if (!o) return null; o.position.x += x; o.position.y += y; o.position.z += z; g.add(o); parts.push(o); o.userData.kind = kind || 'p'; return o; };
   const add = (geo, m, x, y, z, kind) => put(new T3.Mesh(geo, m), x, y, z, kind), Cyl = (r1, r2, h, n) => new T3.CylinderGeometry(r1, r2, h, n || 16);
   if (vid === 'plane') {
-    const hb = sel.wheel ? .84 : .53, pc = 0xe8483e;
-    V.body = put(mdl('Body', { paint: pc }), 0, hb, 0, 'body'); put(mdl('Nose'), 0, hb, 0); put(mdl('Canopy'), 0, hb, 0); put(mdl('Fin', { paint: pc }), 0, hb, 0); put(mdl('HStab'), 0, hb, 0);
+    // šasija: 0 – kartupelis, tad kartona kaste, saplākšņa, alumīnija, sacīkšu, reaktīvā (aug līdz ar līmeni)
+    const bL = sel.body || 0, bT = bL ? VEH.plane.slots.body.lv[bL].tier : -1, s = .74 + bL * .012, hb = (sel.wheel ? .84 : .53) * (.6 + .4 * s);
+    const af = new T3.Group(); af.position.set(0, hb, 0); af.scale.setScalar(s); g.add(af);
+    const putA = (o, kind) => { if (!o) return null; af.add(o); parts.push(o); o.userData.kind = kind || 'p'; return o; };
+    const CARD = 0xc9a26b, pc = [0xe0c08a, 0xb8c0cc, 0xe8483e, 0x3d5afe][Math.max(0, bT - 1)] || 0xe8483e;
+    if (bT < 0) { // kartupelis ar acīm
+      const pg = new T3.SphereGeometry(1, 20, 14), pp = pg.attributes.position; for (let i = 0; i < pp.count; i++) { const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), k = 1 + .09 * Math.sin(x * 5 + z * 3) * Math.cos(y * 4 - z * 2) + .05 * Math.sin(z * 9); pp.setXYZ(i, x * k * .55, y * k * .48, z * k * 1.15); }
+      pg.computeVertexNormals(); V.body = putA(new T3.Mesh(pg, mat(0xb5884e)), 'body');
+      [-.2, .2].forEach(x => { const e = putA(new T3.Mesh(new T3.SphereGeometry(.11, 10, 8), mat(0xffffff))); e.position.set(x, .18, 1.02); const pu = new T3.Mesh(new T3.SphereGeometry(.055, 8, 6), mat(0x111111)); pu.position.set(0, 0, .08); e.add(pu); });
+      for (let i = 0; i < 6; i++) { const d = putA(new T3.Mesh(new T3.SphereGeometry(.05, 6, 4), mat(0x7a5530))); d.position.set(Math.sin(i * 2.3) * .5, Math.cos(i * 1.7) * .4, -.8 + i * .3); }
+    } else if (bT === 0) { // kartona kaste ar līmlenti
+      V.body = putA(new T3.Mesh(new T3.BoxGeometry(1.05, .95, 3.4), mat(CARD)), 'body'); const tp = putA(new T3.Mesh(new T3.BoxGeometry(.28, .97, 3.42), mat(0xe8d9a8))); tp.position.y = .005;
+      [-1, 1].forEach(sx => { const fl = putA(new T3.Mesh(new T3.BoxGeometry(.5, .03, 1.2), mat(0xb8915c))); fl.position.set(sx * .5, .55, -.6); fl.rotation.z = sx * .5; });
+    } else { V.body = putA(mdl('Body', { paint: pc }), 'body'); if (bT >= 3) putA(mdl('Nose')); if (bT >= 2) putA(mdl('Canopy')); else putA(mdl('Nose', { white: CARD })); }
+    putA(mdl('Fin', { paint: bT <= 0 ? CARD : pc })); putA(mdl('HStab', { white: bT <= 0 ? CARD : 0xf5f5f5 }));
     if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing ? VEH.plane.slots.wing.lv[sel.wing].tier + 1 : 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
     if (sel.wheel) { const wr = .2 + sel.wheel * .004; [-.55, .55].forEach(x => { const w = put(mdl('Wheel'), x, wr, .45); w.scale.setScalar(wr); add(Cyl(.035, .035, hb - wr - .2, 6), mat(0x9aa0aa), x * .8, wr + (hb - wr - .2) / 2, .45); });
       const tw = put(mdl('Wheel'), 0, .1, -1.55); tw.scale.setScalar(.1); }
     const e = sel.eng ? [1, 2, 3, 3, 4][VEH.plane.slots.eng.lv[sel.eng].tier] : 0;
-    if (e === 1 || e === 2) { const pr = put(mdl('Prop'), 0, hb, 0); pr.scale.setScalar(e === 1 ? .42 : .95); V.spin = pr; if (e === 1) add(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd), 0, hb, 2.36); }
+    if (e === 1 || e === 2) { const pr = putA(mdl('Prop')); pr.scale.setScalar(e === 1 ? .42 : .95); V.spin = pr; if (e === 1) { const ring = putA(new T3.Mesh(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd))); ring.position.z = 2.36; } }
     if (e === 3) { add(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c), 0, hb - .5, -.3); add(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5), 0, hb - .5, .47); V.flames.push([0, hb - .5, -.95, .5]); }
     if (e === 4) { add(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e), 0, hb + .62, -.6); add(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63), 0, hb + .62, .25); V.flames.push([0, hb + .62, -1.5, .7]); }
-    const p = makePerson('sit'); p.scale.setScalar(.72); p.position.set(0, hb - .3, .32); g.add(p); V.pilot = p;
-    V.len = 4.7; V.flow = { ax: .55, ay: .55, az: 2.3, cy: hb + .05, cz: 0, blunt: st.S ? .3 : .45, drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
+    const p = makePerson('sit'); p.scale.setScalar(.72); p.position.set(0, hb + (bT < 2 ? .3 * s : -.3), .32); g.add(p); V.pilot = p;
+    V.len = 4.7 * s; V.flow = { ax: .55 * s, ay: .55 * s, az: 2.3 * s, cy: hb + .05, cz: 0, blunt: [.65, .85, .45, .3, .22, .15][bT + 1], drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
   } else if (vid === 'scoot') {
     const wr = .11 + (sel.wheel || 0) * .0018;
     V.body = put(mdl('SDeck'), 0, wr - .11, 0, 'body'); put(mdl('SStem'), 0, wr - .11, 0);

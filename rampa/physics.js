@@ -35,8 +35,9 @@
   // ---- braucamrīki un uzlabojumi ----
   // wheel: mu – berze rampā, roll – ripošana pa zemi; wing: S laukums, ar [īsie, garie]; eng: T vilce (N), f degviela (s); aero: cda
   const VEH = {
-    plane: { i: '✈️', n: 'Lidmašīna', p: 0, m: 120, cda: .3, crashV: 8,
+    plane: { i: '✈️', n: 'Lidmašīna', p: 0, m: 80, cda: .3, crashV: 8,
       slots: {
+        body: slot('🥔', 'Šasija', 'Kartupelis', ['Kartona kaste', 'Saplākšņa', 'Alumīnija', 'Sacīkšu', 'Reaktīvā'], 20, L => L ? { cda: lin(.44, .15, L), m: lin(28, 55, L), crashV: lin(6.5, 11, L) } : { cda: .5, m: 20, crashV: 6 }),
         wheel: slot('🛞', 'Riteņi', 'Nav', ['Ratiņu', 'Velo', 'Skrituļu', 'Sacīkšu', 'Gultņu'], 15, L => ({ mu: L ? expo(.06, .012, L) : .07, roll: .1 })),
         wing: slot('🪽', 'Spārni', 'Nav', ['Kartona', 'Saplākšņa', 'Pūķa', 'Deltaplāna', 'Planiera'], 25, L => L ? { S: lin(5.2, 10.4, L), ar: lin(5, 18, L), cd0: lin(.035, .014, L), m: lin(8, 19, L) } : { S: 0 }),
         eng: slot('🔥', 'Dzinējs', 'Nav', ['Ventilators', 'Propelleris', 'Raķete', 'Lielā raķete', 'Reaktīvais'], 70, L => L ? { T: lin(220, 1300, L), f: lin(3, 9, L), m: lin(4, 22, L) } : {}),
@@ -56,11 +57,12 @@
   };
   function stats(vid, sel) {
     const V = VEH[vid], S = V.slots, lv = k => S[k] ? S[k].lv[clamp(sel[k] || 0, 0, S[k].lv.length - 1)] : null;
-    const w = lv('wheel'), wi = lv('wing'), e = lv('eng'), a = lv('aero');
+    const w = lv('wheel'), wi = lv('wing'), e = lv('eng'), a = lv('aero'), bo = lv('body');
     const st = { vid, m: V.m, cda: a ? a.cda : V.cda, mu: w.mu, roll: w.roll, rest: w.rest || 0, crashV: V.crashV, S: 0, AR: 0, cd0: 0, T: 0, fuel: 0, flips: !!V.flips, bounce: !!V.bounce, wheels: (sel.wheel || 0) > 0 || vid !== 'plane', pitchK: 1, brake: { plane: .35, scoot: .3, car: .14 }[vid] };
     if (wi && wi.S) { st.S = wi.S; st.AR = wi.ar; st.cd0 = wi.cd0; st.m += wi.m; st.pitchK = .85; st.span = Math.sqrt(st.S * st.AR); st.chord = st.S / st.span; }
     if (e && e.T) { st.T = e.T; st.fuel = e.f; st.m += e.m; }
-    if (vid === 'plane' && !st.wheels) st.crashV = 6;
+    if (bo) { st.cda = bo.cda; st.m += bo.m; st.crashV = bo.crashV; }
+    if (vid === 'plane' && !st.wheels) st.crashV *= .8;
     st.aSlope = st.AR ? 2 * Math.PI * st.AR / (st.AR + 2) : 0; // cēlējspēka līknes slīpums (1/rad)
     // labākais planēšanas leņķis (max L/D): CL* = sqrt(CD0 · π e AR)
     if (st.S) { const cd0t = st.cd0 + st.cda / st.S, cl = Math.sqrt(cd0t * Math.PI * .8 * st.AR); st.aBest = clamp(cl / st.aSlope, 2 * D2R, 12 * D2R); st.LD = .5 * Math.sqrt(Math.PI * .8 * st.AR / cd0t); }
