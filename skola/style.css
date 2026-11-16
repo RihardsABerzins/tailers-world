@@ -15,16 +15,16 @@ button{font:inherit;cursor:pointer}
 #task{padding:8px 12px;font-size:14.5px;font-weight:800;display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0}
 #tTxt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mood{display:flex;align-items:center;gap:8px}
-.mood span{font-size:20px;line-height:1}
+.mood span{font-size:17px;line-height:1;width:22px;text-align:center}
 .mood .bar{flex:1;height:10px;background:#ffffff22;border-radius:5px;overflow:hidden}
 .mood .bar i{display:block;height:100%;width:70%;background:#2ecc71;border-radius:5px;transition:width .4s,background .4s}
 .mood.hit{animation:hit .5s}
 @keyframes hit{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
 
-#banner{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);width:min(520px,92vw);box-sizing:border-box;background:#ffd34d;color:#2b1a00;border-radius:16px;padding:11px 16px;font-size:16px;font-weight:900;text-align:center;box-shadow:0 8px 24px #0005;opacity:0;transition:.3s;pointer-events:none;z-index:8}
+#banner{position:fixed;left:50%;bottom:calc(48px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);width:min(460px,64vw);box-sizing:border-box;background:#ffd34d;color:#2b1a00;border-radius:16px;padding:11px 16px;font-size:16px;font-weight:900;text-align:center;box-shadow:0 8px 24px #0005;opacity:0;transition:.3s;pointer-events:none;z-index:8}
 #banner.on{opacity:1;transform:translateX(-50%)}
 
-#toast{position:fixed;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(14px);background:#0f1220ee;border:1px solid var(--line);padding:11px 18px;border-radius:14px;font-size:16px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:20;text-align:center;max-width:86vw}
+#toast{position:fixed;left:50%;bottom:calc(48px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(14px);background:#0f1220ee;border:1px solid var(--line);padding:11px 18px;border-radius:14px;font-size:16px;font-weight:700;opacity:0;transition:.3s;pointer-events:none;z-index:20;text-align:center;max-width:86vw}
 #toast.on{opacity:1;transform:translateX(-50%)}
 
 /* logi */
@@ -76,3 +76,9 @@ button{font:inherit;cursor:pointer}
   #top{grid-template-columns:auto 1fr 190px} #task{grid-column:3}
 }
 @media (max-width:380px){ .subj{grid-template-columns:repeat(3,1fr)} }
+
+/* taimeris uz skolotāja galda */
+#timer{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(300px,46vw);height:24px;border-radius:12px;background:#0f1220cc;border:1px solid var(--line);overflow:hidden;z-index:7;opacity:0;transition:opacity .3s;pointer-events:none}
+#timer.on{opacity:1}
+#timer i{position:absolute;left:0;top:0;bottom:0;width:100%;background:#2ecc71;transition:background .3s}
+#timer span{position:relative;display:block;text-align:center;font-weight:900;font-size:13.5px;line-height:24px;text-shadow:0 1px 2px #000}

@@ -106,6 +106,17 @@ const PRANKS = {
 };
 const SORRY = ['Atvainojiet, skolotāj! 😅', 'Es tikai… nekas! 🙈', 'Labi, labi! 😇', 'Hmm, pieķēra… 😬', 'Vairs nebūs! 🙏'];
 // klases rotājumi (pērk par kopīgo naudu, redzami klasē)
+// tāfeles krāsas (pērk veikalā, izvēlas savu)
+const BOARDS = [
+  { id: 'green', n: 'Zaļa', c: ['#2f6a4f', '#24533d'], ink: '#ffffff', p: 0 },
+  { id: 'black', n: 'Melna', c: ['#383c42', '#212428'], ink: '#ffffff', p: 25 },
+  { id: 'blue', n: 'Zila', c: ['#2d5684', '#1f3d63'], ink: '#ffffff', p: 25 },
+  { id: 'wine', n: 'Ķiršu', c: ['#7a3442', '#5a2430'], ink: '#fff4e0', p: 40 },
+  { id: 'white', n: 'Baltā', c: ['#fbfbf8', '#e6e9e3'], ink: '#1f3a8a', p: 60 },
+];
+const boardC = () => BOARDS.find(b => b.id === save.board) || BOARDS[0];
+// skolas diena: 4 stundas, pēc 2. – pusdienas
+const DAY = [[8, 30], [9, 20], [10, 40], [11, 30]];
 const DECO = [
   { id: 'plant', i: '🪴', n: 'Puķupods', p: 30 },
   { id: 'globe', i: '🌍', n: 'Globuss', p: 60 },
@@ -115,26 +126,33 @@ const DECO = [
   { id: 'cat', i: '🐈', n: 'Klases kaķis', p: 500 },
 ];
 
-let save = { xp: 0, lessons: 0, perfect: 0, caught: 0, correct: 0, ml: 1, miss: [], seen: [], deco: {}, tut: 0 };
+let save = { xp: 0, lessons: 0, perfect: 0, caught: 0, correct: 0, ml: 1, miss: [], seen: [], deco: {}, tut: 0, board: 'green', boards: { green: 1 }, day: 0, en: 100 };
 let kids = [], L = null, LT = 0, timers = [], fx = [], stuck = [], splats = [], LY = { board: { x: 0, y: 0, w: 0, h: 0 } };
 function pickKids() { kids = shuffle(KIDS.slice()).map((k, i) => Object.assign({}, k, { st: 'idle', t: 0, ans: '', ph: Math.random() * 6, i })); layout(); }
 const later = (s, fn) => timers.push({ t: LT + s, fn });
 
-// izkārtojums: tāfele augšā, 10 skolēni rindās (aizmugurē mazāki) – vertikāli 3+3+4, horizontāli 5+5
+// izkārtojums: 3D klase no skolotāja galda – aizmugurējā siena ar tāfeli, grīda perspektīvā,
+// 10 skolēni 3 rindās (4+3+3, tālākie mazāki), apakšā skolotāja galds ar kafijas krūzi
 function layout() {
   W = innerWidth; H = innerHeight; const land = W > H, sr = $('stat').getBoundingClientRect(), tr = $('task').getBoundingClientRect();
-  if (land && tr.left - sr.right - 16 >= 300) { const bh = clamp(H * .3, 84, 160); LY.board = { x: sr.right + 8, y: sr.top, w: tr.left - sr.right - 16, h: bh }; }
-  else { const top = Math.max(sr.bottom, tr.bottom) + 8, bh = land ? clamp(H * .27, 78, 180) : clamp(H * .2, 104, 210), bw = Math.min(W - 20, land ? Math.max(420, W * .6) : 680);
+  const gap = W - 2 * Math.max(sr.right, W - tr.left) - 16;
+  if (land && gap >= 300) { const bw = Math.min(gap, 560), bh = clamp(H * .28, 80, 150); LY.board = { x: (W - bw) / 2, y: sr.top + 2, w: bw, h: bh }; }
+  else { const top = Math.max(sr.bottom, tr.bottom) + 10, bh = land ? clamp(H * .25, 78, 170) : clamp(H * .19, 104, 200), bw = Math.min(W * .8, land ? Math.max(420, W * .56) : 620);
     LY.board = { x: (W - bw) / 2, y: top, w: bw, h: bh }; }
-  const rows = land || W > 760 ? [5, 5] : [3, 3, 4], dep = rows.length === 3 ? [.84, .92, 1] : [.9, 1], n = rows.length;
-  const y0 = LY.board.y + LY.board.h + 4, avail = H - y0 - 4, maxN = Math.max(...rows);
-  const s = Math.min(avail / (5.4 * dep[0] + 4.4 * (n - 1) + 1.45), W / maxN / 3.5, 46);
-  const sp = clamp((avail / s - 5.4 * dep[0] - 1.45) / Math.max(1, n - 1), 4.4, 6.5), yF = y0 + 5.4 * dep[0] * s + sp * s * (n - 1);
+  const b = LY.board, hy = b.y + b.h * .45, fy = b.y + b.h + (land ? 16 : 30), wx0 = Math.max(W * .07, b.x - (land ? 70 : 26));
+  const dh = clamp(H * .11, 46, 84);
+  LY.room = { hy, fy, wx0, wx1: W - wx0, top: Math.max(-40, b.y - b.h * .35) };
+  LY.td = { y: H - dh, h: dh }; LY.hudB = Math.max(sr.bottom, tr.bottom); LY.hudL = sr.right; LY.hudR = tr.left;
+  $('banner').style.bottom = $('toast').style.bottom = `calc(${Math.round(dh + 8)}px + env(safe-area-inset-bottom))`;
+  const rows = [4, 3, 3], U = [[-1.5, -.5, .5, 1.5], [-1, 0, 1], [-1, 0, 1]], fr = [.3, .63, 1];
+  const hv = hy - (fy - hy) * 1.3; // tēliem maigāka perspektīva nekā telpai
+  const s = Math.min(46, (H - dh - fy) / 6.5, W / 2 / 5.95), yf = H - dh + .3 * s, X = Math.min(W / 2 - 2.05 * s, s * 6.5);
   let i = 0;
-  rows.forEach((cnt, r) => { const ry = yF - sp * s * (n - 1 - r), rs = s * dep[r], cw = W / cnt;
-    for (let c = 0; c < cnt; c++, i++) { const k = kids[i]; if (!k) continue; k.r = r; k.c = c; k.s = rs; k.x = (c + .5) * cw + (r % 2 ? -1 : 1) * (cnt < maxN ? 0 : rs * .15); k.y = ry; } });
-  LY.floor = yF - sp * s * (n - 1) - 1.4 * s * dep[0];
+  rows.forEach((cnt, r) => { const y = fy + (yf - fy) * fr[r], k = (y - hv) / (yf - hv);
+    for (let c = 0; c < cnt; c++, i++) { const kd = kids[i]; if (!kd) continue; kd.r = r; kd.c = c; kd.s = s * k; kd.x = W / 2 + U[r][c] * X * k; kd.y = y; } });
+  LY.u0 = s * (fy - hv) / (yf - hv); // mērogs pie aizmugurējās sienas
   LY.order = kids.slice().sort((a, b) => a.y - b.y);
+  LY.mug = { x: W - clamp(W * .14, 50, 120), y: H - dh * .5, r: dh * .3 };
 }
 function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; layout(); }
 addEventListener('resize', resize);
@@ -158,22 +176,49 @@ function buildQs() {
   return shuffle(list);
 }
 const tutOn = () => !save.tut;
-const warnDur = () => Math.max(.65, 1.5 - (tLv() - 1) * .07);
+// laiks vienam jautājumam: garākam tekstam vairāk, augstākā līmenī mazāk
+const qDur = q => clamp(16 + q.q.length * .12 - (tLv() - 1) * .6, 10, 30) * (tutOn() ? 1.5 : 1);
+// skolotāja enerģija: krīt stundas laikā, kafija +40, pusdienas – pilna
+let energy = 100, mugAt = -99;
+const mugFull = () => LT - mugAt > 35;
+function drinkCoffee() {
+  if (!mugFull()) { toast('☕ Krūze tukša – jaunā kafija drīz būs gatava'); sfx('tick'); return; }
+  mugAt = LT; energy = Math.min(100, energy + 40); sfx('slurp'); buzz(20); addFx(LY.mug.x - 30, LY.mug.y - 50, '☕ +40 ⚡', '#ffd34d'); hud();
+  if (L.tutCoffee === 1) { L.tutCoffee = 2; banner(''); }
+}
+const clockMin = () => { const d = DAY[save.day % 4], p = L && L.st !== 'end' ? clamp((L.n + clamp((LT - L.qT) / (L.qd || 20), 0, 1)) / QN, 0, 1) : 0; return d[0] * 60 + d[1] + p * 40; };
+const clockTxt = () => { const m = Math.floor(clockMin()); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+// tualete: kāds paceļ roku – laist vai nē? Šmaucējs smīn un kabatā telefons; tiešām vajag – dīdās un svīst
+function wcStart() {
+  const c = kids.filter(k => k.st === 'idle' && !k.out); if (!c.length) return; const k = pick(c);
+  k.st = 'wc'; k.t = LT; k.fake = Math.random() < .45; L.wcN++; sfx('tick');
+  if (!save.wcTut) { save.wcTut = 1; banner('🚽 Kāds grib uz tualeti! Vai viņam tiešām vajag? Paskaties uzmanīgi 👀', 4500); }
+}
+function wcDecide(k, yes) {
+  const good = yes !== k.fake; k.wcBtn = null;
+  if (good) { L.wcOk++; mood(4); sfx('good'); addFx(k.x, k.y - 4.4 * k.s, yes ? '👍 Pareizi!' : '🕵️ Pieķerts šmaucoties!', '#7dffa8'); }
+  else { L.wcBad++; mood(-6); sfx('bad'); addFx(k.x, k.y - 4.4 * k.s, yes ? '😏 Viņš šmaucās!' : '😣 Viņam tiešām vajadzēja…', '#ffb0b8'); }
+  if (yes) { k.st = 'idle'; k.out = LT + 10; k.ans = ''; } else { k.st = k.fake ? 'caught' : 'sad'; k.say = k.fake ? 'Labi, labi… 😅' : ''; k.back = 'idle'; k.t = LT; if (!k.fake) later(1.5, () => { if (k.st === 'sad') k.st = 'idle'; }); }
+  hud();
+}
+const warnDur = () => Math.max(.55, 1.5 - (tLv() - 1) * .07) * (energy < 30 ? .7 : 1);
 const prankGap = () => rnd(4.5, 9) * Math.max(.5, 1 - (tLv() - 1) * .05);
 
 function startLesson() {
   closeSheet(); audioInit(); timers = []; fx = []; stuck = []; splats = []; pickKids();
-  L = { qs: buildQs(), n: -1, ok: 0, mood: 70, caught: 0, missed: 0, st: 'wait', wrong: 0, qT: LT, np: Infinity, qp: 0, cur: null };
+  L = { qs: buildQs(), n: -1, ok: 0, mood: 70, caught: 0, missed: 0, st: 'wait', wrong: 0, qT: LT, np: Infinity, qp: 0, cur: null, wcN: 0, wcOk: 0, wcBad: 0,
+    wcAt: !tutOn() && Math.random() < .75 ? LT + rnd(10, 60) : Infinity };
+  kids.forEach(k => { k.out = 0; });
   sfx('bell'); hud(); later(.9, nextQ);
 }
 function nextQ() {
   L.n++; stuck = []; if (L.n >= QN) { endLesson(); return; }
   let q = L.qs[L.n]; const ml = clamp(Math.floor(save.ml), mathFloor(), 8); if (q.mat) q = L.qs[L.n] = mathQ(ml); else if (q.lg) q = L.qs[L.n] = logicQ(ml);
-  L.cur = q; L.st = 'q'; L.qT = LT; L.qp = 0;
+  L.cur = q; L.st = 'q'; L.qT = LT; L.qp = 0; L.qd = qDur(q);
   if (q.id) { save.seen = save.seen.filter(x => x !== q.id).concat(q.id).slice(-80); }
   const opts = shuffle([q.a, ...q.w.slice(0, 3)]);
   const ans = pickAnswerers();
-  kids.forEach(k => { const i = ans.indexOf(k); k.pk = null; k.say = ''; k.ouch = 0;
+  kids.forEach(k => { const i = ans.indexOf(k); if (k.st === 'wc') return; k.pk = null; k.say = ''; k.ouch = 0;
     if (i >= 0) { k.ans = opts[i]; k.st = 'hand'; k.t = LT + .5 + i * .14 + Math.random() * .25; } else { k.ans = ''; k.st = 'idle'; k.t = LT; } });
   // joki: pirmajā mācību stundā 1. jautājumā nav, 2. jautājumā viens lēns
   if (tutOn() && L.n === 0) { L.np = Infinity; banner('👆 Pieskaries skolēnam, kuram ir PAREIZĀ atbilde!'); }
@@ -182,8 +227,16 @@ function nextQ() {
   sfx('chalk'); hud();
 }
 function pickAnswerers() {
-  for (let t = 0; t < 60; t++) { const c = shuffle(kids.slice()).slice(0, 4); if (c.every(a => c.every(b => a === b || a.r !== b.r || Math.abs(a.c - b.c) > 1))) return c; }
-  return shuffle(kids.slice()).slice(0, 4);
+  const b = LY.board, ok = kids.filter(k => !k.out && k.st !== 'wc' && k.y - 5.4 * k.s >= b.y + b.h - 10), pool = ok.length >= 4 ? ok : kids.filter(k => !k.out && k.st !== 'wc');
+  const far = (a, c) => a.r !== c.r ? Math.abs(a.x - c.x) > Math.max(a.s, c.s) * 1.6 : Math.abs(a.x - c.x) > Math.max(a.s, c.s) * 4.2;
+  for (let t = 0; t < 80; t++) { const c = shuffle(pool.slice()).slice(0, 4); if (c.every(a => c.every(o => a === o || far(a, o)))) return c; }
+  return shuffle(pool.slice()).slice(0, 4);
+}
+// laiks beidzās – mācību brīdis bez soda
+function timeUp() {
+  const q = L.cur; banner(''); kids.forEach(o => { if (o.st === 'plot' || o.st === 'prank' || o.st === 'caught') { o.st = o.back || 'idle'; o.t = LT; o.say = ''; } });
+  L.wrong++; mood(-3); sfx('bad'); if (q.mat || q.lg) save.ml = Math.max(1, save.ml - .5); else if (!save.miss.includes(q.id)) save.miss = save.miss.concat(q.id).slice(-30);
+  L.st = 'explain'; later(.3, () => explain(null));
 }
 function startPlot(k) {
   k.back = k.st; k.st = 'plot'; k.t = LT; k.pk = pick(Object.keys(PRANKS)); k.warn = warnDur(); L.qp++;
@@ -198,7 +251,7 @@ function catchKid(k) {
   if (L.tutPrank === 1) { L.tutPrank = 2; banner('👏 Lieliski! Pieķer draiskuļus laikus – klasei būs labs noskaņojums.', 3500); }
 }
 function prankDone(k) {
-  k.st = k.back || 'idle'; k.t = LT; L.missed++; mood(-10); sfx('laugh'); buzz([30, 40, 30]);
+  k.st = k.back || 'idle'; k.t = LT; L.missed++; mood(-10); energy = Math.max(0, energy - 4); sfx('laugh'); buzz([30, 40, 30]);
   kids.forEach(o => { if (o !== k) o.lol = LT + 1.6; });
   addFx(W / 2, LY.board.y + LY.board.h + 20, '😂 Ha-ha-ha!', '#fff');
   if (k.pk === 'plane') stuck.push({ x: LY.board.x + LY.board.w * rnd(.2, .8), y: LY.board.y + LY.board.h * rnd(.3, .7), r: rnd(-.5, .5) });
@@ -224,7 +277,7 @@ function answer(k) {
 // mācību brīdis: kāpēc pareizi ir tā – bez soda, bez steigas
 function explain(k) {
   const q = L.cur;
-  sheet(`<div class="step">Mācību brīdis</div><h2>🤔 Ne gluži!</h2><p>${esc(k.n)} teica „${esc(k.ans)}”, bet pareizi ir:</p>
+  sheet(`<div class="step">Mācību brīdis</div><h2>${k ? '🤔 Ne gluži!' : '⏰ Laiks beidzās!'}</h2><p>${k ? `${esc(k.n)} teica „${esc(k.ans)}”, bet pareizi ir:` : 'Pareizā atbilde bija:'}</p>
     <div class="ansBox">✅ ${esc(q.a)}</div><div class="fact">💡 ${esc(q.e)}</div><button class="main green" id="goOn">Saprotu →</button>`);
   $('goOn').onclick = () => { closeSheet(); sfx('tick'); kids.forEach(o => { if (o.ans === q.a) { o.st = 'happy'; o.t = LT; } else if (o.st !== 'sad') { o.st = 'idle'; o.t = LT; } }); L.st = 'wait'; later(1, nextQ); };
 }
@@ -232,20 +285,30 @@ function mood(d) { L.mood = clamp(L.mood + d, 0, 100); if (d < 0) { const m = do
 function endLesson() {
   L.st = 'end'; banner(''); kids.forEach(k => { k.st = 'idle'; k.t = LT; k.lol = LT + 2; }); sfx('bell');
   const ok = L.ok, perfect = ok === QN, stars = ok >= 7 ? 3 : ok >= 5 ? 2 : 1, md = Math.round(L.mood);
-  const money = 3 + ok * 2 + L.caught + (md >= 80 ? 5 : 0) + (perfect ? 5 : 0), xp = ok * 10 + L.caught * 5 + (perfect ? 20 : 0);
+  const lunch = save.day % 4 === 1, dayEnd = save.day % 4 === 3;
+  const money = 3 + ok * 2 + L.caught + L.wcOk + (md >= 80 ? 5 : 0) + (perfect ? 5 : 0) + (dayEnd ? 10 : 0), xp = ok * 10 + L.caught * 5 + L.wcOk * 5 + (perfect ? 20 : 0);
+  save.day++; save.en = Math.round(energy);
   const lv0 = levelOf(save.xp).l; save.xp += xp; save.lessons++; save.correct += ok; save.caught += L.caught; if (perfect) save.perfect++; save.tut = 1;
   const lv1 = levelOf(save.xp).l; persist(); walletAdd(money); medals(); hud();
   const praise = perfect ? '🏆 Izcila stunda!' : stars === 3 ? '🌟 Lieliska stunda!' : stars === 2 ? '👍 Laba stunda!' : '🙂 Stunda pabeigta!';
   const tot = L.caught + L.missed;
   later(.8, () => {
     sheet(`<div class="step">🔔 Zvans! Stunda beigusies</div><h2>${praise}</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
-      <div class="parts"><div class="part">✅ Pareizas atbildes <b>${ok}/${QN}</b></div>${tot ? `<div class="part">👀 Pieķerti draiskuļi <b>${L.caught}/${tot}</b></div>` : ''}<div class="part">😊 Klases noskaņojums <b>${md}%</b></div></div>
+      <div class="parts"><div class="part">✅ Pareizas atbildes <b>${ok}/${QN}</b></div>${tot ? `<div class="part">👀 Pieķerti draiskuļi <b>${L.caught}/${tot}</b></div>` : ''}${L.wcN ? `<div class="part">🚽 Tualetes lēmumi <b>${L.wcOk}/${L.wcN}</b></div>` : ''}<div class="part">😊 Klases noskaņojums <b>${md}%</b></div></div>
+      ${dayEnd ? '<div class="fact" style="text-align:center">🏠 Skolas diena beigusies! <b>+€10</b> bonuss. Rīt – jauna diena ar pilnu enerģiju.</div>' : ''}
       <div class="big">+€${money} · +${xp} XP</div>${lv1 > lv0 ? `<div class="fact" style="text-align:center">🎉 Jauns līmenis – <b>${lv1}.</b>! Jautājumi kļūs grūtāki, draiskuļi – viltīgāki.</div>` : ''}
       ${L.wrong ? `<div class="fact">📌 Jautājumus, kuros kļūdījies, atkārtosim nākamajās stundās – tā tie labāk paliek atmiņā.</div>` : ''}
-      <button class="main green" id="again">▶ Nākamā stunda</button>
-      <div class="row2"><button class="main ghostB" id="other">🏫 Uz skolu</button><button class="main ghostB" id="shopB">🛍 Klases rotājumi</button></div>`);
-    $('again').onclick = startLesson; $('other').onclick = lobby; $('shopB').onclick = () => shop(lobby);
+      <button class="main green" id="again">${lunch ? '🍽 Pusdienu pauze' : '▶ Nākamā stunda'}</button>
+      <div class="row2"><button class="main ghostB" id="other">🏫 Uz skolu</button><button class="main ghostB" id="shopB">🛍 Klase un tāfele</button></div>`);
+    $('again').onclick = lunch ? lunchBreak : dayEnd ? () => { energy = 100; startLesson(); } : startLesson; if (dayEnd) energy = 100; $('other').onclick = lobby; $('shopB').onclick = () => shop(lobby);
   });
+}
+
+function lunchBreak() {
+  const F = [['🍲', 'Zupa'], ['🥔', 'Kartupeļi ar kotleti'], ['🥞', 'Pankūkas'], ['🥗', 'Salāti']];
+  sheet(`<div class="step">🕙 10:10 – 10:40</div><h2>🍽 Pusdienu pauze</h2><p>Skolotājiem arī jāēd! Ko ēdīsi šodien?</p>
+    <div class="shop">${F.map(([i, n]) => `<button data-f="${n}"><i>${i}</i>${n}<em>⚡ 100%</em></button>`).join('')}</div>`);
+  document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { energy = 100; mugAt = -99; sfx('win'); toast(`😋 Garšīgi! Enerģija pilna ⚡`); startLesson(); });
 }
 
 // ================= Atjaunošana =================
@@ -254,8 +317,17 @@ function update(dt) {
   fx = fx.filter(f => LT - f.t0 < f.d);
   if (!L || L.st !== 'q') return;
   splats = splats.filter(p => LT - p.t0 < 2);
+  // laiks, enerģija, tualete
+  const left = L.qd - (LT - L.qT); if (left <= 0) { timeUp(); return; }
+  if (left < 3.2 && Math.ceil(left) !== L.tick) { L.tick = Math.ceil(left); sfx('tick'); }
+  energy = Math.max(0, energy - dt * .3); if (energy <= 0) { L.mood = clamp(L.mood - dt * 1.5, 0, 100); if (!L.sleepB) { L.sleepB = 1; banner('😴 Tu snaud! Iedzer kafiju – pieskaries ☕ krūzei', 4000); } } else L.sleepB = 0;
+  if (energy < 35 && mugFull() && !L.tutCoffee && !save.coffeeTut) { L.tutCoffee = 1; save.coffeeTut = 1; banner('☕ Enerģija beidzas – pieskaries kafijas krūzei uz galda!', 5000); }
+  if (LT > L.wcAt) { L.wcAt = L.wcN < 1 + (tLv() >= 5) ? LT + rnd(20, 45) : Infinity; wcStart(); }
+  for (const k of kids) { if (k.out && LT > k.out) { k.out = 0; k.st = 'idle'; k.t = LT; if (k.fake) { mood(-3); toast(`😏 ${esc(k.n)} gaitenī visu laiku spēlēja telefonā…`); } }
+    if (k.st === 'wc' && LT - k.t > 9) { k.wcBtn = null; if (!k.fake) { mood(-5); k.st = 'sad'; k.t = LT; later(1.5, () => { if (k.st === 'sad') k.st = 'idle'; }); L.wcBad++; } else { k.st = 'idle'; k.t = LT; } } }
+  hudLive(left);
   const busy = kids.filter(k => k.st === 'plot' || k.st === 'prank').length, lim = L.tutPrank === 1 ? 1 : maxBusy();
-  if (busy < lim && LT > L.np && L.qp < maxPerQ()) { const c = kids.filter(k => (k.st === 'hand' || k.st === 'idle') && LT > k.t); if (c.length) startPlot(pick(c)); else L.np = LT + 1; }
+  if (busy < lim && LT > L.np && L.qp < maxPerQ()) { const c = kids.filter(k => (k.st === 'hand' || k.st === 'idle') && !k.out && LT > k.t); if (c.length) startPlot(pick(c)); else L.np = LT + 1; }
   for (const k of kids) {
     if (k.st === 'plot' && LT - k.t > k.warn) { k.st = 'prank'; k.t = LT; k.snd = 0; k.hits = 0;
       if (k.pk === 'spit') k.tg = [0, 1, 2].map(() => ({ x: rnd(W * .15, W * .85), y: rnd(H * .2, H * .75) }));
@@ -282,62 +354,163 @@ function wrap(txt, maxW) { const out = []; let line = ''; for (const w of String
 const CHALK = '"Chalkboard SE","Comic Sans MS","Segoe Print",system-ui,sans-serif';
 
 function drawRoom() {
-  const b = LY.board, fl = LY.floor;
-  let gr = g.createLinearGradient(0, 0, 0, fl); gr.addColorStop(0, '#f8ead0'); gr.addColorStop(1, '#efd9b2'); g.fillStyle = gr; g.fillRect(0, 0, W, fl);
-  g.fillStyle = '#d6ae7c'; g.fillRect(0, fl - 26, W, 26); g.fillStyle = '#c29567'; g.fillRect(0, fl - 26, W, 4);
-  gr = g.createLinearGradient(0, fl, 0, H); gr.addColorStop(0, '#c08a58'); gr.addColorStop(1, '#a8743f'); g.fillStyle = gr; g.fillRect(0, fl, W, H - fl);
-  g.strokeStyle = '#00000018'; g.lineWidth = 2; for (let y = fl + 22, i = 0; y < H; y += 22 + i * 4, i++) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-  // logi sānos, ja ir vieta
-  const side = b.x - 16;
-  if (side > 70) for (const x of [10, W - 10 - Math.min(side, 150)]) { const w = Math.min(side - 4, 150), y = b.y + 6, h = Math.min(b.h + 30, fl - y - 34);
-    rr(x, y, w, h, 8); fs('#bfe6ff'); g.save(); rr(x, y, w, h, 8); g.clip(); g.fillStyle = '#ffffffaa'; circ(x + w * .3, y + h * .35, w * .16); g.fill(); circ(x + w * .45, y + h * .32, w * .2); g.fill(); g.fillStyle = '#7cc46a'; g.fillRect(x, y + h * .78, w, h); g.restore();
-    g.strokeStyle = '#8a5a2b'; g.lineWidth = 5; g.beginPath(); g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y + h); g.moveTo(x, y + h / 2); g.lineTo(x + w, y + h / 2); g.stroke(); rr(x, y, w, h, 8); g.lineWidth = 6; g.stroke(); }
-  // tāfele
-  rr(b.x - 4, b.y - 4, b.w + 8, b.h + 8, 12); fs('#8a5a2b', 3);
-  rr(b.x + 4, b.y + 4, b.w - 8, b.h - 8, 8); gr = g.createLinearGradient(0, b.y, 0, b.y + b.h); gr.addColorStop(0, '#2f6a4f'); gr.addColorStop(1, '#24533d'); fs(gr, 0);
-  g.fillStyle = '#ffffff0c'; for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(b.x + b.w * (.15 + i * .24), b.y + b.h * (.3 + (i % 2) * .4), b.w * .1, b.h * .12, .3, 0, 7); g.fill(); }
-  rr(b.x + b.w * .1, b.y + b.h - 2, b.w * .8, 8, 3); fs('#a0703f', 2); g.fillStyle = '#fff'; g.fillRect(b.x + b.w * .7, b.y + b.h - 4, 14, 4); g.fillStyle = '#ffd34d'; g.fillRect(b.x + b.w * .76, b.y + b.h - 4, 10, 4);
+  const b = LY.board, R = LY.room, { hy, fy, wx0, wx1, top } = R, cx = W / 2;
+  const ex = y => hy + (y - hy) * cx / (cx - wx0); // kur stars no pazušanas punkta caur sienas stūri sasniedz ekrāna malu
+  // grīda ar dēļiem perspektīvā
+  let gr = g.createLinearGradient(0, fy, 0, H); gr.addColorStop(0, '#9a6a3e'); gr.addColorStop(1, '#c9905a'); g.fillStyle = gr; g.fillRect(0, fy, W, H - fy);
+  g.strokeStyle = '#00000020'; g.lineWidth = 1.5; g.beginPath();
+  for (let i = -16; i <= 16; i++) { const xb = cx + i * (wx1 - wx0) / 12; g.moveTo(xb, fy); g.lineTo(cx + (xb - cx) * (H - hy) / (fy - hy), H); } g.stroke();
+  g.strokeStyle = '#00000012'; g.beginPath(); for (let z = .86; z > .1; z -= .14) { const y = hy + (fy - hy) / z; if (y > H) break; g.moveTo(0, y); g.lineTo(W, y); } g.stroke();
+  // saules gaisma uz grīdas no logiem
+  g.fillStyle = '#fff6d81c'; for (let i = 0; i < 2; i++) { const y0 = fy + (H - fy) * (.12 + i * .3); g.beginPath(); g.moveTo(0, y0); g.lineTo(W * .35, y0 + 20); g.lineTo(W * .28, y0 + (H - fy) * .22); g.lineTo(0, y0 + (H - fy) * .2); g.fill(); }
+  // griesti
+  g.fillStyle = '#f3ead8'; g.beginPath(); g.moveTo(0, -1); g.lineTo(W, -1); g.lineTo(W, ex(top)); g.lineTo(wx1, top); g.lineTo(wx0, top); g.lineTo(0, ex(top)); g.fill();
+  // sānu sienas
+  const side = (x0, xe, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(xe, ex(top)); g.lineTo(x0, top); g.lineTo(x0, fy); g.lineTo(xe, ex(fy)); g.fill();
+    const wy = fy - (fy - top) * .17; g.fillStyle = '#c3976a'; g.beginPath(); g.moveTo(xe, ex(wy)); g.lineTo(x0, wy); g.lineTo(x0, fy); g.lineTo(xe, ex(fy)); g.fill(); };
+  side(wx0, 0, '#e8d1a7'); side(wx1, W, '#efdab2');
+  // aizmugurējā siena
+  gr = g.createLinearGradient(0, top, 0, fy); gr.addColorStop(0, '#fbeccc'); gr.addColorStop(1, '#f1dbb2'); g.fillStyle = gr; g.fillRect(wx0, top, wx1 - wx0, fy - top);
+  const wy = fy - (fy - top) * .17; g.fillStyle = '#cfa37a'; g.fillRect(wx0, wy, wx1 - wx0, fy - wy); g.fillStyle = '#b88a5e'; g.fillRect(wx0, wy - 3, wx1 - wx0, 4); g.fillStyle = '#7a5434'; g.fillRect(wx0, fy - 4, wx1 - wx0, 4);
+  g.strokeStyle = '#00000026'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx0, top); g.lineTo(wx0, fy); g.lineTo(0, ex(fy)); g.moveTo(wx1, top); g.lineTo(wx1, fy); g.lineTo(W, ex(fy)); g.moveTo(wx0, top); g.lineTo(wx1, top); g.stroke();
+  // logi kreisajā sienā, durvis labajā (ja ir vieta)
+  const onWall = (xa, Y) => hy + (Y - hy) * (cx - xa) / (cx - wx0);
+  if (wx0 > 40) {
+    for (const [a0, a1] of wx0 > 110 ? [[.12, .42], [.55, .85]] : [[.2, .8]]) { const xa = wx0 * a0, xb = wx0 * a1, Y0 = top + (fy - top) * .16, Y1 = top + (fy - top) * .66;
+      g.beginPath(); g.moveTo(xa, onWall(xa, Y0)); g.lineTo(xb, onWall(xb, Y0)); g.lineTo(xb, onWall(xb, Y1)); g.lineTo(xa, onWall(xa, Y1)); g.closePath();
+      gr = g.createLinearGradient(0, onWall(xa, Y0), 0, onWall(xa, Y1)); gr.addColorStop(0, '#9fd6ff'); gr.addColorStop(.7, '#d9f1ff'); gr.addColorStop(.71, '#8fcf7a'); gr.addColorStop(1, '#6fb35e'); g.fillStyle = gr; g.fill();
+      g.lineWidth = 4; g.strokeStyle = '#fff'; g.stroke(); const xm = (xa + xb) / 2; g.lineWidth = 3; g.beginPath(); g.moveTo(xm, onWall(xm, Y0)); g.lineTo(xm, onWall(xm, Y1)); g.stroke(); }
+    const xa = W - wx0 * .75, xb = W - wx0 * .3, onR = (x, Y) => hy + (Y - hy) * (x - cx) / (wx1 - cx), Y0 = top + (fy - top) * .3;
+    g.beginPath(); g.moveTo(xa, onR(xa, Y0)); g.lineTo(xb, onR(xb, Y0)); g.lineTo(xb, onR(xb, fy)); g.lineTo(xa, onR(xa, fy)); g.closePath(); g.fillStyle = '#a8743f'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#7a5434'; g.stroke();
+    circ(xa + (xb - xa) * .2, onR(xa, top + (fy - top) * .65), Math.max(2, wx0 * .025)); g.fillStyle = '#ffd34d'; g.fill();
+  }
+  drawClock();
+  // tāfele ar rāmi, ēnu un plauktiņu
+  const bc = boardC();
+  rr(b.x + 3, b.y + 7, b.w, b.h, 10); g.fillStyle = '#00000030'; g.fill();
+  rr(b.x - 7, b.y - 7, b.w + 14, b.h + 14, 10); gr = g.createLinearGradient(0, b.y - 7, 0, b.y + b.h + 7); gr.addColorStop(0, '#b07a45'); gr.addColorStop(1, '#7a4f2c'); fs(gr, 2.4);
+  rr(b.x - 1, b.y - 1, b.w + 2, b.h + 2, 6); g.lineWidth = 2; g.strokeStyle = '#00000055'; g.stroke();
+  rr(b.x, b.y, b.w, b.h, 5); gr = g.createLinearGradient(0, b.y, 0, b.y + b.h); gr.addColorStop(0, bc.c[0]); gr.addColorStop(1, bc.c[1]); g.fillStyle = gr; g.fill();
+  g.fillStyle = bc.id === 'white' ? '#0000000a' : '#ffffff0c'; for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(b.x + b.w * (.15 + i * .24), b.y + b.h * (.3 + (i % 2) * .4), b.w * .1, b.h * .12, .3, 0, 7); g.fill(); }
+  g.fillStyle = '#ffffff18'; g.beginPath(); g.moveTo(b.x, b.y); g.lineTo(b.x + b.w * .35, b.y); g.lineTo(b.x + b.w * .2, b.y + b.h); g.lineTo(b.x, b.y + b.h); g.fill();
+  const ty = b.y + b.h + 7; g.fillStyle = '#c18c55'; g.beginPath(); g.moveTo(b.x + b.w * .05, ty); g.lineTo(b.x + b.w * .95, ty); g.lineTo(b.x + b.w * .97, ty + 6); g.lineTo(b.x + b.w * .03, ty + 6); g.fill(); g.fillStyle = '#7a4f2c'; g.fillRect(b.x + b.w * .03, ty + 6, b.w * .94, 4);
+  g.fillStyle = bc.id === 'white' ? '#2d5be3' : '#fff'; g.fillRect(b.x + b.w * .7, ty + 1, 16, 4); g.fillStyle = bc.id === 'white' ? '#e33' : '#ffd34d'; g.fillRect(b.x + b.w * .76, ty + 1, 12, 4);
   for (const p of stuck) emoji('✈️', p.x, p.y, Math.max(18, b.h * .18), p.r);
   boardText();
   drawDeco();
 }
+// pulkstenis pie sienas – rāda stundas laiku
+function drawClock() {
+  const b = LY.board, R = LY.room, gapX = b.x - 7 - R.wx0, gapY = b.y - 7 - R.top;
+  let x, y, r; if (gapY > 34) { r = Math.min(16, gapY * .4); x = W / 2; y = b.y - 7 - gapY / 2; } else if (gapX > 34) { r = Math.min(18, gapX * .38); x = R.wx0 + gapX / 2; y = Math.max(b.y + r + 6, LY.hudB + r + 8); if (y + r > R.fy - 24) return; } else return;
+  if (y - r < LY.hudB && !(x - r > LY.hudR || x + r < LY.hudL)) return; // zem augšējās joslas – nerāda (laiks ir joslā)
+  circ(x, y, r); fs('#fff', 2.4); g.strokeStyle = OL; g.lineWidth = 1.2; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; g.beginPath(); g.moveTo(x + Math.cos(a) * r * .78, y + Math.sin(a) * r * .78); g.lineTo(x + Math.cos(a) * r * .9, y + Math.sin(a) * r * .9); g.stroke(); }
+  const m = clockMin(), ha = (m / 60 % 12) / 12 * Math.PI * 2 - Math.PI / 2, ma = (m % 60) / 60 * Math.PI * 2 - Math.PI / 2;
+  g.lineCap = 'round'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ha) * r * .5, y + Math.sin(ha) * r * .5); g.stroke(); g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ma) * r * .75, y + Math.sin(ma) * r * .75); g.stroke();
+}
 function boardText() {
-  const b = LY.board, pad = 14, iw = b.w - pad * 2;
-  g.fillStyle = '#ffffffaa'; g.font = `700 ${clamp(b.h * .11, 11, 15)}px ${CHALK}`; g.textAlign = 'left'; g.textBaseline = 'top';
-  if (!L || !L.cur) { g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${clamp(b.h * .24, 18, 40)}px ${CHALK}`;
+  const b = LY.board, pad = 14, iw = b.w - pad * 2, ink = boardC().ink;
+  g.globalAlpha = .7; g.fillStyle = ink; g.font = `700 ${clamp(b.h * .11, 11, 15)}px ${CHALK}`; g.textAlign = 'left'; g.textBaseline = 'top';
+  if (!L || !L.cur) { g.globalAlpha = 1; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${clamp(b.h * .24, 18, 40)}px ${CHALK}`;
     g.fillText(L ? 'Sākam stundu! ✏️' : 'Labdien, klase! 👋', b.x + b.w / 2, b.y + b.h / 2); return; }
-  g.fillText(`${(L.cur.s && SUBJ[L.cur.s]) || (L.cur.lg ? '🧩 Loģika' : '🔢 Matemātika')} · ${Math.min(L.n + 1, QN)}/${QN}`, b.x + pad, b.y + 9);
+  g.fillText(`${(L.cur.s && SUBJ[L.cur.s]) || (L.cur.lg ? '🧩 Loģika' : '🔢 Matemātika')} · ${Math.min(L.n + 1, QN)}/${QN}`, b.x + pad, b.y + 9); g.globalAlpha = 1;
   const top = b.y + 9 + clamp(b.h * .11, 11, 15) + 4, ih = b.h - (top - b.y) - 12;
   let f = clamp(b.h * .27, 16, 40), lines;
   for (; f > 12; f--) { g.font = `700 ${f}px ${CHALK}`; lines = wrap(L.cur.q, iw); if (lines.length * f * 1.18 <= ih) break; }
   let left = (L.st === 'q' && LT - L.qT < 3) ? Math.floor((LT - L.qT) * 55) : 1e9;
-  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; const y0 = top + ih / 2 - (lines.length - 1) * f * 1.18 / 2;
+  g.fillStyle = ink; g.textBaseline = 'middle'; const y0 = top + ih / 2 - (lines.length - 1) * f * 1.18 / 2;
   lines.forEach((ln, i) => { if (left <= 0) return; const shown = ln.slice(0, left); left -= ln.length + 1;
     const fw = g.measureText(ln).width; g.textAlign = 'left'; g.fillText(shown, b.x + b.w / 2 - fw / 2, y0 + i * f * 1.18); });
 }
+// ---- rotājumi (zīmēti, nevis emoji) ----
+function cabinet(x, y, w, h) { const d = h * .22; g.beginPath(); g.moveTo(x, y - h); g.lineTo(x + w, y - h); g.lineTo(x + w - d * .3, y - h - d); g.lineTo(x + d * .3, y - h - d); g.closePath(); fs('#d3a06a', 2);
+  rr(x, y - h, w, h, 3); fs('#b07a45', 2); g.strokeStyle = '#00000033'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + w / 2, y - h + 3); g.lineTo(x + w / 2, y - 3); g.stroke();
+  g.fillStyle = '#ffd34d'; g.fillRect(x + w / 2 - 5, y - h / 2, 3, 6); g.fillRect(x + w / 2 + 2, y - h / 2, 3, 6); return y - h - d * .5; }
+function globe(x, base, u) { const r = u * 1.05, cy = base - u * .35 - r;
+  g.beginPath(); g.ellipse(x, base - u * .15, u * .7, u * .2, 0, 0, 7); fs('#8a5a2b', 2); g.fillStyle = '#8a5a2b'; g.fillRect(x - u * .08, cy + r * .6, u * .16, base - cy - r * .6 - u * .1);
+  circ(x, cy, r); let gr = g.createRadialGradient(x - r * .4, cy - r * .4, r * .1, x, cy, r); gr.addColorStop(0, '#7cc8ff'); gr.addColorStop(1, '#2a6fc0'); fs(gr, 2);
+  g.save(); circ(x, cy, r); g.clip(); g.fillStyle = '#5fbf5a'; const o = (LT * .15) % 2;
+  for (const [a, bb, rx, ry] of [[-.5, -.3, .45, .3], [.3, .2, .35, .45], [1.1, -.4, .3, .25], [-1.3, .35, .4, .3]]) { const px = x + ((a + o + 1.5) % 3 - 1.5) * r; g.beginPath(); g.ellipse(px, cy + bb * r, rx * r, ry * r, .4, 0, 7); g.fill(); }
+  g.restore(); g.lineWidth = Math.max(2, u * .14); g.strokeStyle = '#d9a441'; g.beginPath(); g.arc(x, cy, r + u * .18, Math.PI * .65, Math.PI * 2.35); g.stroke();
+  circ(x - r * .35, cy - r * .35, r * .18); g.fillStyle = '#ffffff66'; g.fill(); }
+function aquarium(x, base, w, h) { rr(x, base - h, w, h, 4); let gr = g.createLinearGradient(0, base - h, 0, base); gr.addColorStop(0, '#9fe3ff'); gr.addColorStop(1, '#3a9bd6'); fs(gr, 2);
+  g.fillStyle = '#e9c48a'; g.fillRect(x + 2, base - h * .18, w - 4, h * .18 - 2); g.strokeStyle = '#3fae5a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + w * .2, base - 2); g.quadraticCurveTo(x + w * .1 + Math.sin(LT * 2) * 3, base - h * .5, x + w * .22, base - h * .75); g.stroke();
+  const fx0 = x + w * (.5 + Math.sin(LT * .8) * .3), fy0 = base - h * .5 + Math.sin(LT * 2.1) * h * .08, dir = Math.cos(LT * .8) > 0 ? 1 : -1, fr = h * .13;
+  g.beginPath(); g.ellipse(fx0, fy0, fr * 1.4, fr, 0, 0, 7); fs('#ff8a3d', 1.4); g.beginPath(); g.moveTo(fx0 - dir * fr * 1.3, fy0); g.lineTo(fx0 - dir * fr * 2.3, fy0 - fr * .8); g.lineTo(fx0 - dir * fr * 2.3, fy0 + fr * .8); g.closePath(); fs('#ff8a3d', 1.4);
+  circ(fx0 + dir * fr * .6, fy0 - fr * .2, fr * .18); g.fillStyle = '#222'; g.fill();
+  g.fillStyle = '#ffffffaa'; for (let i = 0; i < 3; i++) { const q = (LT * .6 + i / 3) % 1; circ(x + w * .75, base - h * .2 - q * h * .7, 1.5 + i * .6); g.fill(); }
+  g.fillStyle = '#ffffff33'; g.fillRect(x + 3, base - h + 3, w * .15, h - 6); }
+function plant(x, base, u) { const ph = u * 1.1; g.beginPath(); g.moveTo(x - u * .6, base - ph); g.lineTo(x + u * .6, base - ph); g.lineTo(x + u * .45, base); g.lineTo(x - u * .45, base); g.closePath(); fs('#c8643b', 2);
+  g.fillStyle = '#a84f2c'; g.fillRect(x - u * .62, base - ph, u * 1.24, u * .22);
+  for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * .38 + Math.sin(LT * 1.3 + i) * .04; g.save(); g.translate(x, base - ph); g.rotate(a); g.beginPath(); g.ellipse(u * .9, 0, u * .95, u * .28, 0, 0, 7); fs(i % 2 ? '#3fae5a' : '#2f8f48', 1.6); g.restore(); } }
+function poster(x, y, w, h) { g.save(); g.translate(x, y); g.rotate(.03); rr(-w / 2, -h / 2, w, h, 3); fs('#1b2150', 2); g.fillStyle = '#fff';
+  for (let i = 0; i < 9; i++) { circ(-w / 2 + ((i * 37) % 97) / 97 * w, -h / 2 + ((i * 53) % 89) / 89 * h, 1.1); g.fill(); }
+  circ(w * .22, h * .22, w * .16); fs('#ff9a3d', 1.4); g.strokeStyle = '#ffd34d'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(w * .22, h * .22, w * .26, w * .07, -.3, 0, 7); g.stroke();
+  g.rotate(-.5); g.beginPath(); g.ellipse(0, -h * .05, w * .1, h * .25, 0, 0, 7); fs('#f2f2f2', 1.4); circ(0, -h * .1, w * .045); fs('#5ab4ff', 1); g.beginPath(); g.moveTo(-w * .1, h * .12); g.lineTo(-w * .18, h * .22); g.lineTo(-w * .05, h * .17); g.moveTo(w * .1, h * .12); g.lineTo(w * .18, h * .22); g.lineTo(w * .05, h * .17); fs('#ff5a6a', 1);
+  g.beginPath(); g.moveTo(-w * .05, h * .2); g.lineTo(0, h * .2 + h * (.12 + Math.sin(LT * 20) * .03)); g.lineTo(w * .05, h * .2); fs('#ffb020', 0); g.restore(); }
+function cat(x, base, u) { g.beginPath(); g.ellipse(x, base - u * .4, u * 1.05, u * .48, 0, 0, 7); fs('#9a9aa5', 2);
+  g.lineWidth = u * .22; g.strokeStyle = OL; g.lineCap = 'round'; g.beginPath(); g.arc(x + u * .9, base - u * .55, u * .45, -.5, 1.8); g.stroke(); g.lineWidth = u * .14; g.strokeStyle = '#9a9aa5'; g.stroke();
+  const hx = x - u * .85, hy2 = base - u * .55; circ(hx, hy2, u * .42); fs('#9a9aa5', 2);
+  for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(hx + sx * u * .32, hy2 - u * .2); g.lineTo(hx + sx * u * .28, hy2 - u * .62); g.lineTo(hx + sx * u * .05, hy2 - u * .38); g.closePath(); fs('#9a9aa5', 1.8); }
+  g.lineWidth = 1.4; for (const sx of [-1, 1]) { g.beginPath(); g.arc(hx + sx * u * .16, hy2, u * .09, .2, Math.PI - .2); g.stroke(); }
+  if (Math.floor(LT / 2) % 3 === 0) { g.fillStyle = '#3d4a8a'; g.font = `900 ${u * .45}px system-ui`; g.textAlign = 'center'; g.fillText('z', hx - u * .4, hy2 - u * .7 - (LT % 2) * 4); } }
 function drawDeco() {
-  const d = save.deco, b = LY.board, fl = LY.floor, u = clamp(Math.min(W, H) * .07, 26, 56);
+  const d = save.deco, b = LY.board, R = LY.room, u = Math.max(9, LY.u0 || 12), fy = R.fy;
   if (d.lights) { const n = Math.max(6, Math.floor(b.w / 34)); g.strokeStyle = '#3a3a3a'; g.lineWidth = 2; g.beginPath();
-    for (let i = 0; i <= n; i++) { const x = b.x + b.w * i / n, y = b.y - 10 + Math.sin(i / n * Math.PI) * 10; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
-    for (let i = 0; i <= n; i++) { const x = b.x + b.w * i / n, y = b.y - 10 + Math.sin(i / n * Math.PI) * 10, on = (Math.floor(LT * 2) + i) % 3;
-      circ(x, y + 6, 5); g.fillStyle = ['#ff5a6a', '#ffd34d', '#4cd97b', '#3d8bff'][i % 4] + (on ? 'ff' : '88'); g.fill(); } }
-  if (d.rocket) { const x = b.x + b.w - u * .9, y = b.y - u * .55; g.save(); g.translate(x, y); g.rotate(.06); rr(-u * .45, -u * .6, u * .9, u * 1.2, 4); fs('#1b2140', 2); emoji('🚀', 0, -u * .1, u * .6); emoji('✨', u * .2, u * .35, u * .25); g.restore(); }
-  if (d.cat) { const x = b.x + u * .9, y = b.y - u * .2; emoji('🐈', x, y, u * .9); if (Math.floor(LT / 2) % 3 === 0) emoji('💤', x + u * .5, y - u * .5 - (LT % 2) * 4, u * .35); }
-  if (d.globe) emoji('🌍', b.x - (b.x > u * 1.2 ? u * .6 : -u * .5), b.y + b.h - u * .35, u * .8);
-  if (d.plant) emoji('🪴', u * .55, fl - u * .45, u * 1.0);
-  if (d.fish) { const x = W - u * .9, y = fl - u * .55; rr(x - u * .7, y - u * .45, u * 1.4, u * .9, 6); g.fillStyle = '#7fd3ffaa'; g.fill(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke(); emoji('🐠', x + Math.sin(LT) * u * .35, y, u * .45, 0); }
+    for (let i = 0; i <= n; i++) { const x = b.x + b.w * i / n, y = b.y - 8 + Math.sin(i / n * Math.PI) * 10; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    for (let i = 0; i <= n; i++) { const x = b.x + b.w * i / n, y = b.y - 8 + Math.sin(i / n * Math.PI) * 10, on = (Math.floor(LT * 2) + i) % 3;
+      circ(x, y + 6, 4.5); g.fillStyle = ['#ff5a6a', '#ffd34d', '#4cd97b', '#3d8bff'][i % 4] + (on ? 'ff' : '77'); g.fill(); } }
+  if (d.rocket) { const sp = R.wx1 - (b.x + b.w) - 7; if (sp > 36) poster(b.x + b.w + 7 + sp / 2, b.y + b.h * .4, Math.min(sp * .8, 60), Math.min(sp * 1.05, 80)); else poster(b.x + b.w - u * 2.2, b.y - u * .3, u * 3, u * 3.8); }
+  // skapīši aizmugurējos stūros
+  const cw = u * 3.4, ch = u * 2.6, lx = R.wx0 + 3, rx = R.wx1 - 3 - cw;
+  if (d.fish || d.cat) { const t = cabinet(lx, fy + 2, cw, ch); if (d.fish) aquarium(lx + cw * .08, t, cw * .84, u * 2); else cat(lx + cw / 2, t, u * 1.1); }
+  if (d.globe) { const t = cabinet(rx, fy + 2, cw, ch); globe(rx + cw / 2, t, u); }
+  if (d.cat && d.fish) cat(b.x + u * 2, b.y - 7, u);
+  if (d.plant) plant(d.globe ? rx - u * 1.4 : R.wx1 - u * 1.4, fy + u * .6, u * 1.1);
+}
+// skolotāja galds priekšplānā – kafijas krūze, ābols, grāmatas, žurnāls
+function teacherDesk() {
+  const { y, h } = LY.td, m = LY.mug;
+  g.fillStyle = '#00000030'; g.fillRect(0, y - 8, W, 8);
+  let gr = g.createLinearGradient(0, y, 0, H); gr.addColorStop(0, '#7a4a28'); gr.addColorStop(1, '#5a341b'); g.fillStyle = gr; g.fillRect(0, y, W, h);
+  g.fillStyle = '#9a6238'; g.fillRect(0, y, W, 5); g.strokeStyle = '#00000022'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(0, y + h * i / 4); g.bezierCurveTo(W * .3, y + h * i / 4 + 4, W * .6, y + h * i / 4 - 4, W, y + h * i / 4); g.stroke(); }
+  // žurnāls un grāmatas
+  const u = h / 4; g.save(); g.translate(W * .08 + u * 2, y + h * .5); g.rotate(-.08); rr(-u * 2, -u * 1.2, u * 4, u * 2.4, 3); fs('#2d5684', 2); g.fillStyle = '#fff'; g.fillRect(-u * 1.6, -u * .9, u * 3.2, u * .35); g.restore();
+  for (let i = 0; i < 3; i++) { rr(W * .08 + u * 5, y + h * .62 - i * u * .55, u * 3.2 - i * u * .3, u * .55, 2); fs(['#ff6b6b', '#ffd34d', '#4cd97b'][i], 1.6); }
+  // ābols
+  const ax = W * .5 - u * 4; circ(ax, y + h * .5, u * .9); fs('#e8343f', 2); g.strokeStyle = '#5a3a22'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, y + h * .5 - u * .8); g.lineTo(ax + u * .15, y + h * .5 - u * 1.3); g.stroke();
+  g.beginPath(); g.ellipse(ax + u * .45, y + h * .5 - u * 1.15, u * .35, u * .15, -.5, 0, 7); fs('#4cd97b', 1.2);
+  // kafijas krūze
+  const full = mugFull(), r = m.r; g.save(); if (L && L.st === 'q' && full && energy < 35) { const k = 1 + Math.sin(LT * 8) * .06; g.translate(m.x, m.y); g.scale(k, k); g.translate(-m.x, -m.y); }
+  g.lineWidth = r * .28; g.strokeStyle = OL; g.beginPath(); g.arc(m.x + r * .95, m.y + r * .1, r * .45, -1.2, 1.2); g.stroke(); g.lineWidth = r * .16; g.strokeStyle = '#ff6b8a'; g.stroke();
+  rr(m.x - r, m.y - r, r * 2, r * 2, r * .3); fs('#ff6b8a', 2.4); g.beginPath(); g.ellipse(m.x, m.y - r, r, r * .28, 0, 0, 7); fs(full ? '#6b3b1f' : '#f3d4dc', 2);
+  g.fillStyle = '#ffffffcc'; g.font = `900 ${r * .7}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('☕', m.x, m.y + r * .15);
+  if (full) { g.strokeStyle = '#ffffff99'; g.lineWidth = 2; for (let i = 0; i < 3; i++) { const q = (LT * .5 + i / 3) % 1; g.globalAlpha = 1 - q; g.beginPath(); g.moveTo(m.x - r * .4 + i * r * .4, m.y - r * 1.2 - q * r * 1.4); g.quadraticCurveTo(m.x - r * .2 + i * r * .4, m.y - r * 1.6 - q * r * 1.4, m.x - r * .4 + i * r * .4, m.y - r * 2 - q * r * 1.4); g.stroke(); } g.globalAlpha = 1; }
+  g.restore();
 }
 
+// skolēna sols 3D: virsma uz pazušanas punktu, priekšpuse, sāns pret centru, kājas un ēna
+function desk3d(x, y, s) {
+  const w = 1.95 * s, d = .62 * s, h = 1.05 * s, cx = W / 2, hy = LY.room.hy, f = (y - d - hy) / (y - hy), bl = cx + (x - w - cx) * f, br = cx + (x + w - cx) * f, by = y - d;
+  g.fillStyle = '#00000024'; g.beginPath(); g.ellipse(x, y + h + .4 * s, w * 1.05, .28 * s, 0, 0, 7); g.fill();
+  g.fillStyle = '#4b4f57'; g.fillRect(x - w + .25 * s, y + h - .1 * s, .2 * s, .5 * s); g.fillRect(x + w - .45 * s, y + h - .1 * s, .2 * s, .5 * s);
+  const sd = x < cx ? 1 : -1, e0 = x + sd * w, eb = sd > 0 ? br : bl;
+  g.beginPath(); g.moveTo(e0, y); g.lineTo(eb, by); g.lineTo(eb, by + h * .55); g.lineTo(e0, y + h); g.closePath(); fs('#a26a39', 1.8);
+  g.beginPath(); g.moveTo(x - w, y); g.lineTo(bl, by); g.lineTo(br, by); g.lineTo(x + w, y); g.closePath(); fs('#ebbb80', 2);
+  rr(x - w, y, 2 * w, h, .08 * s); fs('#c88c55', 2); g.fillStyle = '#ffffff30'; g.fillRect(x - w + 2, y + 2, 2 * w - 4, .1 * s);
+}
 function hairCap(k, hx, hy, s) {
   g.save(); g.beginPath(); g.rect(hx - s * 1.4, hy - s * 1.6, s * 2.8, s * (k.hs === 'buzz' ? 1.12 : 1.3)); g.clip(); circ(hx, hy, s * 1.06); fs(k.hair, 2.4); g.restore();
 }
 function drawKid(k) {
   const { x, y, s } = k, tt = LT - k.t, st = k.st, bob = Math.sin(LT * 2.2 + k.ph) * .04 * s;
-  const raised = (st === 'hand' && tt > 0) || st === 'happy';
+  const raised = (st === 'hand' && tt > 0) || st === 'happy' || st === 'wc';
   const pk = (st === 'plot' || st === 'prank') ? k.pk : null, sleeping = st === 'prank' && pk === 'sleep';
-  const hx = x + (sleeping ? s * .35 : 0), hy = y - 2.55 * s + bob + (sleeping ? s * .55 : 0) + (st === 'happy' ? -Math.abs(Math.sin(tt * 9)) * s * .12 * (tt < 1 ? 1 : 0) : 0);
+  const hx = x + (sleeping ? s * .35 : 0) + (st === 'wc' && !k.fake ? Math.sin(LT * 16) * .12 * s : 0), hy = y - 2.55 * s + bob + (sleeping ? s * .55 : 0) + (st === 'happy' ? -Math.abs(Math.sin(tt * 9)) * s * .12 * (tt < 1 ? 1 : 0) : 0);
+  if (k.out) { desk3d(x, y, s); return; } // aizgājis uz tualeti – tukšs sols
+  const wcw = st === 'wc' && !k.fake ? Math.sin(LT * 16) * .1 * s : 0; // tiešām vajag – dīdās
   // krēsla atzveltne
-  rr(x - 1.3 * s, y - 2.3 * s, 2.6 * s, 1.2 * s, .3 * s); fs('#7a4f2c', 2);
+  rr(x - 1.3 * s + wcw, y - 2.3 * s, 2.6 * s, 1.2 * s, .3 * s); fs('#3d6fb0', 2);
   // ķermenis
   rr(x - 1.15 * s, y - 1.75 * s + bob, 2.3 * s, 2.1 * s, .7 * s); fs(k.shirt);
   // pacelta roka
@@ -357,13 +530,14 @@ function drawKid(k) {
   if (k.hs === 'curly') for (let i = 0; i < 6; i++) { const a = Math.PI * (1.08 + i * .17); circ(hx + Math.cos(a) * s * .95, hy + Math.sin(a) * s * .95, .3 * s); fs(k.hair, 2); }
   if (k.hs === 'spiky') { g.beginPath(); for (let i = 0; i < 5; i++) { const a = Math.PI * (1.15 + i * .175); g.moveTo(hx + Math.cos(a - .15) * s * .95, hy + Math.sin(a - .15) * s * .95); g.lineTo(hx + Math.cos(a) * s * 1.42, hy + Math.sin(a) * s * 1.42); g.lineTo(hx + Math.cos(a + .15) * s * .95, hy + Math.sin(a + .15) * s * .95); } fs(k.hair, 2); }
   face(k, hx, hy, s, st, tt, pk);
-  // sols priekšā
-  rr(x - 1.95 * s, y - .05 * s, 3.9 * s, .34 * s, .1 * s); fs('#e0a96d', 2.4);
-  rr(x - 1.75 * s, y + .27 * s, 3.5 * s, 1.15 * s, .12 * s); fs('#b57a45', 2.4);
-  rr(x - 1.3 * s, y - .2 * s, .9 * s, .18 * s, .05 * s); fs(['#ff5a6a', '#3d8bff', '#4cd97b', '#ffb020'][k.i % 4], 1.6);
+  // sols priekšā (3D)
+  desk3d(x, y, s);
+  g.save(); g.translate(x - .9 * s, y - .3 * s); g.rotate(-.12); rr(-.45 * s, -.12 * s, .9 * s, .24 * s, .04 * s); fs(['#ff5a6a', '#3d8bff', '#4cd97b', '#ffb020'][k.i % 4], 1.4); g.restore();
+  // tualetes pazīmes: šmaucējam telefons kabatā, tiešām vajag – sviedri
+  if (st === 'wc') { if (k.fake) emoji('📱', x + 1.3 * s, y - .5 * s, s * .6, .4); else { g.fillStyle = '#7fd3ff'; g.beginPath(); g.ellipse(hx + .95 * s, hy - .45 * s + (LT * 20 % 6), .12 * s, .2 * s, 0, 0, 7); g.fill(); } }
   // rokas uz sola
-  if (!raised) { const dx = pk === 'drum' && st === 'prank' ? Math.sin(LT * 30) * .15 * s : 0; circ(x - .75 * s, y + .05 * s - Math.abs(dx), .3 * s); fs(k.skin, 2); circ(x + .75 * s, y + .05 * s - Math.abs(dx * .7), .3 * s); fs(k.skin, 2); }
-  else { circ(x - .6 * s, y + .05 * s, .3 * s); fs(k.skin, 2); }
+  if (!raised) { const dx = pk === 'drum' && st === 'prank' ? Math.sin(LT * 30) * .15 * s : 0; circ(x - .75 * s, y - .2 * s - Math.abs(dx), .3 * s); fs(k.skin, 2); circ(x + .75 * s, y - .2 * s - Math.abs(dx * .7), .3 * s); fs(k.skin, 2); }
+  else { circ(x - .6 * s, y - .2 * s, .3 * s); fs(k.skin, 2); }
   // joka priekšmeti
   if (st === 'plot') { const peek = clamp(tt / .3, 0, 1); emoji(PRANKS[pk].i, x + 1.35 * s, y - .25 * s - peek * .3 * s, s * .75, -.3); }
   if (st === 'prank') prankFx(k, tt, hx, hy);
@@ -384,8 +558,9 @@ function face(k, hx, hy, s, st, tt, pk) {
   // mute
   const my = hy + .48 * s; g.lineWidth = Math.max(2, .09 * s); g.beginPath();
   if (st === 'happy' || lol || (st === 'prank' && pk !== 'sleep' && pk !== 'gum')) { g.moveTo(hx - .32 * s, my - .05 * s); g.quadraticCurveTo(hx, my + .45 * s, hx + .32 * s, my - .05 * s); g.closePath(); fs('#8a2f3a', Math.max(2, .08 * s)); }
-  else if (st === 'plot') { g.moveTo(hx - .25 * s, my + .04 * s); g.quadraticCurveTo(hx + .05 * s, my + .18 * s, hx + .3 * s, my - .1 * s); g.stroke(); }
+  else if (st === 'plot' || (st === 'wc' && k.fake)) { g.moveTo(hx - .25 * s, my + .04 * s); g.quadraticCurveTo(hx + .05 * s, my + .18 * s, hx + .3 * s, my - .1 * s); g.stroke(); }
   else if (st === 'sad') { g.arc(hx, my + .2 * s, .2 * s, Math.PI * 1.2, Math.PI * 1.8); g.stroke(); }
+  else if (st === 'wc') { g.moveTo(hx - .28 * s, my); for (let i = 1; i <= 4; i++) g.lineTo(hx - .28 * s + i * .14 * s, my + (i % 2 ? -.08 : .06) * s); g.stroke(); }
   else if (st === 'caught') { circ(hx, my + .05 * s, .1 * s); fs('#8a2f3a', 2); }
   else if (st === 'prank' && pk === 'sleep') { circ(hx, my + .05 * s, .07 * s + Math.sin(LT * 3) * .03 * s); g.stroke(); }
   else if (!(st === 'prank' && pk === 'gum')) { g.arc(hx, my - .12 * s, .24 * s, Math.PI * .2, Math.PI * .8); g.stroke(); }
@@ -409,12 +584,29 @@ function prankFx(k, tt, hx, hy) {
   else if (k.pk === 'drum') { emoji('🥁', x, y - .35 * s, s * 1.0); emoji('✏️', x - .7 * s, y - .9 * s - Math.abs(Math.sin(LT * 18)) * s * .4, s * .5, -.8); emoji('✏️', x + .7 * s, y - .9 * s - Math.abs(Math.cos(LT * 18)) * s * .4, s * .5, .8); }
   else if (k.pk === 'sleep') { for (let i = 0; i < 3; i++) { const q = (tt * .5 + i / 3) % 1; g.globalAlpha = 1 - q; g.fillStyle = '#3d4a8a'; g.font = `900 ${s * (.4 + q * .4)}px system-ui`; g.textAlign = 'center'; g.fillText('z', hx + s * (.9 + q * .9), hy - s * (.6 + q * 1.6)); } g.globalAlpha = 1; }
 }
+// ❗ virs draiskuļa – zīmē pašā virspusē, lai priekšējo burbuļi to neaizsedz
+function drawAlert(k) {
+  const { x, y, s } = k, tt = LT - k.t, by = y - 4.3 * s + Math.sin(LT * 14) * s * .12, r = Math.max(13, .55 * s + 6); circ(x, by, r); fs('#ff3b4e', 3);
+  g.fillStyle = '#fff'; g.font = `900 ${r * 1.4}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, by + 1);
+  if (k.warn > 1.8) { g.lineWidth = 4; g.strokeStyle = '#ffd34d'; g.beginPath(); g.arc(x, by, r + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - tt / k.warn)); g.stroke(); }
+}
+// tualetes lūgums: burbulis ar pogām „Laist” / „Nē”
+function wcBubble(k) {
+  const { x, y, s } = k, f = clamp(s * .55, 13, 18); g.font = `800 ${f}px system-ui,sans-serif`;
+  const t = '🚽 Var uz tualeti?', bw = Math.max(g.measureText(t).width + 18, f * 7.4), bh = f * 3.1, cx = clamp(x, bw / 2 + 4, W - bw / 2 - 4), by = y - 3.95 * s - bh;
+  rr(cx - bw / 2, by, bw, bh, 12); fs('#fff6cf', 2.4); g.fillStyle = '#1d1a22'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, cx, by + f * .85);
+  const bw2 = (bw - 18) / 2, yb = by + f * 1.6, hb = f * 1.25;
+  rr(cx - bw / 2 + 6, yb, bw2, hb, 8); fs('#2ecc71', 1.6); rr(cx + 3, yb, bw2, hb, 8); fs('#ff5a6a', 1.6);
+  g.fillStyle = '#fff'; g.font = `900 ${f * .85}px system-ui,sans-serif`; g.fillText('✅ Laist', cx - bw / 2 + 6 + bw2 / 2, yb + hb / 2); g.fillText('❌ Nē', cx + 3 + bw2 / 2, yb + hb / 2);
+  k.wcBtn = { y0: yb - 4, y1: yb + hb + 4, yes: [cx - bw / 2, cx], no: [cx, cx + bw / 2] };
+  const left = 1 - (LT - k.t) / 9; g.fillStyle = '#ffb020'; g.fillRect(cx - bw / 2 + 10, by + bh - 5, (bw - 20) * clamp(left, 0, 1), 3);
+  k.hit.y0 = Math.min(k.hit.y0, by - 4);
+}
 // burbuļi: atbildes, ❗, atvainošanās – zīmē pēc visiem skolēniem, lai būtu virspusē
 function drawBubble(k) {
   const { x, y, s, st } = k, tt = LT - k.t; k.hit = { x0: x - 2 * s, x1: x + 2 * s, y0: y - 5.4 * s, y1: y + 1.45 * s };
-  if (st === 'plot') { const by = y - 4.3 * s + Math.sin(LT * 14) * s * .12, r = .55 * s + 6; circ(x, by, r); fs('#ff3b4e', 3);
-    g.fillStyle = '#fff'; g.font = `900 ${r * 1.4}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, by + 1);
-    if (k.warn > 1.8) { g.lineWidth = 4; g.strokeStyle = '#ffd34d'; g.beginPath(); g.arc(x, by, r + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - tt / k.warn)); g.stroke(); } return; }
+  if (k.out || st === 'plot') return;
+  if (st === 'wc') { wcBubble(k); return; }
   if (k.ouch > LT) { const f0 = clamp(s * .6, 13, 20); g.font = `900 ${f0}px system-ui,sans-serif`; const t0 = 'Ei! 😠', w0 = g.measureText(t0).width + 14, bx = clamp(x + 1.6 * s, w0 / 2 + 4, W - w0 / 2 - 4), by0 = y - 3.2 * s;
     rr(bx - w0 / 2, by0 - f0 * .8, w0, f0 * 1.6, 10); fs('#ffe0e4', 2); g.fillStyle = '#1d1a22'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t0, bx, by0); }
   let txt = '', bg = '#fff', col = '#1d1a22';
@@ -449,17 +641,24 @@ function draw() {
   for (const k of order) drawKid(k);
   for (const k of order) if (k.st === 'prank') prankFly(k, LT - k.t);
   for (const k of order) drawBubble(k);
-  drawFx(); drawSplats();
+  for (const k of order) if (k.st === 'plot') drawAlert(k);
+  teacherDesk(); drawFx(); drawSplats();
+  // nogurums: malas satumst, pie 0 – skolotājs snauž
+  if (L && L.st !== 'end' && energy < 30) { const a = (30 - energy) / 30 * .55, gr = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .3, W / 2, H / 2, Math.max(W, H) * .75);
+    gr.addColorStop(0, '#0000'); gr.addColorStop(1, `rgba(10,8,30,${a})`); g.fillStyle = gr; g.fillRect(0, 0, W, H); }
 }
 
 // ================= Vadība =================
 let last = 0;
-function frame(now) { requestAnimationFrame(frame); const dt = clamp((now - last) / 1000, 0, .05); last = now; if (!$('ov').classList.contains('on')) { LT += dt; update(dt); } draw(); updateAudio(); }
+function frame(now) { requestAnimationFrame(frame); const dt = clamp((now - last) / 1000, 0, .05); last = now; if (!$('ov').classList.contains('on')) { LT += dt; update(dt); } $('timer').classList.toggle('on', !!L && L.st === 'q' && !$('ov').classList.contains('on')); draw(); updateAudio(); }
 cv.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); if (!L || L.st !== 'q') return;
-  const x = e.clientX, y = e.clientY;
+  const x = e.clientX, y = e.clientY, m = LY.mug;
+  if (Math.hypot(x - m.x, y - m.y) < m.r * 1.8) { drinkCoffee(); return; }
+  const wk = kids.find(k => k.st === 'wc' && k.wcBtn && y >= k.wcBtn.y0 && y <= k.wcBtn.y1 && x >= k.wcBtn.yes[0] && x <= k.wcBtn.no[1]); if (wk) { wcDecide(wk, x < wk.wcBtn.no[0]); return; }
   // vispirms tie, kas draiskojas (pieķert ir svarīgāk nekā atbildēt)
   const hit = k => k.hit && x >= k.hit.x0 && x <= k.hit.x1 && y >= k.hit.y0 && y <= k.hit.y1;
   const pr = kids.find(k => (k.st === 'plot' || k.st === 'prank') && hit(k)); if (pr) { catchKid(pr); return; }
+  if (e.clientY > LY.td.y) return;
   const k = (LY.order || kids).slice().reverse().find(k => k.st === 'hand' && hit(k)); if (!k) return;
   if (k.st === 'hand' && LT - k.t > .15) answer(k); });
 
@@ -470,12 +669,18 @@ let toastT = 0; function toast(t) { const e = $('toast'); e.innerHTML = t; e.cla
 let banT = 0; function banner(t, ms) { const e = $('banner'); clearTimeout(banT); if (!t) { e.classList.remove('on'); return; } e.innerHTML = t; e.classList.add('on'); if (ms) banT = setTimeout(() => e.classList.remove('on'), ms); }
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
 let hudKey = '';
+// taimeris apakšā (atjauno katru kadru, kamēr jautājums aktīvs)
+let tmLast = '';
+function hudLive(left) { const p = clamp(left / L.qd, 0, 1), k = Math.ceil(left) + '|' + Math.round(p * 100);
+  if (k !== tmLast) { tmLast = k; $('tFill').style.width = (p * 100) + '%'; $('tFill').style.background = p > .5 ? '#2ecc71' : p > .25 ? '#ffb020' : '#ff5a6a'; $('tLbl').textContent = `⏱ ${Math.ceil(left)} s`; }
+  hud(); }
 function hud() {
   const lv = levelOf(save.xp), md = L ? Math.round(L.mood) : 70;
-  const key = [lv.l, lv.cur, wallet, L && L.n, md, L && L.st].join('|'); if (key === hudKey) return; hudKey = key;
+  const key = [lv.l, lv.cur, wallet, L && L.n, md, L && L.st, Math.round(energy), clockTxt()].join('|'); if (key === hudKey) return; hudKey = key;
   $('sLv').textContent = `🍎 ${lv.l}. līm.`; $('sXp').style.width = (lv.cur / lv.need * 100) + '%';
   $('sMoney').innerHTML = `<b style="color:${wallet < 0 ? '#ff5a6a' : '#ffd34d'};font-size:14px;display:inline">💰 €${wallet}</b>`;
-  $('tTxt').textContent = L && L.st !== 'end' ? `📝 Jautājums ${Math.max(1, Math.min(L.n + 1, QN))}/${QN}` : '🏫 Skola';
+  $('tTxt').textContent = L && L.st !== 'end' ? `🕗 ${clockTxt()} · 📝 ${Math.max(1, Math.min(L.n + 1, QN))}/${QN}` : `🏫 Skola · ${save.day % 4 + 1}. stunda`;
+  $('eFill').style.width = energy + '%'; $('eFill').style.background = energy >= 50 ? '#ffd34d' : energy >= 25 ? '#ffb020' : '#ff5a6a';
   $('mIco').textContent = md >= 75 ? '😄' : md >= 50 ? '🙂' : md >= 25 ? '😐' : '😵‍💫';
   $('mFill').style.width = md + '%'; $('mFill').style.background = md >= 60 ? '#2ecc71' : md >= 35 ? '#ffb020' : '#ff5a6a';
 }
@@ -488,14 +693,21 @@ function lobby() {
     <div class="fact">❗ Klasē ir 10 skolēni, un daži grib draiskoties – spļauj papīra bumbiņas, met lidmašīnas, nodod zīmītes. Kad virs galvas redzi <b>❗</b>, ātri pieskaries!<br>😊 Pieķer draiskuļus – klasei būs labs noskaņojums un tu nopelnīsi vairāk.</div>
     <div class="parts"><div class="part">🍎 Tavs līmenis <b>${lv}.</b></div><div class="part">📈 Jautājumi <b>${TIERS[maxTier()]}</b></div><div class="part">😈 Draiskuļi reizē <b>līdz ${maxBusy()}</b></div></div>
     <p style="color:#9fb0ff;font-size:13.5px;text-align:center">Jo augstāks līmenis, jo grūtāki jautājumi un viltīgāki draiskuļi.</p>
-    <button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klases rotājumi</button>`);
+    <button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klase un tāfele</button>`);
   $('go').onclick = startLesson; $('shopB').onclick = () => shop(lobby);
 }
 function shop(back) {
-  sheet(`<div class="step">Par kopīgo naudu</div><h2>🛍 Klases rotājumi</h2><p>Tev ir <b style="color:#ffd34d">€${wallet}</b>. Rotājumi paliek tavā klasē.</p>
+  const cur = save.board;
+  sheet(`<div class="step">Par kopīgo naudu</div><h2>🛍 Klase un tāfele</h2><p>Tev ir <b style="color:#ffd34d">€${wallet}</b>. Viss paliek tavā klasē.</p>
+    <div class="step">🖍 Tāfeles krāsa</div>
+    <div class="shop">${BOARDS.map(b => { const own = save.boards[b.id]; return `<button data-b="${b.id}" class="${cur === b.id ? 'own' : !own && wallet < b.p ? 'no' : ''}"><i style="display:block;width:46px;height:30px;border-radius:6px;border:3px solid #8a5a2b;background:linear-gradient(${b.c[0]},${b.c[1]})"></i>${b.n}<em>${cur === b.id ? '✔ Izvēlēta' : own ? 'Izvēlēties' : '€' + b.p}</em></button>`; }).join('')}</div>
+    <div class="step">🪴 Rotājumi</div>
     <div class="shop">${DECO.map(d => `<button data-d="${d.id}" class="${save.deco[d.id] ? 'own' : wallet < d.p ? 'no' : ''}"><i>${d.i}</i>${d.n}<em>${save.deco[d.id] ? '✔ Ir klasē' : '€' + d.p}</em></button>`).join('')}</div>
     <button class="main" id="shopOk">✔ Gatavs</button>`, back);
-  document.querySelectorAll('.shop button').forEach(b => b.onclick = () => { const d = DECO.find(o => o.id === b.dataset.d); if (save.deco[d.id]) return;
+  document.querySelectorAll('[data-b]').forEach(el => el.onclick = () => { const b = BOARDS.find(o => o.id === el.dataset.b);
+    if (!save.boards[b.id]) { if (wallet < b.p) { toast(`💰 Vēl jānopelna €${b.p - wallet} – vadi stundas!`); sfx('bad'); return; } walletAdd(-b.p); save.boards[b.id] = 1; sfx('win'); }
+    else sfx('tick'); save.board = b.id; persist(); shop(back); });
+  document.querySelectorAll('[data-d]').forEach(el => el.onclick = () => { const d = DECO.find(o => o.id === el.dataset.d); if (save.deco[d.id]) return;
     if (wallet < d.p) { toast(`💰 Vēl jānopelna €${d.p - wallet} – vadi stundas!`); sfx('bad'); return; }
     walletAdd(-d.p); save.deco[d.id] = 1; persist(); sfx('win'); toast(`${d.i} ${d.n} ir tavā klasē!`); shop(back); });
   $('shopOk').onclick = back;
@@ -536,7 +748,8 @@ function sfx(k) { if (!AC) return;
   else if (k === 'spit') tone(1200, 300, .12, 'sine', .08);
   else if (k === 'throw') tone(400, 900, .3, 'sine', .06);
   else if (k === 'note') { tone(2000, 1600, .05, 'sine', .04); tone(1800, 1500, .05, 'sine', .04, .1); }
-  else if (k === 'splat') tone(180, 60, .14, 'triangle', .14); }
+  else if (k === 'splat') tone(180, 60, .14, 'triangle', .14);
+  else if (k === 'slurp') { tone(500, 300, .2, 'sine', .08); tone(450, 250, .2, 'sine', .08, .25); } }
 
 // ================= Saglabāšana, nauda, medaļas =================
 const ONLINE = location.protocol === 'https:'; let UID = null, NAME = '', NICK = '', wallet = 0;
@@ -554,7 +767,7 @@ if (ONLINE && window.firebase && window.TW_FIREBASE) {
     UID = u.uid; NAME = u.email.split('@')[0]; const db = firebase.database();
     try { const v = (await db.ref('users/' + UID).get()).val() || {}; if (v.name) NAME = v.name; NICK = v.nick || ''; } catch (e) {}
     try { const s = (await db.ref('skola/saves/' + UID).get()).val(); if (s) save = Object.assign(save, s); else { const l = JSON.parse(localStorage.getItem(LKEY())); if (l) save = Object.assign(save, l); } } catch (e) {}
-    save.miss = save.miss || []; save.seen = save.seen || []; save.deco = save.deco || {};
+    save.miss = save.miss || []; save.seen = save.seen || []; save.deco = save.deco || {}; save.boards = save.boards || { green: 1 }; save.board = save.board || 'green'; save.day = save.day || 0; energy = save.en ?? 100;
     TW.wallet.watch(UID, v => { if (v != null) { wallet = v; hudKey = ''; hud(); } });
     if (window.TW) await TW.ready;
     // spēle vēl nav atvērta visiem – pagaidām tikai admini/moderatori var testēt
