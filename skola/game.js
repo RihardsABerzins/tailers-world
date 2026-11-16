@@ -738,9 +738,9 @@ function lobby() {
   sheet(`<div class="step">Tailers World · Skola</div><h2>🏫 Skola</h2>
     <p>Tu esi skolotājs! Uz tāfeles ir jautājums – <b>pieskaries skolēnam ar pareizo atbildi</b>.</p>
     <div class="fact">❗ = draiskulis! Ātri pieskaries viņam.<br>☕ Nogursti? Iedzer kafiju. 📁 Par grūtu? Mapītē izvēlies klasi.</div>
-    <div class="chips"><span>🍎 ${lv}. līmenis</span><span>🎓 ${grade()}. klase</span><span>😈 līdz ${maxBusy()} draiskuļiem</span></div>
+    <div class="chips"><span>🍎 ${lv}. līmenis</span><span>🎓 ${grade()}. klase</span><span>😈 līdz ${maxBusy()} draiskuļiem</span><button id="setB">⚙ Iestatījumi</button></div>
     <div class="row2 go2"><button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klase un tāfele</button></div>`);
-  $('go').onclick = startLesson; $('shopB').onclick = () => shop(lobby);
+  $('go').onclick = startLesson; $('shopB').onclick = () => shop(lobby); $('setB').onclick = () => { closeSheet(); $('gear').click(); };
 }
 function shop(back) {
   const cur = save.board;
@@ -759,7 +759,7 @@ function shop(back) {
   $('shopOk').onclick = back;
 }
 $('gear').onclick = e => { e.stopPropagation(); audioInit(); const wasOpen = $('ov').classList.contains('on'), prev = wasOpen ? $('sheet').innerHTML : null;
-  if (wasOpen) { toast('⚙ Iestatījumi – kad aizver šo logu'); return; }
+  if (wasOpen && L && L.st !== 'end') { toast('⚙ Iestatījumi – kad aizver šo logu'); return; } // stundas laikā logu nepārtrauc; lobijā/veikalā – atver
   sheet(`<h2>⚙ Iestatījumi</h2><div class="setBox"><div class="step">📻 Radio un dziesmas</div><div id="radioC">${window.TWRadio ? TWRadio.controlsHTML() : ''}</div></div>
     <div class="setBox"><label class="setRow">🔔 Efekti (zvans, joki) <input id="fxV" type="range" min="0" max="100" value="${Math.round(FXV * 100)}"></label></div>
     <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p><button class="main" id="setOk">✔ Gatavs</button>`);
