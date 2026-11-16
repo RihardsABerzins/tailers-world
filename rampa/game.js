@@ -986,8 +986,8 @@ function medals() { if (!UID || !window.TWA) return; const S = save.st, b = save
 function fixSave() { const d = { plane: 0, scoot: 0, car: 0 }; save.best = Object.assign(d, save.best || {}); save.st = Object.assign({ landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, save.st || {});
   save.own = save.own || {}; if (!save.own.plane) save.own.plane = { wheel: 0, wing: 0, eng: 0, long: 0 }; if (!VEH[save.veh] || !save.own[save.veh]) save.veh = 'plane'; save.ramp = clamp(save.ramp || 0, 0, RAMPS.length - 1); }
 // instrukcija pirms pirmā lidojuma: īsti kadri no spēles (rampa/intro/1..5.webp)
-const INTRO = [{ img: 'intro/1.webp', t: 'Velc sviru – aiziet!' }, { img: 'intro/2.webp', t: 'Kreisā puse – augšup, labā – lejup' }, { img: 'intro/3.webp', t: 'Turi un velc ⬅➡ – stūrē' },
-  { img: 'intro/4.webp', t: '🚀 Katapulta – izšaujies!' }, { img: 'intro/5.webp', t: 'Pērc uzlabojumus – lido tālāk!' }];
+const INTRO = [{ img: 'intro/1.webp?v=2', t: 'Velc sviru – aiziet!' }, { img: 'intro/2.webp?v=2', t: 'Kreisā puse – augšup, labā – lejup' }, { img: 'intro/3.webp?v=2', t: 'Turi un velc ⬅➡ – stūrē' },
+  { img: 'intro/4.webp?v=2', t: '🚀 Katapulta – izšaujies!' }, { img: 'intro/5.webp?v=2', t: 'Pērc uzlabojumus – lido tālāk!' }];
 const intro = force => window.TW && TW.intro ? TW.intro('rampa', INTRO, force) : Promise.resolve();
 function start() { loadModels(start2); }
 function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); gfxSetup(); resize(); openShop(); sharpenTextures(); warmUp(); hud(); requestAnimationFrame(frame); intro();
