@@ -7,6 +7,8 @@ const mini = document.getElementById('mini'), mctx = mini.getContext('2d');
 const $ = id => document.getElementById(id);
 const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
 if (!isTouch) document.body.classList.add('kb');
+// ja tomēr pieskaras ekrānam (piem. skārienjūtīgs dators) – rāda kursorsviru
+addEventListener('pointerdown', e => { if (e.pointerType === 'touch') document.body.classList.remove('kb'); }, true);
 let W = innerWidth, H = innerHeight, DPR = Math.min(2, devicePixelRatio || 1);
 function resize() { W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
 addEventListener('resize', resize); resize();

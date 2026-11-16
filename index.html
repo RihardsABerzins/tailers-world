@@ -288,6 +288,7 @@
 // Spēļu saraksts – jaunu spēli pievieno šeit
 const GAMES=[
   {title:'Graffiti RPG', desc:'Skrien pa pilsētu, zīmē grafiti, krāj naudu, pērc krāsas un mašīnas – un bēdz no policijas!', cover:'grafiti/cover.svg', url:'grafiti/index.html', players:'speletaji.html?spele=grafiti'},
+  {title:'🚑 Ātrā palīdzība 112', desc:'Brauc ar ātro palīdzību (vai lido ar helikopteru!) pa pilsētu, noskaidro, kas noticis, palīdzi pacientiem un mācies pirmo palīdzību.', cover:'atra-palidziba/cover.svg', url:'atra-palidziba/index.html'},
 ];
 // Atbalsta saite (piem., Buy Me a Coffee) – kad būs, ieliec šeit
 const SUPPORT_URL='';
@@ -300,10 +301,6 @@ GAMES.forEach((g,i)=>{
     <div class="btns"><a class="btn play" href="${g.url}">▶ Spēlēt</a>${g.players?`<a class="btn ghost" href="${g.players}">👥 Citi spēlētāji</a>`:''}</div></div>`;
   grid.appendChild(d);
 });
-const soon=document.createElement('div'); soon.className='card soon';
-// nākamā spēle – redzama ar bildi, bet aizslēgta; admini var testēt
-soon.innerHTML=`<div class="thumb" style="position:relative"><img class="thumb" src="atra-palidziba/cover.svg" alt="Ātrā palīdzība 112" style="filter:grayscale(.55) brightness(.7)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px">🔒</span></div><div class="body"><p class="title">🚑 Ātrā palīdzība 112</p><p class="desc">Drīzumā! Brauc ar ātro palīdzību pa pilsētu, palīdzi pacientiem un mācies pirmo palīdzību. Ieslēdz paziņojumus, lai uzzinātu pirmais!</p><div class="btns"><a class="btn play" id="apTest" href="atra-palidziba/index.html" style="display:none">🛠 Testēt (admins)</a></div></div>`;
-grid.appendChild(soon);
 if(SUPPORT_URL){ const b=$('supportBtn'); b.href=SUPPORT_URL; b.target='_blank'; b.rel='noopener'; b.textContent='💛 Atbalstīt'; b.removeAttribute('aria-disabled'); }
 
 // ---- drauga uzaicinājums (?draugs=lietotājvārds) ----
@@ -372,7 +369,7 @@ let ME=null, HB=null;
 function paintMe(){ if(!ME) return; const disp=TW.display(ME.name,ME.nick), r=TW.role(ME.uid), mc=TWA.count(TWA.owned), fancy=r||mc>=50;
   $('meName').innerHTML=fancy?(r?'':'👤 ')+TW.nameHTML(disp,ME.uid,mc):'👤 '+disp.replace(/[<>&]/g,'');
   $('hello').innerHTML=`Sveiks, ${fancy?TW.nameHTML(disp,ME.uid,mc):disp.replace(/[<>&]/g,'')}! <span class="wave">👋</span>`;
-  $('panelLink').style.display=r?'inline-flex':'none'; const at=$('apTest'); if(at) at.style.display=r?'inline-flex':'none'; }
+  $('panelLink').style.display=r?'inline-flex':'none'; }
 document.addEventListener('tw-roles',paintMe); document.addEventListener('tw-medals',paintMe);
 function curLang(){ try{ return localStorage.getItem('twLang')||'lv'; }catch(e){ return 'lv'; } }
 function paintLang(l){ document.querySelectorAll('#profForm .seg button').forEach(b=>b.classList.toggle('on',b.dataset.l===l)); }
