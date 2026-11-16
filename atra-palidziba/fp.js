@@ -10,8 +10,8 @@
   const tex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
   function build() {
     R3 = THREE;
-    glCv = document.createElement('canvas'); glCv.id = 'fp'; glCv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:none'; document.body.insertBefore(glCv, document.getElementById('top'));
-    dash = document.createElement('canvas'); dash.id = 'fpDash'; dash.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;display:none;z-index:2'; document.body.insertBefore(dash, document.getElementById('top')); dctx = dash.getContext('2d');
+    glCv = document.createElement('canvas'); glCv.id = 'fp'; glCv.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:var(--twH,100%);touch-action:none;display:none'; document.body.insertBefore(glCv, document.getElementById('top'));
+    dash = document.createElement('canvas'); dash.id = 'fpDash'; dash.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:var(--twH,100%);pointer-events:none;display:none;z-index:2'; document.body.insertBefore(dash, document.getElementById('top')); dctx = dash.getContext('2d');
     glCv.addEventListener('pointerdown', e => cv.dispatchEvent(new PointerEvent('pointerdown', e)));
     renderer = new R3.WebGLRenderer({ canvas: glCv, antialias: true, powerPreference: 'high-performance' }); FP.pr = Math.min(2, devicePixelRatio || 1); renderer.setPixelRatio(FP.pr); FP.aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy()); renderer.outputEncoding = R3.sRGBEncoding; renderer.toneMapping = R3.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; // kā Mega rampā – dabiskākas krāsas; asums: līdz 2× pikseļi, gludas malas
     scene = new R3.Scene(); scene.fog = new R3.Fog(0xbfe3ff, 900, 3200);
@@ -148,10 +148,10 @@
     document.head.appendChild(s); }
   const LCOL = { r: 0xff3030, y: 0xffc533, g: 0x30e070 };
   FP.render = t => {
-    if (!FP.ready) return; const w = innerWidth, h = innerHeight;
+    if (!FP.ready) return; const w = innerWidth, h = viewH();
     { const now = performance.now(), d = FP.lastT ? now - FP.lastT : 16; FP.lastT = now; FP.slow = d > 29 && d < 500 ? (FP.slow || 0) + d : Math.max(0, (FP.slow || 0) - d);
       if (FP.slow > 2000 && FP.pr > 1) { FP.pr = Math.max(1, FP.pr - .25); renderer.setPixelRatio(FP.pr); FP.slow = 0; } } // telefons netiek līdzi – mazliet mazāka izšķirtspēja
-    if (glCv.width !== Math.round(w * renderer.getPixelRatio())) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = clamp(2 * Math.atan(Math.tan(37 * Math.PI / 180) / camera.aspect) * 180 / Math.PI, 66, 96); camera.updateProjectionMatrix(); dash.width = w * 2; dash.height = h * 2; } // fov: portretā platāks skats (citādi viss šķiet izstiepts uz augšu)
+    if (glCv.width !== Math.round(w * renderer.getPixelRatio()) || glCv.height !== Math.round(h * renderer.getPixelRatio())) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = clamp(2 * Math.atan(Math.tan(37 * Math.PI / 180) / camera.aspect) * 180 / Math.PI, 66, 96); camera.updateProjectionMatrix(); dash.width = w * 2; dash.height = h * 2; } // fov: portretā platāks skats (citādi viss šķiet izstiepts uz augšu)
     // diena / nakts
     const dk = darkness() / .62, day = 1 - dk, sky = new R3.Color().setRGB(.5 * day + .06 * dk, .72 * day + .06 * dk, 1 * day + .16 * dk);
     scene.background = sky; scene.fog.color = sky; hemi.intensity = .25 + .65 * day; sun.intensity = .1 + .6 * day; winMat.emissive.setRGB(dk * .9, dk * .9, dk * .9);

@@ -9,9 +9,10 @@ const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in wind
 if (!isTouch) document.body.classList.add('kb');
 // ja tomēr pieskaras ekrānam (piem. skārienjūtīgs dators) – rāda kursorsviru
 addEventListener('pointerdown', e => { if (e.pointerType === 'touch') document.body.classList.remove('kb'); }, true);
-let W = innerWidth, H = innerHeight, DPR = Math.min(2.5, devicePixelRatio || 1); // telefonos (DPR 3) 2,5 – ass, bet ne pārāk smags
-function resize() { W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.imageSmoothingQuality = 'high'; } // canvas izmēra maiņa atiestata kvalitāti
-addEventListener('resize', resize); resize();
+const viewH = () => window.TW && TW.viewH ? TW.viewH() : innerHeight; // iOS no sākuma ekrāna – pilns augstums (tw-common.js), citādi apakšā tukša josla
+let W = innerWidth, H = viewH(), DPR = Math.min(2.5, devicePixelRatio || 1); // telefonos (DPR 3) 2,5 – ass, bet ne pārāk smags
+function resize() { W = innerWidth; H = viewH(); cv.width = W * DPR; cv.height = H * DPR; ctx.imageSmoothingQuality = 'high'; } // canvas izmēra maiņa atiestata kvalitāti
+addEventListener('resize', resize); resize(); setInterval(() => { if (innerWidth !== W || viewH() !== H) resize(); }, 1000); // drošībai (iOS pagrieziens/standalone)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
 const wrapA = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
