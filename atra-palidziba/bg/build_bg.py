@@ -535,3 +535,106 @@ def charlights():
 def lum(path):
     im = bpy.data.images.load(path, check_existing=False); px = im.pixels[:]; vals = [px[i] for i in range(0, len(px), 4) if px[i + 3] > 0.9]
     bpy.data.images.remove(im); vals.sort(); n = len(vals); return (round(vals[n // 10], 2), round(vals[n // 2], 2), round(vals[-1], 2), n)
+
+# ================= KayKit (CC0, Kay Lousberg) – vienots pasaules stils (CLAUDE.md) =================
+# Šie pārraksta iepriekšējās funkcijas: koki, mājas, mašīnas, lampas, luksofori, soliņi, tālā pilsēta un virtuve – no KayKit modeļiem.
+# Kamera, kontūras un gaisma paliek tās pašas (tēli/rekvizīti spēlē sakrīt ar foniem).
+KC = '/Users/rihardsberzins/Documents/Tclaude/tw-modeli/28-kaykit-city-builder/KayKit_City_Builder_Bits_1.0_FREE/Assets/gltf/'
+KF = '/Users/rihardsberzins/Documents/Tclaude/tw-modeli/29-kaykit-forest/KayKit_Forest_Nature_Pack_1.0_FREE/Assets/gltf/'
+KR = '/Users/rihardsberzins/Documents/Tclaude/tw-modeli/30-kaykit-restaurant/KayKit_Restaurant_Bits_1.0_FREE/Assets/gltf/'
+KU = '/Users/rihardsberzins/Documents/Tclaude/tw-modeli/31-kaykit-furniture/KayKit_Furniture_Bits_1.0_FREE/Assets/gltf/'
+KMAP = {'roads/light-square.glb': KC + 'streetlight.gltf', 'roads/traffic-light.glb': KC + 'trafficlight_B.gltf',
+        'cars/sedan.glb': KC + 'car_sedan.gltf', 'cars/taxi.glb': KC + 'car_taxi.gltf', 'cars/suv.glb': KC + 'car_stationwagon.gltf', 'cars/van.glb': KC + 'car_hatchback.gltf'}
+KB = {'A': (1.207, 1.45, 1.55), 'B': (1.607, 1.3, 1.55), 'C': (1.207, 1.3, 2.25), 'D': (1.607, 1.3, 2.25), 'E': (2.007, 1.45, 2.25), 'F': (2.007, 1.3, 2.25), 'G': (2.007, 1.45, 2.25), 'H': (2.007, 1.3, 2.95)}
+_place0 = place
+def src(rel):
+    path = KMAP.get(rel, rel); key = path
+    if key in _SRC and _alive(_SRC[key]): return _SRC[key]
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=path if path.startswith('/') else MD + path)
+    objs = [o for o in bpy.data.objects if o not in before]
+    lib = coll('TW_LIB')
+    for o in objs:
+        for cc in list(o.users_collection): cc.objects.unlink(o)
+        lib.objects.link(o)
+    bpy.context.view_layer.layer_collection.children['TW_LIB'].exclude = True
+    _SRC[key] = objs; return objs
+def place(rel, x, y, z=0.0, rot=0.0, height=None, length=None, c=None):
+    return _place0(KMAP.get(rel, rel), x, y, z, rot, height, length, c)
+def ntree(rel, x, y, z=0.0, rot=0.0, height=6.0, c=None):
+    rr = random.Random(int(x * 100 + y * 37))
+    name = 'Tree_4_A_Color1' if ('pine' in rel or 'fir' in rel) else rr.choice(['Tree_1_A_Color1', 'Tree_1_B_Color1', 'Tree_2_A_Color1', 'Tree_1_A_Color1'])
+    return place(KF + name + '.gltf', x, y, z, rot, height=height, c=c)
+def bush(x, y, c, h=0.9, rnd=None):
+    k = (rnd or random).choice(['Bush_1_A_Color1', 'Bush_2_A_Color1', 'Bush_1_C_Color1']); return place(KF + k + '.gltf', x, y, 0, (rnd or random).random() * 6, height=h, c=c)
+def hedge(x, y, sx, sy, c, h=0.9):
+    n = max(1, int(max(sx, sy) / 1.1)); rr = random.Random(int(x * 7 + y * 13))
+    for i in range(n):
+        t = (i + 0.5) / n - 0.5; bush(x + (sx * t if sx >= sy else 0), y + (sy * t if sy > sx else 0), c, h * rr.uniform(0.9, 1.25), rr)
+def bench3d(x, y, rot, c): return place(KC + 'bench.gltf', x, y, 0, rot, length=1.8, c=c)
+def kbuilding(k, x0, side, y0, L, c):
+    # fasāde x=x0, māja uz side pusi; priekša (−Y modelī) pret ielu
+    mw, md, mh = KB[k]; s = L / mw; cx = x0 + side * md * s / 2
+    return place(KC + 'building_' + k + '_withoutBase.gltf', cx, y0 + L / 2, 0, (-math.pi / 2 if side > 0 else math.pi / 2), length=max(mw, md) * s, c=c)
+def building(x0, side, y0, y1, H, col, aw, c, rnd, night=False):
+    k = rnd.choice(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']); kbuilding(k, x0, side, y0, y1 - y0, c)
+    if night:  # daži logi naktī deg (gaismas plāksnītes uz fasādes)
+        mw, md, mh = KB[k]; s = (y1 - y0) / mw; H = mh * s; fl = 3.6
+        while fl < H - 2.0:
+            for i in range(max(2, int((y1 - y0) / 3.2))):
+                if rnd.random() < 0.45: box('lit', x0 - side * 0.06, y0 + (i + 0.5) * (y1 - y0) / max(2, int((y1 - y0) / 3.2)), fl, 0.05, 1.0, 1.3, rnd.choice(['#ffd36a', '#ffc27a', '#9ae6ff']), c, emit=2.5)
+            fl += H / 4.5
+def cityfar(c, rnd, y0=150, n=44, cols=None):
+    for i in range(n):
+        x = -160 + i * 7.5 + rnd.uniform(-2, 2); k = rnd.choice(list(KB)); mw, md, mh = KB[k]; s = rnd.uniform(4, 7)
+        place(KC + 'building_' + k + '_withoutBase.gltf', x, y0 + rnd.uniform(0, 30), 0, 0, length=max(mw, md) * s, c=c)
+_build_street0 = build_street
+def build_street(night=False):
+    c = _build_street0(night); rnd = random.Random(21)
+    for y in (13, 29, 47): place(KC + 'firehydrant.gltf', 4.7, y, 0, 0, height=0.8, c=c)
+    for y in (20, 42): place(KC + 'trash_A.gltf', -4.7, y, 0, 0, height=0.9, c=c)
+    return c
+_build_park0 = build_park
+def build_park(night=False):
+    c = _build_park0(night); rnd = random.Random(31)
+    for i in range(10):
+        x, y = rnd.uniform(-14, 14), rnd.uniform(9, 30)
+        if abs(x) > 3.5: bush(x, y, c, rnd.uniform(0.6, 1.1), rnd)
+    for x, y in ((-11, 26), (13, 28)): place(KF + 'Rock_1_A_Color1.gltf', x, y, 0, rnd.random() * 6, height=0.9, c=c)
+    return c
+_build_playground0 = build_playground
+def build_playground(night=False):
+    c = _build_playground0(night); rnd = random.Random(41)
+    for x, y in ((-15, 12), (14, 18), (12, 26), (-17, 28)): bush(x, y, c, rnd.uniform(0.7, 1.1), rnd)
+    return c
+def nightlamps(names=('P_light-square', 'P_streetlight'), energy=700):
+    for o in [o for o in bpy.data.objects if o.name.startswith(names)]:
+        ld = bpy.data.lights.new('TWL_p', 'POINT'); ld.energy = energy; ld.color = (1.0, 0.8, 0.55); ld.shadow_soft_size = 0.6
+        lo = bpy.data.objects.new('TWL_p', ld); bpy.context.scene.collection.objects.link(lo); lo.location = (o.location.x * 0.8, o.location.y, 4.6)
+def build_kitchen(night=False):
+    clear(); c = coll('TW_SCENE'); rnd = random.Random(17)
+    W0, W1, BY, HC, s = -4.2, 4.2, 9.0, 2.9, 0.72
+    for i in range(-6, 6):
+        for j in range(0, 14):
+            box('t', i * 0.7 + 0.35, j * 0.7 + 0.35, -0.02, 0.7, 0.7, 0.02, '#c9a77c' if (i + j) % 2 else '#b8936a', c)
+    box('wl', W0 - 0.1, 4, 0, 0.2, 14, HC, '#efe2cf', c); box('wr', W1 + 0.1, 4, 0, 0.2, 14, HC, '#e8dac6', c); box('wb', 0, BY + 0.1, 0, 9, 0.2, HC, '#f3e6d3', c)
+    box('ceil', 0, 4, HC, 9, 14, 0.1, '#fbf5ea', c)
+    box('win', 0.3, BY - 0.02, 1.25, 1.8, 0.06, 1.1, '#2c3160' if night else '#9fd2f5', c, emit=(0 if night else 0.6)); box('winf', 0.3, BY, 1.18, 2.0, 0.05, 1.24, '#ffffff', c)
+    box('wcross', 0.3, BY - 0.06, 1.25, 0.06, 0.04, 1.1, '#ffffff', c)
+    # KayKit virtuve (Restaurant Bits): skapīši ar virsmu gar aizmugurējo sienu, izlietne, plīts, augšējie skapīši (ne virs loga), ledusskapis pie kreisās sienas
+    cy = BY - 1.02 * s
+    for x, k in ((-2.8, 'kitchencounter_sink_backsplash'), (-1.36, 'kitchencounter_straight_A_backsplash'), (0.08, 'kitchencounter_straight_A_backsplash'), (1.52, 'kitchencounter_straight_A_backsplash'), (2.96, 'kitchencounter_straight_A_backsplash')):
+        place(KR + k + '.gltf', x, cy, 0, 0, length=2.04 * s, c=c)
+    place(KR + 'stove_multi_countertop.gltf', -1.36, cy, 0.93 * s, 0, length=1.74 * s, c=c)
+    for x in (-2.8, -1.36, 2.96): place(KR + 'kitchencabinet.gltf', x, BY - 0.52 * s, 2.0 * s, 0, length=2.04 * s, c=c)
+    place(KR + 'fridge_A.gltf', W0 + 1.12 * s, 6.5, 0, math.pi / 2, length=2.24 * s, c=c)
+    # galds labajā pusē (uz tā tējas krūze – rekvizīts tiek zīmēts spēlē) + krēsli
+    place(KU + 'table_medium.gltf', 1.6, 5.5, 0, 0, height=0.72, c=c)
+    place(KU + 'chair_A_wood.gltf', 2.55, 5.5, 0, -math.pi / 2, height=0.9, c=c); place(KU + 'chair_A_wood.gltf', 0.65, 5.5, 0, math.pi / 2, height=0.9, c=c)
+    place(KU + 'cactus_small_A.gltf', 2.96, cy, 1.0 * s, 0, height=0.25, c=c)
+    cyl('lamp', 0, 5, 2.3, 0.35, 0.25, '#ffd98a' if night else '#f4f1e4', c, 16, emit=(4 if night else 0))
+    if night:
+        ld = bpy.data.lights.new('TWL_k', 'POINT'); ld.energy = 250; ld.color = (1, 0.85, 0.6); lo = bpy.data.objects.new('TWL_k', ld); c.objects.link(lo); lo.location = (0, 5, 2.2)
+    else:
+        ld = bpy.data.lights.new('TWL_k', 'AREA'); ld.energy = 400; ld.size = 2; lo = bpy.data.objects.new('TWL_k', ld); c.objects.link(lo); lo.location = (0.3, BY - 1.0, 1.6); lo.rotation_euler = (math.radians(-90), 0, 0)
+    return c

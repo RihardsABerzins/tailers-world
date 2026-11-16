@@ -156,7 +156,7 @@
   // statiskā daļa tiek uzzīmēta vienreiz (kešs katrai vietai/diennaktij), virsū – kustīgās lietas (saule, prožektori)
   const BGC = {}, VX = 230;
   // uzrenderētie foni (Blender, atra-palidziba/bg/<vieta>_d|_n.png); kamēr nav ielādēti vai nav – zīmē paši
-  const BGBASE = new URL('bg/', document.currentScript ? document.currentScript.src : location.href).href, BGV = 1, IMG = {}, HAS = { street: 1, park: 1, garden: 1, playground: 1, school: 1, concert: 1, kitchen: 1 };
+  const BGBASE = new URL('bg/', document.currentScript ? document.currentScript.src : location.href).href, BGV = 2, IMG = {}, HAS = { street: 1, park: 1, garden: 1, playground: 1, school: 1, concert: 1, kitchen: 1 };
   function bgImg(pl, night) { const k = pl + (night ? '_n' : '_d'); if (!HAS[pl]) return null;
     if (!(k in IMG)) { const im = IMG[k] = new Image(); im.onload = () => { delete BGC[pl + (night ? 'N' : 'D')]; }; im.onerror = () => { IMG[k] = null; }; im.src = BGBASE + k + '.webp?v=' + BGV; }
     const im = IMG[k]; return im && im.complete && im.naturalWidth ? im : null; }

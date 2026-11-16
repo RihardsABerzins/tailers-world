@@ -98,8 +98,7 @@
     FP.birds = []; SKY.flocks.forEach((f, fi) => { for (let i = 0; i < f.n; i++) { const sp = new R3.Sprite(bMat); sp.scale.set(26, 13, 1); scene.add(sp); FP.birds.push({ sp, f, fi, i }); } });
     FP.ready = true; loadModels();
   }
-  // ---- Kenney CC0 3D modeļi (models/): mašīnas, koki, luksofori, ielu lampas. Katras modeļa daļas – InstancedMesh ----
-  const MODEL = { cars: ['sedan', 'sedan-sports', 'hatchback-sports', 'suv', 'suv-luxury', 'taxi', 'van', 'delivery'], trees: [] }; // (koki – skat. TREE_MODEL game.js) t.m
+  // ---- 3D modeļi – KayKit (CC0): mašīnas, mājas, koki, luksofori, ielu lampas (InstancedMesh); saraksti KK_* game.js ----
   function loadModels() {
     const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
     s.onload = async () => { try {
@@ -109,39 +108,40 @@
         const along = upright ? null : (sz.z > sz.x ? 'z' : 'x'), k = upright ? len / sz.y : len / Math.max(sz.x, sz.z);
         scene.traverse(o => { if (!o.isMesh) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); g.translate(-ctr.x, -box.min.y, -ctr.z); if (along === 'z') g.rotateY(Math.PI / 2); g.scale(k, k, k); out.push({ geo: g, mat: o.material }); });
         return out; };
-      // mašīnas
-      const byModel = MODEL.cars.map(() => []); cars.forEach((c, i) => byModel[c.k % MODEL.cars.length].push(i));
+      // ---- KayKit (CC0, Kay Lousberg): models/kk/city.glb – mājas B_A..B_H, mašīnas C_*, ielu objekti S_* (viena tekstūra); trees.glb – koki T_1..T_5 ----
+      const geoms = sc => { const out = {}; sc.updateMatrixWorld(true); sc.traverse(o => { if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!g.attributes.normal) g.computeVertexNormals(); out[o.name.replace(/\.\d+$/, '')] = { geo: g, map: o.material && o.material.map }; } }); return out; };
+      const KK = geoms(await get('models/kk/city.glb?v=1')), KT = geoms(await get('models/kk/trees.glb?v=1')), m4 = new R3.Matrix4(), q = new R3.Quaternion(), up = new R3.Vector3(0, 1, 0), V = (x, y, z) => new R3.Vector3(x, y, z);
+      const kmat = map => new R3.MeshLambertMaterial({ map }), CM = kmat(KK.B_A.map); // visiem pilsētas modeļiem kopīga tekstūra
+      // mašīnas (priekša +Z → +X; garums ~58 vienības)
+      const byModel = KK_CARS.map(() => []); cars.forEach((c, i) => byModel[KK_CARMAP[c.k % KK_CARMAP.length]].push(i));
       FP.carSets = [];
-      for (let m = 0; m < MODEL.cars.length; m++) { if (!byModel[m].length) continue; const sc = await get('models/cars/' + MODEL.cars[m] + '.glb');
-        const ps = parts(sc, 58, false).map(p => { const im = new R3.InstancedMesh(p.geo, p.mat, byModel[m].length); im.instanceMatrix.setUsage(R3.DynamicDrawUsage); scene.add(im); return im; });
-        FP.carSets.push({ idx: byModel[m], meshes: ps }); }
+      KK_CARS.forEach((n, m) => { if (!byModel[m].length || !KK['C_' + n]) return; const g = KK['C_' + n].geo.clone(); g.rotateY(Math.PI / 2); g.scale(62, 62, 62);
+        const im = new R3.InstancedMesh(g, CM, byModel[m].length); im.instanceMatrix.setUsage(R3.DynamicDrawUsage); scene.add(im); FP.carSets.push({ idx: byModel[m], meshes: [im] }); });
       [carBody, carGlass, carCab, carWheel, carHead, carTail].forEach(m => m.visible = false); // vienkāršās kastes vairs nevajag
-      // koki
-      const trees = []; blocks.forEach(b => b.trees.forEach(t => trees.push(t))); const m4 = new R3.Matrix4(), q = new R3.Quaternion(), up = new R3.Vector3(0, 1, 0);
-      // koki – tie paši kā Mega rampā (Quaternius „Tree”, CC0, models/nature/r/trees.glb: T_1..T_3, virsotņu krāsas); katram nedaudz cits zaļais
-      const tsc = await get('models/nature/r/trees.glb?v=1'), TG = {}; tsc.updateMatrixWorld(true); tsc.traverse(o => { if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!g.attributes.normal) g.computeVertexNormals(); TG[o.name.replace(/\.\d+$/, '')] = g; } });
-      const tm = new R3.MeshLambertMaterial({ vertexColors: true }), TGREEN = [0xffffff, 0xe6f2d8, 0xd2e6c0, 0xf2f7cf]; FP.treeSets = [];
-      [0, 1, 2].forEach(k => { const list = trees.filter(t => TREE_MODEL[t.m || 0] === k), geo = TG['T_' + (k + 1)]; if (!list.length || !geo) return;
-        const im = new R3.InstancedMesh(geo, tm, list.length); im.instanceMatrix.setUsage(R3.DynamicDrawUsage); const tc = new R3.Color(); list.forEach((t, j) => im.setColorAt(j, tc.setHex(TGREEN[((t.x * 3 + t.y) | 0) % 4 & 3]))); scene.add(im); FP.treeSets.push({ im, list }); });
+      // koki (augstums 1 → mērogo; rāda tikai tuvumā)
+      const trees = []; blocks.forEach(b => b.trees.forEach(t => trees.push(t))); const TM = kmat(KT.T_1.map); FP.treeSets = [];
+      [0, 1, 2, 3].forEach(k => { const list = trees.filter(t => TREE_MODEL[t.m || 0] === k), T_ = KT['T_' + (k + 1)]; if (!list.length || !T_) return;
+        const im = new R3.InstancedMesh(T_.geo, TM, list.length); im.instanceMatrix.setUsage(R3.DynamicDrawUsage); scene.add(im); FP.treeSets.push({ im, list }); });
       FP.treeT = -1;
-      // mājas – Kenney City Kit modeļi (models/city/buildings.glb, vienības kubs): „rest” ar virsotņu krāsām, „wall” – mājas krāsā; kastes paliek tikai slimnīcai un benzīntankiem
-      const bsc = await get('models/city/buildings.glb?v=1'), BM = {}; bsc.updateMatrixWorld(true); bsc.traverse(o => { if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (!g.attributes.normal) g.computeVertexNormals(); BM[o.name.replace(/\.\d+$/, '')] = g; } });
-      const vcm = new R3.MeshLambertMaterial({ vertexColors: true }), wm = new R3.MeshLambertMaterial({ color: 0xffffff }), bc = new R3.Color(), zero0 = new R3.Matrix4().makeScale(0, 0, 0);
-      BMODELS.forEach((n, mi) => { const list = FP.blds.filter(it => it.m === mi); if (!list.length) return;
-        [['rest', vcm], ['wall', wm]].forEach(([part, mat]) => { const geo = BM['B_' + n + '_' + part]; if (!geo) return; const im = new R3.InstancedMesh(geo, mat, list.length);
-          list.forEach((it, i) => { const fw = (it.x1 - it.x0 + it.y1 - it.y0) / 2, hh = clamp(it.h * HK, fw * .8, fw * (mi === 4 || mi === 5 ? 2 : mi === 3 || mi === 6 ? 1.2 : 1.4)); // nestiept uz augšu – logi paliek kvadrātiski
-            im.setMatrixAt(i, m4.compose(new R3.Vector3((it.x0 + it.x1) / 2, 0, (it.y0 + it.y1) / 2), q.identity(), new R3.Vector3(it.x1 - it.x0, hh, it.y1 - it.y0))); im.setColorAt(i, bc.set(part === 'wall' ? it.wall || it.col : tint(it.wall || it.col, .55))); }); scene.add(im); }); }); // arī rāmji/jumts viegli mājas krāsā – nav pelēks
-      FP.blds.forEach((it, i) => { if (it.m != null) FP.bI.setMatrixAt(i, zero0); }); FP.bI.instanceMatrix.needsUpdate = true; // koki tiek rādīti tikai tuvumā (atjauno ik pēc 0,5 s) – citādi telefonam par smagu
+      // mājas – pagrieztas ar priekšu (markīzes, durvis) pret tuvāko ielu, dabiskās proporcijās (it.kk, game.js); slimnīca un benzīntanki – kastes
+      const zero0 = new R3.Matrix4().makeScale(0, 0, 0);
+      KK_BLD.forEach((n, mi) => { const list = FP.blds.filter(it => it.kk && it.kk.m === mi); if (!list.length || !KK['B_' + n]) return;
+        const im = new R3.InstancedMesh(KK['B_' + n].geo, CM, list.length);
+        list.forEach((it, i) => { const k = it.kk; im.setMatrixAt(i, m4.compose(V((it.x0 + it.x1) / 2, 0, (it.y0 + it.y1) / 2), q.setFromAxisAngle(up, k.ry), V(k.sx, k.sy, k.sz))); }); scene.add(im); });
+      FP.blds.forEach((it, i) => { if (it.kk) FP.bI.setMatrixAt(i, zero0); }); FP.bI.instanceMatrix.needsUpdate = true;
       FP.trunk.visible = FP.crown.visible = false;
-      // luksofori (modelis + mūsu spīdošā krāsa virsū)
-      const tl = await get('models/roads/traffic-light.glb'); parts(tl, 74, true).forEach(p => { const im = new R3.InstancedMesh(p.geo, p.mat, FP.lp.length); FP.lp.forEach((L_, i) => { im.setMatrixAt(i, m4.compose(new R3.Vector3(L_.x, 0, L_.y), q.setFromAxisAngle(up, L_.rot), new R3.Vector3(1, 1, 1))); }); scene.add(im); });
-      // gaismas pašā luksofora korpusā (sarkans/dzeltens/zaļš viens virs otra), nevis bumba virs tā
-      FP.poles.visible = false; lightsM.visible = false; const lk = 74 / .515;
-      FP.lamps = new R3.InstancedMesh(new R3.SphereGeometry(2.6, 8, 6), new R3.MeshBasicMaterial({ color: 0xffffff }), FP.lp.length * 3);
-      FP.lp.forEach((L_, i) => { const c = Math.cos(L_.rot), s_ = Math.sin(L_.rot), fx = -.064 * lk; [.48, .438, .396].forEach((hz, k) => FP.lamps.setMatrixAt(i * 3 + k, m4.compose(new R3.Vector3(L_.x + fx * c, hz * lk, L_.y - fx * s_), q.identity(), new R3.Vector3(1, 1, .5)))); });
+      // luksofori – KayKit modelis; lukturi tā priekšā (−Y Blenderī → +Z), mūsu krāsainās gaismas tieši lukturos
+      const TK = 77, TL = KK.S_tlight; if (TL) { const im = new R3.InstancedMesh(TL.geo, CM, FP.lp.length); FP.lp.forEach((L_, i) => im.setMatrixAt(i, m4.compose(V(L_.x, 0, L_.y), q.setFromAxisAngle(up, L_.rot - Math.PI / 2), V(TK, TK, TK)))); scene.add(im); }
+      FP.poles.visible = false; lightsM.visible = false;
+      FP.lamps = new R3.InstancedMesh(new R3.SphereGeometry(1.7, 8, 6), new R3.MeshBasicMaterial({ color: 0xffffff }), FP.lp.length * 3);
+      FP.lp.forEach((L_, i) => { const r = L_.rot - Math.PI / 2, c = Math.cos(r), s_ = Math.sin(r), X = .0875 * TK, Z = .077 * TK; [.686, .62, .555].forEach((hz, k) => FP.lamps.setMatrixAt(i * 3 + k, m4.compose(V(L_.x + X * c + Z * s_, hz * TK, L_.y - X * s_ + Z * c), q.identity(), V(1, 1, 1)))); });
       scene.add(FP.lamps);
-      // ielu lampas
-      const ls = await get('models/roads/light-square.glb'); parts(ls, 90, true).forEach(p => { const im = new R3.InstancedMesh(p.geo, p.mat, LAMPS.length); LAMPS.forEach((L_, i) => im.setMatrixAt(i, m4.compose(new R3.Vector3(L_.x, 0, L_.y), q.setFromAxisAngle(up, (i % 4) * Math.PI / 2), new R3.Vector3(1, 1, 1)))); scene.add(im); });
+      // ielu lampas – roka pret ielu (augšmalas lampas → uz ziemeļiem, kreisās malas → uz rietumiem)
+      const LK = 94; if (KK.S_light) { const im = new R3.InstancedMesh(KK.S_light.geo, CM, LAMPS.length); LAMPS.forEach((L_, i) => im.setMatrixAt(i, m4.compose(V(L_.x, 0, L_.y), q.setFromAxisAngle(up, i % 2 ? 0 : -Math.PI / 2), V(LK, LK, LK)))); scene.add(im); }
+      // soliņi parkos, hidranti pie kvartālu stūriem
+      const bn = [], hy = []; blocks.forEach(b => { if (b.park) b.park.benches.forEach(p => bn.push([p.x, p.y, p.a])); if (b.kind !== 'park') hy.push([b.x0 + TREE_IN, b.y0 + TREE_IN + 26]); });
+      if (KK.S_bench) { const im = new R3.InstancedMesh(KK.S_bench.geo, CM, bn.length); bn.forEach(([x, y, a], i) => im.setMatrixAt(i, m4.compose(V(x, 6, y), q.setFromAxisAngle(up, -a), V(58, 58, 58)))); scene.add(im); }
+      if (KK.S_hydrant) { const im = new R3.InstancedMesh(KK.S_hydrant.geo, CM, hy.length); hy.forEach(([x, y], i) => im.setMatrixAt(i, m4.compose(V(x, 5, y), q.identity(), V(50, 50, 50)))); scene.add(im); }
       if (window.PEDS) await PEDS.fpBuild(R3, scene, get); // gājēji (Quaternius)
       FP.models = true;
     } catch (e) { console.warn('modeļi neielādējās', e); } };

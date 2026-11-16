@@ -70,17 +70,25 @@ const FUEL = blocks.filter(b => b.kind === 'fuel').map(b => ({ x: (b.x0 + b.x1) 
 const hospBlock = blocks.find(b => b.kind === 'hospital');
 // ielu lampas – pa vienai katram ielas posmam (kvartāla augšmalas un kreisās malas vidū)
 const LAMPS = []; blocks.forEach(b => { [[(b.x0 + b.x1) / 2 + 40, b.y0 + TREE_IN], [b.x0 + TREE_IN, (b.y0 + b.y1) / 2 + 40]].forEach(([x, y]) => LAMPS.push({ x, y })); });
-// koka veids t.m (0–3) → modelis TREE_MODEL: Mega rampas koki (Quaternius „Tree”, CC0) T_1..T_3 – tas pats 2D (models/nature/r/top.webp) un 🛞 skatā
-const TREE_MODEL = [0, 1, 2, 2];
-blocks.forEach(b => b.trees.forEach(t => { const h = ((t.x * 7 + t.y * 13) | 0) % 10; t.m = t.fir ? 3 : h < 6 ? 0 : h < 8 ? 1 : 2; }));
-// mājas – Kenney City Kit (Commercial, CC0) modeļi: augstas → debesskrāpji, vidējas → lielās ēkas, zemas → mazās (it.m; tas pats 2D jumtam un 🛞 skatam)
-const BMODELS = ['large1', 'large4', 'large5', 'low1', 'sky1', 'sky2', 'small1'], ROOFS = new Image(); ROOFS.src = 'models/city/roofs.webp?v=2';
-// sienu krāsas: Mega rampas dabiskās (ķieģelis, smilšu, rūsa, zilganpelēks, brūns, salvijas) + dažas priecīgākas; jumts – tās pašas krāsas gaišāks tonis
-const PALW = ['#a5523c', '#c9a77a', '#b8693f', '#6f8196', '#d9c7a2', '#8a5a44', '#7c8a7a', '#d9734e', '#e0b65a', '#5f9ec9', '#8fb866', '#c97b9a'];
+// ---- KayKit (CC0, Kay Lousberg) – vienots pasaules stils (models/kk/): mājas, mašīnas, koki; tie paši modeļi 🛞 skatā (fp.js) un 2D sprite (no augšas) ----
+// koka veids t.m (0–3) → TREE_MODEL: KayKit Forest T_1 apaļš, T_2 divkāršs, T_3 kubveida, T_4 egle
+const TREE_MODEL = [0, 1, 2, 3];
+blocks.forEach(b => b.trees.forEach(t => { const h = ((t.x * 7 + t.y * 13) | 0) % 10; t.m = t.fir ? 3 : h < 5 ? 0 : h < 8 ? 1 : 2; }));
+// mājas: KayKit City Builder building_A..H (izmēri vienībās: platums gar fasādi, dziļums, augstums); fasāde (markīzes, durvis) pret tuvāko ielu
+const KK_BLD = 'ABCDEFGH'.split(''), KK_BD = [[1.207, 1.45, 1.55], [1.607, 1.3, 1.55], [1.207, 1.3, 2.25], [1.607, 1.3, 2.25], [2.007, 1.45, 2.25], [2.007, 1.3, 2.25], [2.007, 1.45, 2.25], [2.007, 1.3, 2.95]];
+const KK_WALL = ['#3f5f7f', '#c4623e', '#d0473f', '#2f8a5a', '#b5603f', '#d9a03c', '#a95a40', '#4c6f9e']; // valdošā sienu krāsa 2D sānu sienām
+const KK_CARS = ['hatchback', 'police', 'sedan', 'stationwagon', 'taxi'], KK_CARMAP = [0, 2, 3, 4, 0, 2, 3, 1, 2, 0, 3]; // policija retāk
+const ROOFS = new Image(); ROOFS.src = 'models/kk/roofs_top.webp?v=1';
 const tint = (h, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - t) + 255 * t).toString(16).padStart(2, '0')).join('');
-blocks.forEach(b => b.items.forEach(it => { if (it.t !== 'bld' || it.hosp || it.fuel) return; const g = it.h > 120 ? [4, 5] : it.h > 70 ? [0, 1, 2] : [3, 6, 0]; it.m = g[it.win % g.length];
-  it.wall = PALW[(it.win >>> 3) % PALW.length]; it.col = tint(it.wall, .45); }));
-const TREE_TOP = new Image(); TREE_TOP.src = 'models/nature/r/top.webp?v=2';
+blocks.forEach(b => b.items.forEach(it => { if (it.t !== 'bld' || it.hosp || it.fuel) return;
+  const d = [it.y0 - b.y0, b.y1 - it.y1, it.x0 - b.x0, b.x1 - it.x1], face = d.indexOf(Math.min(...d)); // 0 – ziemeļi (−y), 1 – dienvidi (+y), 2 – rietumi (−x), 3 – austrumi (+x)
+  const lw = it.x1 - it.x0, ld = it.y1 - it.y0, fw = face < 2 ? lw : ld, fd = face < 2 ? ld : lw;
+  const cand = it.h > 120 ? [7, 4, 5, 6] : it.h > 70 ? [2, 3, 4, 5, 6] : [0, 1, 2, 3]; let m = cand[0], best = 1e9;
+  cand.forEach((k, n) => { const e = Math.abs(Math.log((KK_BD[k][0] / KK_BD[k][1]) / (fw / fd))) + ((it.win >>> n) & 1) * .12; if (e < best) { best = e; m = k; } });
+  const [mw, md, mh] = KK_BD[m], sx = fw / mw, sz = fd / md, sy = (sx + sz) / 2 * (1 + (it.win % 3) * .07);
+  it.kk = { m, face, sx, sz, sy, ry: [Math.PI, 0, -Math.PI / 2, Math.PI / 2][face], rr: [Math.PI, 0, Math.PI / 2, -Math.PI / 2][face] };
+  it.h = mh * sy * .6; it.wall = KK_WALL[m]; it.col = '#a9b0b6'; })); // it.h – tikai 2D slīpumam (krāsainās sienas redzamas); 🛞 augstums – it.kk.sy
+const TREE_TOP = new Image(); TREE_TOP.src = 'models/kk/trees_top.webp?v=1';
 const HOSP_BAY = { x: (hospBlock.x0 + hospBlock.x1) / 2, y: hospBlock.y1 + 34 }; // uzbrauktuve uz ielas pie slimnīcas
 // sastrēgumu posmi (ielas daļa starp krustojumiem): tur mašīnas brauc lēni un to ir daudz
 const jams = new Set();
@@ -624,7 +632,7 @@ function drawBuilding(it, t, dk, lit, neon) {
   if (it.hosp) { const hx = (it.x0 + it.x1) / 2, hy = (it.y0 + it.y1) / 2; ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(hx, hy, 46, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 52px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('H', hx, hy + 3);
     ctx.fillStyle = '#e53950'; [[it.x0 + 30, it.y0 + 30], [it.x1 - 30, it.y0 + 30]].forEach(([x, y]) => { ctx.fillRect(x - 7, y - 20, 14, 40); ctx.fillRect(x - 20, y - 7, 40, 14); }); }
   else if (it.fuel) { ctx.fillStyle = '#16a34a'; ctx.fillRect(it.x0, it.y0, w, 14); ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('⛽ DEGVIELA', (it.x0 + it.x1) / 2, (it.y0 + it.y1) / 2 + 6); }
-  else if (it.m != null && ROOFS.complete && ROOFS.naturalWidth) { ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(ROOFS, it.m * 256, 0, 256, 256, it.x0, it.y0, w, h); ctx.globalCompositeOperation = 'source-over'; } // Kenney jumta detaļas uz mājas krāsas
+  else if (it.kk && ROOFS.complete && ROOFS.naturalWidth) { const k = it.kk, sw = k.face < 2 ? w : h, sh = k.face < 2 ? h : w; ctx.save(); ctx.translate(it.x0 + w / 2, it.y0 + h / 2); ctx.rotate(k.rr); ctx.drawImage(ROOFS, k.m * 256, 0, 256, 256, -sw / 2, -sh / 2, sw, sh); ctx.restore(); } // KayKit jumts (fasāde pret ielu)
   else { ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.lineWidth = 2; ctx.strokeRect(it.x0 + 9, it.y0 + 9, w - 18, h - 18);
     it.det.forEach(d => { const x = it.x0 + 16 + d.u * (w - 46), y = it.y0 + 16 + d.v * (h - 46);
       if (d.k < .4) { ctx.fillStyle = '#9aa3ad'; ctx.fillRect(x, y, 22, 16); ctx.fillStyle = '#7d858f'; ctx.beginPath(); ctx.arc(x + 11, y + 8, 5, 0, 7); ctx.fill(); }
@@ -677,7 +685,7 @@ function drawBlock(b, t) {
   ctx.fillStyle = '#3d4250'; [[b.x0 + 8, b.y0 + 8], [b.x1 - 8, b.y0 + 8], [b.x0 + 8, b.y1 - 8], [b.x1 - 8, b.y1 - 8], [(b.x0 + b.x1) / 2, b.y0 + 8], [(b.x0 + b.x1) / 2, b.y1 - 8], [b.x0 + 8, (b.y0 + b.y1) / 2], [b.x1 - 8, (b.y0 + b.y1) / 2]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); });
   for (const tr of b.trees) { ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.arc(tr.x + 5, tr.y + 6, tr.r, 0, 7); ctx.fill();
     const f = 40 * PK, x = tr.x + (tr.x - cam.x) * f, y = tr.y + (tr.y - cam.y) * f; ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(tr.x, tr.y); ctx.lineTo(x, y); ctx.stroke();
-    if (TREE_TOP.complete && TREE_TOP.naturalWidth) { const d = tr.r * 3.1; ctx.drawImage(TREE_TOP, TREE_MODEL[tr.m] * 256, 0, 256, 256, x - d / 2, y - d / 2, d, d); }
+    if (TREE_TOP.complete && TREE_TOP.naturalWidth) { const d = tr.r * 3.2; ctx.drawImage(TREE_TOP, TREE_MODEL[tr.m] * 256, 0, 256, 256, x - d / 2, y - d / 2, d, d); }
     else if (tr.fir) { ctx.fillStyle = '#2f6b35'; ctx.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, rr_ = k % 2 ? tr.r * .55 : tr.r; ctx.lineTo(x + Math.cos(a) * rr_, y + Math.sin(a) * rr_); } ctx.fill(); ctx.fillStyle = '#3d8445'; ctx.beginPath(); ctx.arc(x, y, tr.r * .4, 0, 7); ctx.fill(); }
     else { const tt = tr.tint || 0, c1 = tt < .33 ? '#3f8f3a' : tt < .66 ? '#4a9a3c' : '#5d8f2f', c2 = tt < .33 ? '#5bb04f' : tt < .66 ? '#6cbf55' : '#86b347';
       ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(x, y, tr.r, 0, 7); ctx.arc(x + tr.r * .5, y + tr.r * .2, tr.r * .7, 0, 7); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.arc(x - tr.r * .25, y - tr.r * .25, tr.r * .55, 0, 7); ctx.fill(); } }
@@ -687,9 +695,9 @@ function drawHospital(b, ix0, iy0, ix1, iy1, t) {
   ctx.fillStyle = '#6b7080'; ctx.fillRect(ix0 + 40, iy1 - 70, ix1 - ix0 - 80, 70); // uzbrauktuve
   const cx = (ix0 + ix1) / 2; ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🚑 SLIMNĪCA', cx, iy1 - 34);
 }
-// mašīnas no augšas – Kenney Car Kit (CC0) modeļi, Blenderī uzrenderēti (models/cars/top.webp: rindas pa 160 px, priekša pa labi);
-// tie paši modeļi kā 🛞 skatā (c.k % 8), pēdējā rinda – ātrā palīdzība. Kamēr nav ielādēts – zīmētās mašīnas
-const CAR_TOP = new Image(); CAR_TOP.src = 'models/cars/top.webp?v=1'; const CAR_TOP_H = [151, 131, 117, 142, 135, 140, 140, 118, 118];
+// mašīnas no augšas – KayKit City Builder (CC0), Blenderī uzrenderētas (models/kk/cars_top.webp: rindas pa 140 px, priekša pa labi);
+// tie paši modeļi kā 🛞 skatā (KK_CARMAP), pēdējā rinda – ātrā palīdzība (universālis ar baltu virsbūvi). Kamēr nav ielādēts – zīmētās mašīnas
+const CAR_TOP = new Image(); CAR_TOP.src = 'models/kk/cars_top.webp?v=1'; const CAR_TOP_H = [133, 114, 114, 114, 114, 114]; // KayKit: hatchback, police, sedan, stationwagon, taxi, ātrā palīdzība (rindas pa 140 px)
 function drawCar(x, y, a, L, Wd, col, isAmb, t, c) {
   if (CAR_TOP.complete && CAR_TOP.naturalWidth) return drawCarTop(x, y, a, L, isAmb, t, c);
   ctx.save(); ctx.translate(x, y); ctx.rotate(a);
@@ -717,12 +725,12 @@ function drawCar(x, y, a, L, Wd, col, isAmb, t, c) {
   ctx.restore();
 }
 function drawCarTop(x, y, a, L, isAmb, t, c) {
-  const m = isAmb ? 8 : c ? c.k % 8 : Math.abs((x * 7 + y * 3) | 0) % 8, sh = CAR_TOP_H[m], w = L * 1.02, h = w * sh / 256, Wd = h * .82;
+  const m = isAmb ? 5 : KK_CARMAP[(c ? c.k : Math.abs((x * 7 + y * 3) | 0)) % KK_CARMAP.length], sh = CAR_TOP_H[m], w = L * 1.02, h = w * sh / 256, Wd = h * .82;
   ctx.save(); ctx.translate(x, y); ctx.rotate(a);
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 4, -Wd / 2 + 5, L, Wd, 8); ctx.fill();
   if (isAmb && amb.siren) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const on = Math.sin(t * 16) > 0;
     const g1 = ctx.createRadialGradient(4, 0, 4, 4, 0, 110); g1.addColorStop(0, on ? 'rgba(255,40,60,.45)' : 'rgba(40,110,255,.45)'); g1.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(4, 0, 110, 0, 7); ctx.fill(); ctx.restore(); }
-  ctx.drawImage(CAR_TOP, 0, m * 160, 256, sh, -w / 2, -h / 2, w, h);
+  ctx.drawImage(CAR_TOP, 0, m * 140, 256, sh, -w / 2, -h / 2, w, h);
   if (isAmb) { // sarkans krusts uz jumta un bākugunis (sirēna mirgo sarkani/zili)
     ctx.fillStyle = '#e53950'; ctx.fillRect(-14, -3.5, 22, 7); ctx.fillRect(-6.5, -11, 7, 22);
     const on = Math.sin(t * 16) > 0, bx = L * .2; ctx.fillStyle = amb.siren ? (on ? '#ff2a43' : '#5a1520') : '#7a2a33'; ctx.fillRect(bx, -Wd / 2 + 3, 6, Wd / 2 - 3);
