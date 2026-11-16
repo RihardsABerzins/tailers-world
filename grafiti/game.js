@@ -1857,10 +1857,10 @@ updateHud();
 // ---- Pirmās spēles instrukcija (1–2 teikumi par katru funkciju) ----
 // Instrukcija pirms spēles – kopīgais logs TW.intro (tw-common.js): 4 īsti kadri no spēles + daži vārdi.
 const INTRO=[
-  {img:'intro/1.webp',t:'Tap a wall – paint! 🎨'},
-  {img:'intro/2.webp',t:'Trace the shape exactly ✏️'},
-  {img:'intro/3.webp',t:'Watch out for police 🚓 – hide!'},
-  {img:'intro/4.webp',t:'Buy paint and eat 🍔'},
+  {img:'intro/1.webp?v=2',t:'Tap a wall – paint! 🎨'},
+  {img:'intro/2.webp?v=2',t:'Trace the shape exactly ✏️'},
+  {img:'intro/3.webp?v=2',t:'Watch out for police 🚓 – hide!'},
+  {img:'intro/4.webp?v=2',t:'Buy paint and eat 🍔'},
 ];
 const showIntro=force=>window.TW&&TW.intro?TW.intro('grafiti',INTRO,force,{i18n:true}):Promise.resolve();
 document.getElementById('pzHelp').onclick=()=>{ pauseOv.classList.remove('on'); showIntro(true).then(openPauseAgain); };
