@@ -87,19 +87,6 @@
   #pTitle{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;color:#ddd}
   #pVol{width:84px;height:4px;accent-color:#ffd34d}
   #pVolTxt{font-size:11px;color:#ccc;min-width:30px}
-  #tutOv{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:#000c;backdrop-filter:blur(6px);padding:16px}
-  #tutOv.on{display:flex}
-  #tut{width:min(460px,100%);max-height:94vh;overflow:auto;background:linear-gradient(160deg,#2a2350,#1e2027 70%);border:1px solid #fff3;border-radius:22px;padding:20px 20px 16px;text-align:center;color:#fff;box-shadow:0 20px 60px #000a}
-  #tut .ti{font-size:64px;line-height:1;display:block;margin:4px 0 8px;animation:tutPop .5s cubic-bezier(.2,1.6,.4,1) both}
-  #tut h3{margin:0 0 8px;font-size:23px}
-  #tut p{margin:0 auto;font-size:17px;line-height:1.45;color:#e8e4ff;max-width:380px;min-height:3em}
-  #tut .dots{display:flex;gap:6px;justify-content:center;margin:14px 0 12px}
-  #tut .dots i{width:8px;height:8px;border-radius:50%;background:#fff3}
-  #tut .dots i.on{background:#ffd34d;width:20px;border-radius:5px}
-  #tut .tb{display:flex;gap:10px}
-  #tut .tb button{flex:1;min-height:52px;font-size:17px;border-radius:14px}
-  #tut .skip{background:none;border:0;color:#aab;font-size:14px;margin-top:10px;min-height:36px;cursor:pointer;text-decoration:underline}
-  @keyframes tutPop{from{transform:scale(.3) rotate(-15deg);opacity:0}to{transform:none;opacity:1}}
   #pauseBox{width:min(540px,94vw);max-height:90vh;overflow:auto;background:#1e2027;border-radius:16px;padding:20px;border:1px solid #fff2}
   #pauseBox input[type=range]{width:210px;accent-color:#ffd34d}
   #setBtn{position:fixed;left:290px;bottom:12px;z-index:12;background:#000a;color:#eee;border:1px solid #fff3}

@@ -30,10 +30,9 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - `grafiti/` – Graffiti RPG. Kods raksta tekstus angliski; valodas slānis (skripts `<head>` sākumā, `PHRASES`/`WORDS`) pārtulko visu redzamo latviski. Noklusējums – latviešu; iestatījumos LV/EN slēdzis (localStorage `twLang`). Jaunam tekstam pievieno tulkojumu `PHRASES` sarakstā.
 
 ## Instrukcija spēlē
-- Pirmajā reizē – mācības darot (`GUIDE`: bultiņa uz sienu → Zīmēt → apvelc → padomi), dzeltens baneris. 10 lapu instrukcija (`TUT_LV`/`TUT_EN`) – pauzē „❓ Kā spēlēt”.
+- Graffiti pirms spēles – `TW.intro('grafiti', INTRO)` (game.js): 4 īsti kadri no spēles `grafiti/intro/1..4.webp` (800×500, 15–32 KB) ar 3–5 vārdiem (EN kodā, LV – `PHRASES`); spēle stāv pauzē, līdz aizver. Pauzē „❓ Kā spēlēt” atver to pašu logu (`force`). Pēc tam pirmajā reizē – mācības darot (`GUIDE`: bultiņa uz sienu → Zīmēt → apvelc → padomi), dzeltens baneris, atzīme `grafitiTut`.
 - Pēc sienas – rezultāta kartīte `showResult` (1–3 zvaigznes, zīmējums virs kontūras, ikonas) garā teksta vietā.
 - Telefonā nerāda tastatūras taustiņus (`.kh`, `.kbOnly`, `isTouch` teksti).
-- Pirmajā reizē rāda soļu instrukciju (1–2 teikumi par katru funkciju + mērķis): `TUT_LV`/`TUT_EN` grafiti/index.html, atzīme `grafitiTut` localStorage; vēlreiz – pauzē „❓ Kā spēlēt”. Jaunai funkcijai pievieno soli.
 - Spēlētāju vārdus kanvā zīmē ar `fillTextRaw` (netulko, piem. „Gold”).
 
 ## Mobilā vadība (principi)

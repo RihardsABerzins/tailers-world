@@ -1575,7 +1575,7 @@ addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(e.target&&e.target.tagName==='INPUT'&&k!=='escape'&&k!=='enter') return;
   if(typeof lootOpen!=='undefined'&&lootOpen){ if(k==='enter'||k===' '){ const b=lootEl.querySelector('button'); b&&b.click(); } return; }
-  if(document.getElementById('tutOv').classList.contains('on')){ if(k==='escape') closeTut(); else if(k==='arrowright'||k==='enter'||k===' ') document.getElementById('tutNext').click(); else if(k==='arrowleft') showTut(tutI-1); return; }
+  { const io=document.getElementById('twIntro'); if(io){ if(k==='arrowright'||k==='enter'||k===' ') io.querySelector('.next').click(); else if(k==='escape'){ const sk=io.querySelector('.skip')||io.querySelector('.next'); sk.click(); } return; } }
   if(mode==='pause'){ if(k==='escape'||k==='p') closePause(); return; }
   if(mode==='chat'){ if(k==='escape') TWS.close(); return; }
   if(mode==='ride') return;
@@ -1733,48 +1733,16 @@ setInterval(netTick,500);
 
 updateHud();
 // ---- Pirmās spēles instrukcija (1–2 teikumi par katru funkciju) ----
-const TUT_LV=[
-  ['🎯','Tavs mērķis','Kļūsti par labāko grafiti mākslinieku! Zīmē sienas, krāj naudu un XP, kāp līmeņos un tiec līdz 99. līmenim un 10. pilsētai.'],
-  ['🕹️','Kustība',isTouch?'Staigā ar ◀ ▶ bultiņām un lec ar ⤒. Uzspied uz veikala, sienas vai miskastes – tēls pats aizies un izdarīs.':'Skrien ar A / D, lec ar W. Pie sienas, veikala vai metro spied E.'],
-  ['🎨','Zīmēšana',isTouch?'Pie sienas spied 🎨 Zīmēt un ar pirkstu apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.':'Pie sienas spied E un ar peli apvelc parādīto formu. Jo precīzāk, jo vairāk naudas un XP.'],
-  ['🧱','Līmeņi','Katrā līmenī ir 3 sienas. Sakrāj XP, un atveras nākamā līmeņa sienas – grūtākas, bet maksā vairāk.'],
-  ['🚓','Policija','Grafiti ir aizliegts! Jo vairāk cilvēku redz, kā tu zīmē (👀), jo ātrāk ierodas policija. Zīmē, kad neviens neskatās, bēdz vai paslēpies miskastē 🙈.'],
-  ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Krāsa zīmējot iztērējas 🎨 – uzpildi to depo (melnā lētākā, €20). Katru nakti 02:00 saņem €20 dāvanā!'],
-  ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet lēnāk, un rokas trīc. Kafejnīcā vai picērijā pērc ēdienu līdzņemšanai – tas ieiet somā 🎒, un ēd, kad gribi.'],
-  ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
-  ['🔁','Atkārto manu zīmējumu','Pilsētas sākumā pie sienas ATKĀRTO MANI uzzīmē savu zīmējumu citiem vai atkārto kāda cita zīmējumu. Nauda un XP par precizitāti, ar 90% un vairāk – arī lootbox 🎁!'],
-  ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
-  ['⚙️','Iestatījumi','⚙ pogā ir skaņa, gaišums un valoda, 🎵 – radio. Šo instrukciju vari atvērt vēlreiz pauzē: ❓ Kā spēlēt.'],
+// Instrukcija pirms spēles – kopīgais logs TW.intro (tw-common.js): 4 īsti kadri no spēles + daži vārdi.
+const INTRO=[
+  {img:'intro/1.webp',t:'Tap a wall – paint! 🎨'},
+  {img:'intro/2.webp',t:'Trace the shape exactly ✏️'},
+  {img:'intro/3.webp',t:'Watch out for police 🚓 – hide!'},
+  {img:'intro/4.webp',t:'Buy paint and eat 🍔'},
 ];
-const TUT_EN=[
-  ['🎯','Your goal','Become the best graffiti artist! Paint walls, earn money and XP, level up and reach level 99 and city 10.'],
-  ['🕹️','Moving',isTouch?'Walk with the ◀ ▶ arrows and jump with ⤒. Tap a shop, wall or dumpster – your character walks there and does it.':'Run with A / D, jump with W. Press E at a wall, shop or metro.'],
-  ['🎨','Painting',isTouch?'At a wall tap 🎨 Paint and trace the shape with your finger. The more accurate, the more money and XP.':'Press E at a wall and trace the shape with the mouse. The more accurate, the more money and XP.'],
-  ['🧱','Levels','Every level has 3 walls. Earn XP to unlock the next level\'s walls – harder, but they pay more.'],
-  ['🚓','Police','Graffiti is illegal! The more people see you paint (👀), the faster the police come. Paint when nobody is looking, run or hide in a dumpster 🙈.'],
-  ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Paint runs out as you draw 🎨 – refill it there (black is cheapest, €20). Every night at 02:00 you get €20 as a gift!'],
-  ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks slower and their hands shake. Buy takeaway food at a café or pizzeria – it goes into your backpack 🎒, eat it whenever you like.'],
-  ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
-  ['🔁','Repeat my drawing','At the REPEAT ME wall at the start of each city, draw something for others or repeat someone else\'s drawing. Money and XP for accuracy, 90% or more also gives a loot box 🎁!'],
-  ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
-  ['⚙️','Settings','The ⚙ button has sound, brightness and language, 🎵 is the radio. Open this guide again from pause: ❓ How to play.'],
-];
-let tutI=0, tutPrev='world';
-function showTut(i){ const T=window.TW_LANG==='en'?TUT_EN:TUT_LV, en=window.TW_LANG==='en'; tutI=Math.max(0,Math.min(T.length-1,i)); const [ic,h,t]=T[tutI];
-  const ti=document.getElementById('tutI'); ti.textContent=ic; ti.style.animation='none'; ti.offsetWidth; ti.style.animation='';
-  document.getElementById('tutH').textContent=h; document.getElementById('tutP').textContent=t;
-  document.getElementById('tutD').innerHTML=T.map((_,k)=>`<i class="${k===tutI?'on':''}"></i>`).join('');
-  const b=document.getElementById('tutBack'); b.textContent=en?'← Back':'← Atpakaļ'; b.style.visibility=tutI?'visible':'hidden';
-  document.getElementById('tutNext').textContent=tutI===T.length-1?(en?'Let\'s play! ▶':'Spēlējam! ▶'):(en?'Next →':'Tālāk →');
-  document.getElementById('tutSkip').textContent=en?'Skip':'Izlaist'; }
-function openTut(){ tutPrev=mode==='pause'?'pause':'world'; if(mode==='world') mode='pause'; pauseOv.classList.remove('on'); document.getElementById('tutOv').classList.add('on'); showTut(0); }
-function closeTut(){ document.getElementById('tutOv').classList.remove('on'); try{ localStorage.setItem('grafitiTut','1'); }catch(e){} if(tutPrev==='pause') openPauseAgain(); else mode='world'; }
+const showIntro=force=>window.TW&&TW.intro?TW.intro('grafiti',INTRO,force):Promise.resolve();
+document.getElementById('pzHelp').onclick=()=>{ pauseOv.classList.remove('on'); showIntro(true).then(openPauseAgain); };
 function openPauseAgain(){ mode='world'; openPause(); }
-document.getElementById('tutNext').onclick=()=>{ const T=window.TW_LANG==='en'?TUT_EN:TUT_LV; if(tutI>=T.length-1) closeTut(); else { showTut(tutI+1); buzz(8); } };
-document.getElementById('tutBack').onclick=()=>showTut(tutI-1);
-document.getElementById('tutSkip').onclick=closeTut;
-document.getElementById('pzHelp').onclick=openTut;
-{ let sx=null; const ov=document.getElementById('tutOv'); ov.addEventListener('pointerdown',e=>{ sx=e.clientX; }); ov.addEventListener('pointerup',e=>{ if(sx==null) return; const dx=e.clientX-sx; sx=null; if(Math.abs(dx)>50){ if(dx<0) document.getElementById('tutNext').click(); else showTut(tutI-1); } }); }
 const GUIDE=[
   {t:isTouch?'👉 Walk to the brick wall with ◀ ▶ – or just tap the wall':'👉 Walk to the brick wall (A / D)', done:()=>nearLot&&nearLot.kind==='wall'&&!locked(nearLot)||mode==='entering'||mode==='draw'},
   {t:isTouch?'🎨 Tap the big Paint button':'🎨 Press E to paint', done:()=>mode==='entering'||mode==='draw'},
@@ -1794,6 +1762,8 @@ function drawGuideArrow(){ if(guide.i<0||guide.i>1||mode!=='world') return; let 
   const y=b.py-112+Math.sin(time*6)*8; /* virs LEVEL plāksnītes, lai burti neraustās */ ctx.save(); ctx.fillStyle='#ffd34d'; ctx.strokeStyle='#000'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(b.cx-26,y); ctx.lineTo(b.cx+26,y); ctx.lineTo(b.cx,y+34); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.fillRect(b.cx-10,y-30,20,32); ctx.restore(); }
 let tutSeen=false; try{ tutSeen=localStorage.getItem('grafitiTut')==='1'; }catch(e){}
 // Pirmajā reizē – mācības darot (bultiņa uz sienu, uzzīmē pirmo sienu). 10 lapu instrukcija paliek pauzē: ❓ Kā spēlēt.
-if(!tutSeen) startGuide(); else
-toast(isTouch?'Tap a brick wall to paint 🎨. People with 📱 can call the police – hide in a dumpster 🙈.':'Run along the street with <b>A / D</b>. Press <b>E</b> at a brick wall and paint. The Paint Depot (pink sign) sells colors and vehicles. People with 📱 can report you to the police – hide with <b>S</b>.');
+// pirmajā reizē vispirms instrukcija (bildes), tad spēle
+{ let seen=false; try{ seen=!!localStorage.getItem('twIntro:grafiti'); }catch(e){} if(!seen) mode='pause'; }
+showIntro(false).then(()=>{ if(mode==='pause'&&!pauseOv.classList.contains('on')) mode='world'; if(!tutSeen) startGuide(); else
+toast(isTouch?'Tap a brick wall to paint 🎨. People with 📱 can call the police – hide in a dumpster 🙈.':'Run along the street with <b>A / D</b>. Press <b>E</b> at a brick wall and paint. The Paint Depot (pink sign) sells colors and vehicles. People with 📱 can report you to the police – hide with <b>S</b>.'); });
 requestAnimationFrame(frame);
