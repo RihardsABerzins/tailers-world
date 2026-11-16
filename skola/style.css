@@ -82,3 +82,8 @@ button{font:inherit;cursor:pointer}
 #timer.on{opacity:1}
 #timer i{position:absolute;left:0;top:0;bottom:0;width:100%;background:#2ecc71;transition:background .3s}
 #timer span{position:relative;display:block;text-align:center;font-weight:900;font-size:13.5px;line-height:24px;text-shadow:0 1px 2px #000}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;justify-content:center}
+.chips span{background:#ffffff12;border:1px solid #ffffff22;border-radius:999px;padding:6px 11px;font-weight:800;font-size:13.5px}
+.row2.go2{grid-template-columns:2fr 1fr;align-items:stretch}
+.row2.go2 .main{margin-top:8px}

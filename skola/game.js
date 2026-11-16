@@ -228,7 +228,7 @@ function nextQ() {
   L.cur = q; L.st = 'q'; L.qT = LT; L.qp = 0; L.qd = qDur(q);
   if (q.id) { save.seen = save.seen.filter(x => x !== q.id).concat(q.id).slice(-80); }
   const opts = shuffle([q.a, ...q.w.slice(0, 3)]);
-  const ans = pickAnswerers();
+  const ans = pickAnswerers(opts);
   kids.forEach(k => { const i = ans.indexOf(k); if (k.st === 'wc') return; k.pk = null; k.say = ''; k.ouch = 0;
     if (i >= 0) { k.ans = opts[i]; k.st = 'hand'; k.t = LT + .5 + i * .14 + Math.random() * .25; } else { k.ans = ''; k.st = 'idle'; k.t = LT; } });
   // joki: pirmajā mācību stundā 1. jautājumā nav, 2. jautājumā viens lēns
@@ -237,11 +237,22 @@ function nextQ() {
   else L.np = Math.random() < Math.min(.9, .5 + tLv() * .04) ? LT + rnd(1, 2.6) : LT + rnd(4, 7);
   sfx('chalk'); hud();
 }
-function pickAnswerers() {
+// atbildes burbuļa taisnstūris (tāpat kā drawBubble) – lai burbuļi nepārklātos
+function bubRect(k, txt) {
+  const s = k.s, f = clamp(s * .58, 13, 22); g.font = `800 ${f}px system-ui,sans-serif`;
+  const mw = Math.max(3.7 * s, 86); let lines = wrap(txt, mw); if (lines.length > 2) { g.font = `800 ${f * .82}px system-ui,sans-serif`; lines = wrap(txt, mw * 1.05); }
+  const bw = Math.max(...lines.map(l => g.measureText(l).width)) + 18, bh = lines.length * f * 1.12 + 12, cx = clamp(k.x - .15 * s, bw / 2 + 4, W - bw / 2 - 4), by = k.y - 3.95 * s - bh;
+  return { x0: cx - bw / 2 - 3, x1: cx + bw / 2 + 3, y0: by - 3, y1: by + bh + .4 * s };
+}
+function pickAnswerers(opts) {
   const b = LY.board, ok = kids.filter(k => !k.out && k.st !== 'wc' && k.y - 5.4 * k.s >= b.y + b.h - 10), pool = ok.length >= 4 ? ok : kids.filter(k => !k.out && k.st !== 'wc');
-  const far = (a, c) => a.r !== c.r ? Math.abs(a.x - c.x) > Math.max(a.s, c.s) * 1.6 : Math.abs(a.x - c.x) > Math.max(a.s, c.s) * 4.2;
-  for (let t = 0; t < 80; t++) { const c = shuffle(pool.slice()).slice(0, 4); if (c.every(a => c.every(o => a === o || far(a, o)))) return c; }
-  return shuffle(pool.slice()).slice(0, 4);
+  const hit = (a, c) => a.x0 < c.x1 && c.x0 < a.x1 && a.y0 < c.y1 && c.y0 < a.y1;
+  let best = null, bestN = 99;
+  for (let t = 0; t < 120; t++) { const c = shuffle(pool.slice()).slice(0, 4), R = c.map((k, i) => bubRect(k, opts[i]));
+    // burbulis nedrīkst aizsegt citu burbuli vai cita atbildētāja seju
+    let n = 0; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if (i !== j) { const o = c[j]; if (hit(R[i], R[j])) n += 2; if (hit(R[i], { x0: o.x - o.s, x1: o.x + o.s, y0: o.y - 3.6 * o.s, y1: o.y - 1.6 * o.s })) n++; }
+    if (n < bestN) { best = c; bestN = n; } if (!n) break; }
+  return best;
 }
 // laiks beidzās – mācību brīdis bez soda
 function timeUp() {
@@ -436,7 +447,7 @@ function drawClock() {
 function boardText() {
   const b = LY.board, pad = 14, iw = b.w - pad * 2, ink = boardC().ink;
   g.globalAlpha = .7; g.fillStyle = ink; g.font = `700 ${clamp(b.h * .11, 11, 15)}px ${CHALK}`; g.textAlign = 'left'; g.textBaseline = 'top';
-  if (!L || !L.cur) { g.globalAlpha = 1; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${clamp(b.h * .24, 18, 40)}px ${CHALK}`;
+  if (!L || !L.cur || L.st === 'end') { g.globalAlpha = 1; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${clamp(b.h * .24, 18, 40)}px ${CHALK}`;
     g.fillText(L ? 'Sākam stundu! ✏️' : 'Labdien, klase! 👋', b.x + b.w / 2, b.y + b.h / 2); return; }
   g.fillText(`${(L.cur.s && SUBJ[L.cur.s]) || (L.cur.lg ? '🧩 Loģika' : '🔢 Matemātika')} · ${Math.min(L.n + 1, QN)}/${QN}`, b.x + pad, b.y + 9); g.globalAlpha = 1;
   const top = b.y + 9 + clamp(b.h * .11, 11, 15) + 4, ih = b.h - (top - b.y) - 12;
@@ -613,7 +624,7 @@ function prankFx(k, tt, hx, hy) {
 }
 // ❗ virs draiskuļa – zīmē pašā virspusē, lai priekšējo burbuļi to neaizsedz
 function drawAlert(k) {
-  const { x, y, s } = k, tt = LT - k.t, by = y - 4.3 * s + Math.sin(LT * 14) * s * .12, r = Math.max(13, .55 * s + 6); circ(x, by, r); fs('#ff3b4e', 3);
+  const { x, y, s } = k, tt = LT - k.t, by = y - 4.3 * s + Math.sin(LT * 14) * s * .12, r = Math.max(13, .55 * s + 6); k.al = { x, y: by, r: r + 10 }; circ(x, by, r); fs('#ff3b4e', 3);
   g.fillStyle = '#fff'; g.font = `900 ${r * 1.4}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, by + 1);
   if (k.warn > 1.8) { g.lineWidth = 4; g.strokeStyle = '#ffd34d'; g.beginPath(); g.arc(x, by, r + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - tt / k.warn)); g.stroke(); }
 }
@@ -631,7 +642,7 @@ function wcBubble(k) {
 }
 // burbuļi: atbildes, ❗, atvainošanās – zīmē pēc visiem skolēniem, lai būtu virspusē
 function drawBubble(k) {
-  const { x, y, s, st } = k, tt = LT - k.t; k.hit = { x0: x - 2 * s, x1: x + 2 * s, y0: y - 5.4 * s, y1: y + 1.45 * s };
+  const { x, y, s, st } = k, tt = LT - k.t, hw = Math.max(2 * s, 28); k.hit = { x0: x - hw, x1: x + hw, y0: Math.min(y - 5.4 * s, y - 4.3 * s - 26), y1: y + 1.45 * s }; k.bb = null;
   if (k.out || st === 'plot') return;
   if (st === 'wc') { wcBubble(k); return; }
   if (k.ouch > LT) { const f0 = clamp(s * .6, 13, 20); g.font = `900 ${f0}px system-ui,sans-serif`; const t0 = 'Ei! 😠', w0 = g.measureText(t0).width + 14, bx = clamp(x + 1.6 * s, w0 / 2 + 4, W - w0 / 2 - 4), by0 = y - 3.2 * s;
@@ -649,7 +660,7 @@ function drawBubble(k) {
   rr(cx - bw / 2, by, bw, bh, 12); g.lineWidth = 2.4; g.strokeStyle = OL; g.stroke();
   g.fillStyle = bg; g.fillRect(x - .32 * s, by + bh - 3, .55 * s, 4); g.beginPath(); g.moveTo(x - .35 * s, by + bh); g.lineTo(x - .05 * s, by + bh + .4 * s); g.lineTo(x + .25 * s, by + bh); g.stroke();
   g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; lines.forEach((l, i) => g.fillText(l, cx, by + 6 + lh * (i + .5)));
-  g.restore(); k.hit.y0 = Math.min(k.hit.y0, by - 4);
+  g.restore(); k.hit.y0 = Math.min(k.hit.y0, by - 4); k.bb = { x0: cx - bw / 2 - 4, x1: cx + bw / 2 + 4, y0: by - 4, y1: by + bh + .4 * s };
 }
 function addFx(x, y, txt, col) { fx.push({ x, y, txt, col, t0: LT, d: 1.3 }); }
 function drawFx() { for (const f of fx) { const p = (LT - f.t0) / f.d; g.globalAlpha = 1 - p * p; g.font = `900 ${clamp(W * .045, 18, 28)}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -686,9 +697,14 @@ cv.addEventListener('pointerdown', e => { e.preventDefault(); audioInit();
   const wk = kids.find(k => k.st === 'wc' && k.wcBtn && y >= k.wcBtn.y0 && y <= k.wcBtn.y1 && x >= k.wcBtn.yes[0] && x <= k.wcBtn.no[1]); if (wk) { wcDecide(wk, x < wk.wcBtn.no[0]); return; }
   // vispirms tie, kas draiskojas (pieķert ir svarīgāk nekā atbildēt)
   const hit = k => k.hit && x >= k.hit.x0 && x <= k.hit.x1 && y >= k.hit.y0 && y <= k.hit.y1;
-  const pr = kids.find(k => (k.st === 'plot' || k.st === 'prank') && hit(k)); if (pr) { catchKid(pr); return; }
+  // secība: ❗ zīme → atbildes burbulis → draiskuļa ķermenis → atbildētāja ķermenis (priekšējais vispirms)
+  const busy = k => k.st === 'plot' || k.st === 'prank', front = (LY.order || kids).slice().reverse();
+  const al = kids.find(k => k.st === 'plot' && k.al && Math.hypot(x - k.al.x, y - k.al.y) < k.al.r); if (al) { catchKid(al); return; }
+  const inB = k => k.bb && x >= k.bb.x0 && x <= k.bb.x1 && y >= k.bb.y0 && y <= k.bb.y1;
+  const bk = front.find(k => k.st === 'hand' && inB(k)); if (bk) { if (LT - bk.t > .15) answer(bk); return; }
+  const pr = front.find(k => busy(k) && hit(k)); if (pr) { catchKid(pr); return; }
   if (e.clientY > LY.td.y) return;
-  const k = (LY.order || kids).slice().reverse().find(k => k.st === 'hand' && hit(k)); if (!k) return;
+  const k = front.find(k => k.st === 'hand' && hit(k)); if (!k) return;
   if (k.st === 'hand' && LT - k.t > .15) answer(k); });
 
 // ================= Logi =================
@@ -718,11 +734,10 @@ function lobby() {
   if (L) L.st = 'end'; banner('');
   const lv = tLv();
   sheet(`<div class="step">Tailers World · Skola</div><h2>🏫 Skola</h2>
-    <p>Tu vadi stundu! Uz tāfeles ir jautājums – no matemātikas, loģikas, dabas, valodām vai par Latviju. Skolēni paceļ rokas – pieskaries tam, kuram ir <b>pareizā</b> atbilde.</p>
-    <div class="fact">❗ Klasē ir 10 skolēni, un daži grib draiskoties – spļauj papīra bumbiņas, met lidmašīnas, nodod zīmītes. Kad virs galvas redzi <b>❗</b>, ātri pieskaries!<br>😊 Pieķer draiskuļus – klasei būs labs noskaņojums un tu nopelnīsi vairāk.</div>
-    <div class="parts"><div class="part">🍎 Tavs līmenis <b>${lv}.</b></div><div class="part">🎓 Jautājumi <b>${grade()}. klasei${save.grade ? ' (izvēlēta)' : ''}</b></div><div class="part">😈 Draiskuļi reizē <b>līdz ${maxBusy()}</b></div></div>
-    <p style="color:#9fb0ff;font-size:13.5px;text-align:center">Jo augstāks līmenis, jo grūtāki jautājumi un viltīgāki draiskuļi. Ja par grūtu – pieskaries 📁 mapītei uz galda.</p>
-    <button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klase un tāfele</button>`);
+    <p>Tu esi skolotājs! Uz tāfeles ir jautājums – <b>pieskaries skolēnam ar pareizo atbildi</b>.</p>
+    <div class="fact">❗ = draiskulis! Ātri pieskaries viņam.<br>☕ Nogursti? Iedzer kafiju. 📁 Par grūtu? Mapītē izvēlies klasi.</div>
+    <div class="chips"><span>🍎 ${lv}. līmenis</span><span>🎓 ${grade()}. klase</span><span>😈 līdz ${maxBusy()} draiskuļiem</span></div>
+    <div class="row2 go2"><button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klase un tāfele</button></div>`);
   $('go').onclick = startLesson; $('shopB').onclick = () => shop(lobby);
 }
 function shop(back) {
