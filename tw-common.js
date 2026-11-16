@@ -62,4 +62,20 @@
     document.addEventListener('tw-back', arm);
     arm(); return setInterval(beat, 15000);
   };
+  // 🏠 „Uz sākumu” – visās spēlēs (lapas, kas ielādē ../tw-common.js) vienmēr redzama poga kreisajā augšējā stūrī,
+  // virs visiem logiem. Pirmais pieskāriens – „Uz sākumu?”, otrais (3 s laikā) – aiziet uz sākumlapu (lai bērns netīšām neiziet).
+  const me = document.currentScript, inGame = me && /^\.\.\//.test(me.getAttribute('src') || '');
+  if (inGame) {
+    const st = document.createElement('style'); st.textContent = `
+      #twHome{position:fixed;left:calc(8px + env(safe-area-inset-left));top:calc(8px + env(safe-area-inset-top));z-index:2147483000;height:48px;min-width:48px;padding:0 12px;box-sizing:border-box;border-radius:24px;border:2px solid #ffffff55;background:rgba(16,20,36,.82);color:#fff;font:800 15px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 16px #0006;cursor:pointer;-webkit-tap-highlight-color:transparent;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);touch-action:manipulation}
+      #twHome b{font-size:22px;line-height:1}#twHome span{display:none;white-space:nowrap}#twHome.ask{background:linear-gradient(160deg,#ffd34d,#ffb020);color:#2b1a00;border-color:#fff}#twHome.ask span{display:inline}
+      #top{left:calc(64px + env(safe-area-inset-left)) !important} #stat > #home{display:none !important} #hud{left:64px !important}`;
+    document.head.appendChild(st);
+    const add = () => { if (document.getElementById('twHome')) return; const b = document.createElement('button'); b.id = 'twHome'; b.type = 'button'; b.title = 'Uz sākumlapu'; b.setAttribute('aria-label', 'Uz sākumlapu');
+      b.innerHTML = '<b>🏠</b><span>Uz sākumu?</span>'; let t = 0;
+      const go = e => { e.preventDefault(); e.stopPropagation(); if (b.classList.contains('ask')) { location.href = '../index.html'; return; }
+        b.classList.add('ask'); clearTimeout(t); t = setTimeout(() => b.classList.remove('ask'), 3000); };
+      b.addEventListener('pointerdown', e => e.stopPropagation()); b.addEventListener('pointerup', go); b.addEventListener('click', e => e.preventDefault()); document.body.appendChild(b); };
+    if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
+  }
 })();
