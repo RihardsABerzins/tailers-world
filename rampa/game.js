@@ -141,13 +141,30 @@ function buildCity0() {
   scene.add(cb); scene.add(cc); scene.add(cw); if (cd) scene.add(cd);
   // mākoņi
   const cl = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 1), CLOUDM, 70), RM = mulberry(9);
-  for (let i = 0; i < 70; i++) { const s = 18 + RM() * 30; cl.setMatrixAt(i, m4.compose(v3.set((RM() - .5) * 1600, 160 + RM() * 160, -300 + RM() * (CITY_Z + 600)), q0, new T3.Vector3(s * 2, s * .55, s * 1.4))); }
-  scene.add(cl);
+  for (let i = 0; i < 70; i++) { const s = 18 + RM() * 30; CLOUDS.push({ x: (RM() - .5) * 1800, y: 160 + RM() * 160, z: -300 + RM() * (CITY_Z + 600), sc: new T3.Vector3(s * 2, s * .55, s * 1.4), v: 1.2 + RM() * 1.6 }); }
+  cl.frustumCulled = false; cl.userData.noChunk = true; CLOUDS.mesh = cl; driftClouds(0); scene.add(cl);
   // attāluma zīmes ik pēc 100 m
   for (let z = 100; z <= CITY_Z; z += 100) { const sp = label(`${z} m`, '#ffffff', '#1b2140cc', 26); sp.position.set(-35, 15, z); sp.scale.set(10, 3.4, 1); scene.add(sp);
     const pole = new T3.Mesh(POLE, mat(0x8a8f99)); pole.position.set(-35, 6.5, z); scene.add(pole); }
 }
 const POLE = new T3.CylinderGeometry(.15, .15, 13, 5);
+// mākoņi lēni slīd vējā (pa x, aiz ±900 m – miglā – atgriežas otrā pusē)
+const CLOUDS = [];
+function driftClouds(dt) { const m = CLOUDS.mesh; if (!m) return; CLOUDS.forEach((c, i) => { c.x += c.v * dt; if (c.x > 900) c.x -= 1800; m.setMatrixAt(i, m4.compose(v3.set(c.x, c.y, c.z), q0, c.sc)); }); m.instanceMatrix.needsUpdate = true; }
+// dekoratīvi putnu bariņi tālumā (V formā, vicina spārnus) – bez sadursmēm, viena instancēta mēģa (lēti telefonam)
+const DB = { fl: [] };
+{ const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute([0, 0, .3, -1, .45, -.2, 0, 0, -.15, 0, 0, .3, 0, 0, -.15, 1, .45, -.2], 3));
+  DB.m = new T3.InstancedMesh(g, new T3.MeshBasicMaterial({ color: 0x2b2f38, side: T3.DoubleSide }), 36); DB.m.frustumCulled = false; scene.add(DB.m);
+  for (let f = 0; f < 6; f++) DB.fl.push({ c: new T3.Vector3(), h: 0, sp: 0, ph: Math.random() * 9, init: false }); }
+const dbf = new T3.Vector3(), dbq = new T3.Quaternion(), dbe = new T3.Euler(), dbs = new T3.Vector3();
+function updateDecoBirds(dt) { camera.getWorldDirection(dbf); dbf.y = 0; if (dbf.lengthSq() < .01) dbf.set(0, 0, 1); dbf.normalize(); const cp = camera.position;
+  DB.fl.forEach((f, fi) => { tmp.copy(f.c).sub(cp); const ahead = tmp.x * dbf.x + tmp.z * dbf.z;
+    if (!f.init || tmp.length() > 750 || ahead < -150) { const d = rnd(f.init ? 380 : 120, 520), sd = rnd(-260, 260); f.c.set(cp.x + dbf.x * d - dbf.z * sd, Math.max(35, cp.y + rnd(-10, 50)), cp.z + dbf.z * d + dbf.x * sd); f.h = rnd(0, 6.28); f.sp = rnd(6, 10); f.init = true; }
+    f.h += Math.sin(performance.now() / 4000 + fi) * .1 * dt; f.c.x += Math.sin(f.h) * f.sp * dt; f.c.z += Math.cos(f.h) * f.sp * dt; f.ph += dt * 7;
+    for (let k = 0; k < 6; k++) { const row = Math.ceil(k / 2), sx = k ? (k % 2 ? -1 : 1) * row * 2.2 : 0, sz = -row * 1.8, ch = Math.cos(f.h), sh = Math.sin(f.h);
+      v3.set(f.c.x + sx * ch + sz * sh, f.c.y + Math.sin(f.ph * .3 + k) * .4, f.c.z - sx * sh + sz * ch); dbq.setFromEuler(dbe.set(0, f.h, 0)); dbs.set(1.1, Math.sin(f.ph + k * .7), 1.1);
+      DB.m.setMatrixAt(fi * 6 + k, m4.compose(v3, dbq, dbs)); } });
+  DB.m.instanceMatrix.needsUpdate = true; }
 // ---- diena un nakts (kā citās spēlēs: 6 min diennakts, sākas 10:00; naktī 21–6) ----
 const DAYLEN = 360; let DAYT = 0; const DAY0 = 10 / 24 * DAYLEN;
 const hourNow = () => ((DAYT + DAY0) % DAYLEN) / DAYLEN * 24, isNight = () => { const h = hourNow(); return h >= 21 || h < 6; };
@@ -160,13 +177,13 @@ function applyDay() { const d = dayLight(), k = Math.round(d * 60) + (isNight() 
   const dusk = d > 0 && d < 1 ? 1 - Math.abs(d - .5) * 2 : 0;
   scene.background.copy(SKY[0]).lerp(SKY[1], d).lerp(SKY[2], dusk * .5); scene.fog.color.copy(FOGC[0]).lerp(FOGC[1], d).lerp(SKY[2], dusk * .35);
   hemi.intensity = .3 + .65 * d; sun.intensity = .1 + .65 * d; sun.color.setHex(dusk > .3 ? 0xffb27a : 0xfff4e0);
-  UNIGHT.value = 1 - d; CLOUDM.emissive.setHex(d > .5 ? 0x9aa7b5 : 0x2a3348); LAMPM.color.setHex(d < .5 ? 0xffd27a : 0xd8dde6); STARS.material.opacity = Math.max(0, 1 - d * 2.5); hudKey = ''; }
+  UNIGHT.value = 1 - d; CLOUDM.emissive.setHex(d > .5 ? 0x9aa7b5 : 0x2a3348); CLOUDM.color.setHex(d > .5 ? 0xffffff : 0x8a96b8); DB.m.material.color.setHex(d > .5 ? 0x2b2f38 : 0x0c1020); LAMPM.color.setHex(d < .5 ? 0xffd27a : 0xd8dde6); STARS.material.opacity = Math.max(0, 1 - d * 2.5); hudKey = ''; }
 const TREES = [], LAMPM = new T3.MeshBasicMaterial({ color: 0xd8dde6 });
 function mergeGeos(list) { const pos = [], nor = []; list.forEach(g => { g = g.index ? g.toNonIndexed() : g; pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); });
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(nor, 3)); return g; }
 // pilsētas instancētos objektus sadala 350 m gabalos pa z un zīmē tikai tuvos gabalus (telefonā mazāk trijstūru → neraustās)
 const CHUNKS = [], CH = 350;
-function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh) continue; const groups = new Map(), mt = new T3.Matrix4(), c = new T3.Color();
+function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh || m.userData.noChunk) continue; const groups = new Map(), mt = new T3.Matrix4(), c = new T3.Color();
   for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, mt); const k = Math.floor(mt.elements[14] / CH); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); }
   if (groups.size < 2) continue; scene.remove(m);
   groups.forEach((ids, k) => { const s = new T3.InstancedMesh(m.geometry, m.material, ids.length); s.frustumCulled = false;
@@ -674,7 +691,7 @@ function frame(now) {
   if (state === 'crash' || state === 'end') { crashT += dt; updateDebris(dt); updatePilot(dt); wind(0); engine(false);
     if (state === 'crash' && crashT < 3 && Math.random() < dt * 8 && DEB[0]) puff(DEB[0].o.position, 'smoke', 1);
     if (state === 'crash' && (ejected ? (PIL && PIL.landed) || crashT > 8 : crashT > (FOCUS ? 2.4 : .9))) finish('crash'); } // sienā iesprūdušo cilvēciņu parāda ilgāk
-  updateFX(dt);
+  updateFX(dt); driftClouds(dt);
   // ēna
   const vp = state === 'shop' || state === 'run' ? VEHM.g.position : PIL ? PIL.o.position : VEHM.g.position, sh = state === 'run' && sim && sim.mode !== 'ramp' ? surfAt(WORLD, vp.x, vp.z).h : -9;
   shadow.visible = sh > -1 && vp.y - sh < 60; if (shadow.visible) { const k = clamp(1 - (vp.y - sh) / 60, .2, 1); shadow.position.set(vp.x, sh + .08, vp.z); shadow.scale.setScalar(VEHM.len * .45 * (1.4 - k * .4)); shadow.material.opacity = .3 * k; }
@@ -698,7 +715,7 @@ function frame(now) {
     else camT.set(tgt.x + 8 + Math.min(6, crashT), tgt.y + 5 + Math.min(4, crashT), tgt.z - 14);
     camL.copy(tgt); camL.y += 1.5; camera.position.lerp(camT, 1 - Math.exp(-dt * 2)); }
   camera.lookAt(camL);
-  cullChunks();
+  cullChunks(); updateDecoBirds(dt);
   if (camShake > 0) { camShake = Math.max(0, camShake - dt * 1.6); camera.position.x += rnd(-.3, .3) * camShake; camera.position.y += rnd(-.3, .3) * camShake; }
   renderer.render(scene, camera);
 }
