@@ -18,7 +18,8 @@ let LOOK = { skin: '#f2c9a0', hood: 'auto', hat: 'cap', cap: '#1b1b1f', mask: 'n
 
 // ================= Pilsēta (vienāda katru reizi – sēkla) =================
 const BLK = 70, RD = 14, NZ = 100, NX = 10, CITY_Z = NZ * BLK;
-const PAL = [0xf2e6d0, 0xe8c9a8, 0xd9a07a, 0xc7d3e0, 0xf6f1e7, 0xe3b9b0, 0xb9c8b0, 0xd0c4e4, 0xf3d68c, 0xa9c3d9, 0xe0e0e0, 0xcfb79a];
+const PAL = [0xd8c3a0, 0xc79f78, 0xb5714f, 0xa9a59c, 0x8fa0b0, 0xe0d2b4, 0x9c6b52, 0x9aa596, 0xcab48e, 0xb0b8c0, 0xc98f63, 0xd4cbb8]; // ķieģelis, smilšakmens, betons…
+const PALW = [0xa5523c, 0xc9a77a, 0x9c9a94, 0xb8693f, 0x6f8196, 0xd9c7a2, 0x8a5a44, 0x7c8a7a]; // detalizēto māju sienas
 function genCity() {
   const R = mulberry(20261116), lots = [], parks = [], obs = [], tan26 = Math.tan(26 * D2R);
   for (let k = -8; k < NZ; k++) for (let j = -NX; j <= NX; j++) {
@@ -44,7 +45,7 @@ const CITY = genCity(), WORLD = CITY.world;
 
 // ================= three.js aina =================
 const renderer = new T3.WebGLRenderer({ canvas: $('cv'), antialias: (devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 2, devicePixelRatio || 1)); renderer.outputEncoding = T3.sRGBEncoding;
+renderer.setPixelRatio(Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 2, devicePixelRatio || 1)); renderer.outputEncoding = T3.sRGBEncoding; renderer.toneMapping = T3.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; // dabiskākas, ne tik izbalējušas krāsas
 const scene = new T3.Scene(); scene.background = new T3.Color(0x9fd3ff); scene.fog = new T3.Fog(0xbfe3ff, 240, 1250);
 const camera = new T3.PerspectiveCamera(62, 1, .3, 1350);
 const hemi = new T3.HemisphereLight(0xeaf6ff, 0x6a7d5a, .95); scene.add(hemi); const sun = new T3.DirectionalLight(0xfff4e0, .75); sun.position.set(-.6, 1, -.4); scene.add(sun);
@@ -55,14 +56,14 @@ const m4 = new T3.Matrix4(), q0 = new T3.Quaternion(), v3 = new T3.Vector3(), co
 function buildCity() { const n0 = scene.children.length; buildCity0(); chunkCity(scene.children.slice(n0)); }
 function buildCity0() {
   // zeme: ielas + ietves (tekstūra viena kvartāla izmērā)
-  const gt = tex(256, 256, (g, w) => { const s = w / BLK, r = RD / 2 * s; g.fillStyle = '#4c515c'; g.fillRect(0, 0, w, w); g.fillStyle = '#cfc8bb'; g.fillRect(r, r, w - 2 * r, w - 2 * r);
-    g.fillStyle = '#bdb6a8'; g.fillRect(r + 5, r + 5, w - 2 * r - 10, w - 2 * r - 10); g.fillStyle = '#f2f2f2';
+  const gt = tex(256, 256, (g, w) => { const s = w / BLK, r = RD / 2 * s; g.fillStyle = '#464b55'; g.fillRect(0, 0, w, w); g.fillStyle = '#a9a398'; g.fillRect(r, r, w - 2 * r, w - 2 * r);
+    g.fillStyle = '#9d978b'; g.fillRect(r + 5, r + 5, w - 2 * r - 10, w - 2 * r - 10); g.fillStyle = '#f2f2f2';
     for (let i = 0; i < w; i += 22) { g.fillRect(i, -1, 11, 2); g.fillRect(i, w - 1, 11, 2); g.fillRect(-1, i, 2, 11); g.fillRect(w - 1, i, 2, 11); }
     g.fillStyle = '#e8e8e8'; for (let i = r + 4; i < w - r - 4; i += 8) { g.fillRect(i, r - 9, 4, 7); } }, true);
   const GX = 21 * BLK, GZ0 = -8 * BLK, GZ = CITY_Z - GZ0 + 600;
   gt.repeat.set(GX / BLK, GZ / BLK); gt.offset.set(.5, 0);
-  const ground = new T3.Mesh(new T3.PlaneGeometry(GX, GZ), new T3.MeshLambertMaterial({ map: gt })); ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, GZ0 + GZ / 2); scene.add(ground);
-  const far = new T3.Mesh(new T3.PlaneGeometry(9000, 12000), mat(0x8fbf6a)); far.rotation.x = -Math.PI / 2; far.position.set(0, -.3, 4000); scene.add(far);
+  const ground = new T3.Mesh(new T3.PlaneGeometry(GX, GZ), new T3.MeshLambertMaterial({ map: gt, color: 0x8c8c86 })); ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, GZ0 + GZ / 2); scene.add(ground);
+  const far = new T3.Mesh(new T3.PlaneGeometry(9000, 12000), mat(0x6f9a52)); far.rotation.x = -Math.PI / 2; far.position.set(0, -.3, 4000); scene.add(far);
   // mājas – logi zīmēti šeiderī pēc pasaules koordinātām (nav jāstiepj tekstūra)
   const bm = new T3.MeshLambertMaterial({ color: 0xffffff });
   bm.onBeforeCompile = s => { s.uniforms.uNight = UNIGHT; s.vertexShader = 'varying vec3 vWp; varying float vNy;\n' + s.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvWp = (modelMatrix * instanceMatrix * vec4(position,1.)).xyz; vNy = normal.y;');
@@ -73,11 +74,20 @@ function buildCity0() {
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.42, .55, .68) + .12 * rn, w * .9); winLit = w * step(.5, rn) * (.6 + .4 * rn); }
       if (vNy > .5) diffuseColor.rgb *= .78; else diffuseColor.rgb *= mix(.62, 1., smoothstep(0., 7., vWp.y));`); };
   const box = new T3.BoxGeometry(1, 1, 1).translate(0, .5, .5);
-  const L = CITY.lots, bI = new T3.InstancedMesh(box, bm, L.length);
-  L.forEach((b, i) => { bI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, 0, b.z0), q0, new T3.Vector3(b.x1 - b.x0, b.h - (b.w || 0), b.z1 - b.z0))); bI.setColorAt(i, col.set(b.col)); });
-  scene.add(bI);
+  // gar lidojuma ceļu (|x| ≤ 145 m) – detalizētas Kenney mājas tuvumā; tālumā tās pašas mājas kā kastes ar logu šeideri (LOD)
+  const L = CITY.lots, DETM = CITYM.B_sky1_rest ? [['sky1', 'sky2'], ['large1', 'large4', 'large5'], ['low1', 'small1', 'large1']] : null, RDm = mulberry(13);
+  L.forEach(b => { b.det = null; if (DETM && !b.w && Math.abs((b.x0 + b.x1) / 2) <= 145) { const g = DETM[b.h > 34 ? 0 : b.h > 16 ? 1 : 2]; b.det = g[Math.floor(RDm() * g.length)]; } });
+  [L.filter(b => !b.det), L.filter(b => b.det)].forEach((list, far) => { if (!list.length) return; const bI = new T3.InstancedMesh(box, bm, list.length);
+    list.forEach((b, i) => { bI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, 0, b.z0), q0, new T3.Vector3(b.x1 - b.x0, b.h - (b.w || 0), b.z1 - b.z0))); bI.setColorAt(i, col.set(b.col)); });
+    if (far) bI.userData.lod = 'far'; scene.add(bI); });
+  if (DETM) { const groups = {}, vcm = new T3.MeshLambertMaterial({ vertexColors: true }), wm = new T3.MeshLambertMaterial({ color: 0xffffff }), RW = mulberry(17);
+    L.forEach(b => { if (b.det) (groups[b.det] = groups[b.det] || []).push(b); });
+    Object.entries(groups).forEach(([n, list]) => [[CITYM['B_' + n + '_rest'], vcm, false], [CITYM['B_' + n + '_wall'], wm, true]].forEach(([src, m, tint]) => { if (!src) return;
+      const im = new T3.InstancedMesh(src.geometry, m, list.length);
+      list.forEach((b, i) => { im.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2), q0, new T3.Vector3(b.x1 - b.x0, b.h, b.z1 - b.z0))); if (tint) im.setColorAt(i, col.set(PALW[Math.floor(RW() * PALW.length)])); });
+      im.userData.lod = 'near'; scene.add(im); })); }
   // jumta mala (dzega) un jumta detaļas – kondicionieri, ūdens tvertnes, izejas būdiņas
-  const flat = L.filter(b => !b.w), cI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, .5), mat(0xf4f1ea), flat.length);
+  const flat = L.filter(b => !b.w && !b.det), cI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, .5), mat(0xf4f1ea), flat.length);
   flat.forEach((b, i) => cI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, b.h - .15, b.z0 - .35), q0, new T3.Vector3(b.x1 - b.x0 + .7, .55, b.z1 - b.z0 + .7)))); scene.add(cI);
   const RR = mulberry(31), ac = [], tank = [];
   flat.forEach(b => { if (b.roof < .55) for (let n = 0; n < 1 + Math.floor(RR() * 3); n++) ac.push([b.x0 + 2 + RR() * (b.x1 - b.x0 - 4), b.h, b.z0 + 2 + RR() * (b.z1 - b.z0 - 4), 1 + RR() * 2.2, .8 + RR() * 1.6]);
@@ -93,7 +103,7 @@ function buildCity0() {
   wl.forEach((b, i) => wI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, b.h - b.w, b.z0), q0, new T3.Vector3(b.x1 - b.x0, b.w, b.z1 - b.z0))));
   const LR = WORLD.landing; wI.setMatrixAt(wl.length, m4.compose(v3.set(0, 0, LR.z0), q0, new T3.Vector3(22, LR.h, LR.z1 - LR.z0))); scene.add(wI);
   // parki: zāliens, dzīvžogs, celiņi krustā, soliņi, dīķi; koki – Kenney CC0 modeļi (ja ielādēti)
-  const P = CITY.parks, pI = new T3.InstancedMesh(new T3.BoxGeometry(1, .3, 1), mat(0x7cbf5a), P.length); const trees = [], R = mulberry(77), paths = [], hedges = [], benches = [], ponds = [];
+  const P = CITY.parks, pI = new T3.InstancedMesh(new T3.BoxGeometry(1, .3, 1), mat(0x5c9442), P.length); const trees = [], R = mulberry(77), paths = [], hedges = [], benches = [], ponds = [];
   P.forEach((p, i) => { const cx = (p.x0 + p.x1) / 2, cz = (p.z0 + p.z1) / 2, w = p.x1 - p.x0, d = p.z1 - p.z0;
     pI.setMatrixAt(i, m4.compose(v3.set(cx, .15, cz), q0, new T3.Vector3(w, 1, d)));
     paths.push([cx, cz, 3, d - 2], [cx, cz, w - 2, 3]);
@@ -103,14 +113,18 @@ function buildCity0() {
     for (let n = 0; n < 10; n++) { const x = p.x0 + 4 + R() * (w - 8), z = p.z0 + 4 + R() * (d - 8); if (Math.abs(x - cx) < 3 || Math.abs(z - cz) < 3) continue; if (pond && Math.hypot(x - cx - w * .22, z - cz - d * .22) < 9) continue; trees.push([x, z, 5 + R() * 4, R()]); } });
   scene.add(pI);
   const flatI = (list, geo, c, y) => { const m = new T3.InstancedMesh(geo, mat(c), list.length); list.forEach(([x, z, sx, sz], i) => m.setMatrixAt(i, m4.compose(v3.set(x, y, z), q0, new T3.Vector3(sx, 1, sz)))); scene.add(m); };
-  flatI(paths, new T3.BoxGeometry(1, .06, 1), 0xe6d8b8, .32); flatI(hedges, new T3.BoxGeometry(1, 1.1, 1).translate(0, .55, 0), 0x3f8a3a, .3);
+  flatI(paths, new T3.BoxGeometry(1, .06, 1), 0xc9b994, .32); flatI(hedges, new T3.BoxGeometry(1, 1.1, 1).translate(0, .55, 0), 0x356f2f, .3);
   { const pm = new T3.InstancedMesh(new T3.CylinderGeometry(1, 1, .1, 18), mat(0x4aa3df), ponds.length); ponds.forEach(([x, z, r], i) => pm.setMatrixAt(i, m4.compose(v3.set(x, .34, z), q0, new T3.Vector3(r, 1, r)))); scene.add(pm);
     const bg = new T3.BoxGeometry(1.8, .12, .5).translate(0, .5, 0), bI2 = new T3.InstancedMesh(bg, mat(0x9b6b3d), benches.length), qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0);
     benches.forEach(([x, z, r], i) => bI2.setMatrixAt(i, m4.compose(v3.set(x, .3, z), qq.setFromAxisAngle(up, r), new T3.Vector3(1, 1, 1)))); scene.add(bI2); }
   // ielu koki gar ietvēm (dažos kvartālos)
   const RT = mulberry(41); CITY.lots.forEach(b => { if (RT() < .12 && Math.abs(b.x0) < 400) trees.push([b.x0 - 1.2, b.z0 + RT() * (b.z1 - b.z0), 4 + RT() * 2, RT()]); });
   if (TREES.length) { const qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0), groups = TREES.map(() => []); trees.forEach((t, i) => groups[Math.floor(t[3] * TREES.length) % TREES.length].push(t));
-    TREES.forEach((parts, k) => parts.forEach(pt => { const im = new T3.InstancedMesh(pt.geo, pt.mat, groups[k].length); groups[k].forEach(([x, z, h], i) => im.setMatrixAt(i, m4.compose(v3.set(x, .3, z), qq.setFromAxisAngle(up, (x * 7 + z * 13) % 6.28), new T3.Vector3(h, h, h)))); scene.add(im); })); }
+    TREES.forEach((parts, k) => parts.forEach(pt => { const im = new T3.InstancedMesh(pt.geo, pt.mat, groups[k].length); groups[k].forEach(([x, z, h], i) => im.setMatrixAt(i, m4.compose(v3.set(x, .3, z), qq.setFromAxisAngle(up, (x * 7 + z * 13) % 6.28), new T3.Vector3(h, h, h)))); if (CITYM.T_1) im.userData.lod = 'far'; scene.add(im); })); }
+  // tuvumā – Quaternius koki (vienkāršoti līdz ~320 trijstūriem, krāsas virsotnēs)
+  if (CITYM.T_1) { const tm = new T3.MeshLambertMaterial({ vertexColors: true }), tg = [[], [], []], qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0); trees.forEach((t, i) => tg[i % 3].push(t));
+    tg.forEach((list, k) => { const src = CITYM['T_' + (k + 1)]; if (!src || !list.length) return; const im = new T3.InstancedMesh(src.geometry, tm, list.length);
+      list.forEach(([x, z, h], i) => { const s2 = h * 1.25; im.setMatrixAt(i, m4.compose(v3.set(x, .3, z), qq.setFromAxisAngle(up, (x * 7 + z * 13) % 6.28), new T3.Vector3(s2, s2, s2))); }); im.userData.lod = 'near'; scene.add(im); }); }
   else { const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 0), mat(0xffffff), trees.length);
     trees.forEach(([x, z, h, t], i) => { const r = h * .45; tr.setMatrixAt(i, m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1))); cr.setMatrixAt(i, m4.compose(v3.set(x, 3 + r * .8, z), q0, new T3.Vector3(r, r * 1.2, r))); cr.setColorAt(i, col.set(t < .5 ? 0x4a9a3c : 0x5d8f2f)); });
     scene.add(tr); scene.add(cr); }
@@ -118,7 +132,13 @@ function buildCity0() {
   { const people = [], RP2 = mulberry(99);
     CITY.lots.forEach(b => { if (Math.abs(b.x0) < 300 && RP2() < .35) people.push([b.x0 - .8, b.z0 + RP2() * (b.z1 - b.z0), RP2() * 6.28]); });
     P.forEach(p => { if (Math.abs(p.x0) < 400) for (let n = 0; n < 4; n++) people.push([(p.x0 + p.x1) / 2 + (RP2() - .5) * 2, p.z0 + 4 + RP2() * (p.z1 - p.z0 - 8), RP2() * 6.28]); });
-    for (let n = 0; n < 46; n++) { const sx = n % 2 ? 1 : -1; people.push([sx * (15 + RP2() * 9), -10 + RP2() * 70, sx > 0 ? -Math.PI / 2 : Math.PI / 2]); }
+    if (!Object.keys(CITYM).some(k => k.startsWith('H_'))) for (let n = 0; n < 46; n++) { const sx = n % 2 ? 1 : -1; people.push([sx * (15 + RP2() * 9), -10 + RP2() * 70, sx > 0 ? -Math.PI / 2 : Math.PI / 2]); }
+    // skatītāji pie rampas – Kenney Mini Characters (CC0), poza ieceptā (idle), 8 veidi, people.glb
+    const HN = Object.keys(CITYM).filter(k => k.startsWith('H_'));
+    if (HN.length) { const RS = mulberry(21), qh = new T3.Quaternion(), uy = new T3.Vector3(0, 1, 0), hm = new T3.MeshLambertMaterial({ map: CITYM[HN[0]].material.map }), per = Math.ceil(54 / HN.length);
+      HN.forEach((n, k) => { const src = CITYM[n]; const im = new T3.InstancedMesh(src.geometry, hm, per);
+        for (let i = 0; i < per; i++) { const sx = (i + k) % 2 ? 1 : -1, sc = 1.25 + RS() * .25; im.setMatrixAt(i, m4.compose(v3.set(sx * (15 + RS() * 9), 0, -10 + RS() * 70), qh.setFromAxisAngle(uy, (sx > 0 ? -Math.PI / 2 : Math.PI / 2) + (RS() - .5) * .8), new T3.Vector3(sc, sc, sc))); }
+        scene.add(im); }); }
     const SK = [0xf2c9a0, 0xe0ac80, 0xc68642, 0x8d5524, 0xffdbac], SH = [0xe53935, 0x1e88e5, 0x43a047, 0xfdd835, 0xec407a, 0xfb8c00, 0x8e24aa, 0x26c6da, 0xffffff], PA = [0x2b3a67, 0x37474f, 0x5d4037, 0x212121, 0x1565c0];
     const Cy = (r, h, y, x) => new T3.CylinderGeometry(r, r * .9, h, 6).translate(x || 0, y, 0);
     const layers = [[mergeGeos([new T3.SphereGeometry(.17, 7, 5).translate(0, 1.5, 0)]), SK], [mergeGeos([Cy(.2, .55, 1.08), Cy(.06, .5, 1.05, -.27), Cy(.06, .5, 1.05, .27)]), SH], [mergeGeos([Cy(.08, .78, .4, -.1), Cy(.08, .78, .4, .1)]), PA]];
@@ -126,7 +146,7 @@ function buildCity0() {
     layers.forEach(([g, pal], L) => { const im = new T3.InstancedMesh(g, mat(0xffffff), people.length); people.forEach(([x, z, r], i) => { const s = .9 + (i * 37 % 10) / 40; im.setMatrixAt(i, m4.compose(v3.set(x, 0, z), qq.setFromAxisAngle(up, r), new T3.Vector3(s, s, s))); im.setColorAt(i, col.set(pal[(i * (7 + L * 3)) % pal.length])); }); scene.add(im); }); }
   // ielu lampas (naktī spīd)
   { const lamps = []; for (let z = -400; z < CITY_Z; z += 35) for (let j = -4; j <= 4; j++) lamps.push([j * BLK + BLK / 2 - 5.5, z]);
-    const pole = new T3.InstancedMesh(new T3.CylinderGeometry(.09, .12, 6, 5).translate(0, 3, 0), mat(0x5a6170), lamps.length), head = new T3.InstancedMesh(new T3.SphereGeometry(.38, 8, 6).translate(0, 6.1, 0), LAMPM, lamps.length);
+    const pole = new T3.InstancedMesh(new T3.CylinderGeometry(.09, .12, 6, 5).translate(0, 3, 0), mat(0x5a6170), lamps.length), head = new T3.InstancedMesh(new T3.SphereGeometry(.38, 6, 3).translate(0, 6.1, 0), LAMPM, lamps.length);
     lamps.forEach(([x, z], i) => { m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1)); pole.setMatrixAt(i, m4); head.setMatrixAt(i, m4); }); scene.add(pole); scene.add(head); }
   // mašīnas ielās
   const RC = mulberry(5), cars = []; for (let i = 0; i < 220; i++) { const along = RC() < .5, lane = RC() < .5 ? -3.5 : 3.5; let x, z, ry;
@@ -138,7 +158,12 @@ function buildCity0() {
   const cw = new T3.InstancedMesh(new T3.CylinderGeometry(.36, .36, .3, 6).rotateZ(Math.PI / 2).translate(0, .36, 0), mat(0x1d1d1d), cars.length * 4);
   const qy = new T3.Quaternion(), wv = new T3.Vector3(); cars.forEach(([x, z, ry, c], i) => { qy.setFromAxisAngle(new T3.Vector3(0, 1, 0), ry); m4.compose(v3.set(x, 0, z), qy, new T3.Vector3(1, 1, 1)); cb.setMatrixAt(i, m4); cc.setMatrixAt(i, m4); if (cd) cd.setMatrixAt(i, m4); cb.setColorAt(i, col.set(c));
     [[-.86, -1.3], [.86, -1.3], [-.86, 1.3], [.86, 1.3]].forEach(([wx, wz], k) => { wv.set(wx, 0, wz).applyQuaternion(qy); cw.setMatrixAt(i * 4 + k, m4.compose(v3.set(x + wv.x, 0, z + wv.z), qy, new T3.Vector3(1, 1, 1))); }); });
-  scene.add(cb); scene.add(cc); scene.add(cw); if (cd) scene.add(cd);
+  if (!CITYM.C_sedan) { scene.add(cb); scene.add(cc); scene.add(cw); if (cd) scene.add(cd); }
+  // Kenney Car Kit mašīnas (vienkāršotas līdz ~520 trijstūriem) – tikai tuvumā (tālumā miglā tās neredz)
+  if (CITYM.C_sedan) { const CN = ['sedan', 'taxi', 'police', 'van', 'suv', 'hatchback_sports'], km = new T3.MeshLambertMaterial({ map: CITYM.C_sedan.material.map }), cg = CN.map(() => []), qk = new T3.Quaternion(), uk = new T3.Vector3(0, 1, 0);
+    cars.forEach((c, i) => cg[i % CN.length].push(c));
+    CN.forEach((n, k) => { const src = CITYM['C_' + n]; if (!src || !cg[k].length) return; const im = new T3.InstancedMesh(src.geometry, km, cg[k].length);
+      cg[k].forEach(([x, z, ry], i) => im.setMatrixAt(i, m4.compose(v3.set(x, 0, z), qk.setFromAxisAngle(uk, ry + (i % 2 ? Math.PI : 0)), new T3.Vector3(.9, .9, .9)))); im.userData.lod = 'near'; scene.add(im); }); }
   // mākoņi
   const cl = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 1), CLOUDM, 70), RM = mulberry(9);
   for (let i = 0; i < 70; i++) { const s = 18 + RM() * 30; CLOUDS.push({ x: (RM() - .5) * 1800, y: 160 + RM() * 160, z: -300 + RM() * (CITY_Z + 600), sc: new T3.Vector3(s * 2, s * .55, s * 1.4), v: 1.2 + RM() * 1.6 }); }
@@ -169,29 +194,31 @@ function updateDecoBirds(dt) { camera.getWorldDirection(dbf); dbf.y = 0; if (dbf
 const DAYLEN = 360; let DAYT = 0; const DAY0 = 10 / 24 * DAYLEN;
 const hourNow = () => ((DAYT + DAY0) % DAYLEN) / DAYLEN * 24, isNight = () => { const h = hourNow(); return h >= 21 || h < 6; };
 function dayLight() { const h = hourNow(); if (h >= 7 && h < 19) return 1; if (h >= 21 || h < 5) return 0; return h < 12 ? (h - 5) / 2 : 1 - (h - 19) / 2; }
-const UNIGHT = { value: 0 }, CLOUDM = new T3.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9aa7b5 }), SKY = [new T3.Color(0x0b1430), new T3.Color(0x9fd3ff), new T3.Color(0xff9a6a)], FOGC = [new T3.Color(0x1a2440), new T3.Color(0xbfe3ff)];
+const UNIGHT = { value: 0 }, CLOUDM = new T3.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9aa7b5 }), SKY = [new T3.Color(0x0b1430), new T3.Color(0x6fa9e0), new T3.Color(0xff9a6a)], FOGC = [new T3.Color(0x1a2440), new T3.Color(0x93aac2)];
 const STARS = (() => { const n = 700, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, t = Math.random() * 6.28, r = Math.sqrt(1 - u * u); a[i * 3] = r * Math.cos(t) * 1200; a[i * 3 + 1] = Math.abs(u) * 1200 + 60; a[i * 3 + 2] = r * Math.sin(t) * 1200; }
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.BufferAttribute(a, 3)); const s = new T3.Points(g, new T3.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false })); s.frustumCulled = false; scene.add(s); return s; })();
 let dayKey = -1;
 function applyDay() { const d = dayLight(), k = Math.round(d * 60) + (isNight() ? 1000 : 0); if (k === dayKey) return; dayKey = k;
   const dusk = d > 0 && d < 1 ? 1 - Math.abs(d - .5) * 2 : 0;
   scene.background.copy(SKY[0]).lerp(SKY[1], d).lerp(SKY[2], dusk * .5); scene.fog.color.copy(FOGC[0]).lerp(FOGC[1], d).lerp(SKY[2], dusk * .35);
-  hemi.intensity = .3 + .65 * d; sun.intensity = .1 + .65 * d; sun.color.setHex(dusk > .3 ? 0xffb27a : 0xfff4e0);
+  hemi.intensity = .26 + .42 * d; sun.intensity = .12 + .85 * d; sun.color.setHex(dusk > .3 ? 0xffb27a : 0xfff4e0);
   UNIGHT.value = 1 - d; CLOUDM.emissive.setHex(d > .5 ? 0x9aa7b5 : 0x2a3348); CLOUDM.color.setHex(d > .5 ? 0xffffff : 0x8a96b8); DB.m.material.color.setHex(d > .5 ? 0x2b2f38 : 0x0c1020); LAMPM.color.setHex(d < .5 ? 0xffd27a : 0xd8dde6); STARS.material.opacity = Math.max(0, 1 - d * 2.5); hudKey = ''; }
 const TREES = [], LAMPM = new T3.MeshBasicMaterial({ color: 0xd8dde6 });
 function mergeGeos(list) { const pos = [], nor = []; list.forEach(g => { g = g.index ? g.toNonIndexed() : g; pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); });
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(nor, 3)); return g; }
 // pilsētas instancētos objektus sadala 350 m gabalos pa z un zīmē tikai tuvos gabalus (telefonā mazāk trijstūru → neraustās)
 const CHUNKS = [], CH = 350;
-function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh || m.userData.noChunk) continue; const groups = new Map(), mt = new T3.Matrix4(), c = new T3.Color();
+// lod: 'near' – detalizētie modeļi tikai tuvajos gabalos; 'far' – vienkāršie aizstājēji tikai tālāk (telefonam mazāk trijstūru)
+function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh || m.userData.noChunk) continue; const groups = new Map(), mt = new T3.Matrix4(), c = new T3.Color(), lod = m.userData.lod;
   for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, mt); const k = Math.floor(mt.elements[14] / CH); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); }
-  if (groups.size < 2) continue; scene.remove(m);
+  if (groups.size < 2 && !lod) continue; scene.remove(m);
   groups.forEach((ids, k) => { const s = new T3.InstancedMesh(m.geometry, m.material, ids.length); s.frustumCulled = false;
     ids.forEach((i, j) => { m.getMatrixAt(i, mt); s.setMatrixAt(j, mt); if (m.instanceColor) { m.getColorAt(i, c); s.setColorAt(j, c); } });
-    scene.add(s); CHUNKS.push({ s, z0: k * CH - 80, z1: (k + 1) * CH + 80 }); }); } }
+    scene.add(s); CHUNKS.push({ s, k, lod, z0: k * CH - 80, z1: (k + 1) * CH + 80 }); }); } }
 // sākumā visus gabalus vienreiz uzzīmē (GPU saņem buferus/šeiderus uzreiz → lidojumā nav aizķeršanās, kad parādās jauns gabals)
 function warmUp() { CHUNKS.forEach(c => c.s.visible = true); renderer.compile(scene, camera); renderer.render(scene, camera); }
-function cullChunks() { const z = camera.position.z, fz = Math.cos(camera.rotation.y) >= 0 ? 1 : -1; for (const c of CHUNKS) c.s.visible = c.z1 > z - 220 && c.z0 < z + 1300; }
+function cullChunks() { const z = camera.position.z, kc = Math.floor(z / CH);
+  for (const c of CHUNKS) { const near = c.k >= kc && c.k <= kc + 1; c.s.visible = c.z1 > z - 220 && c.z0 < z + 1300 && (c.lod === 'near' ? near : c.lod === 'far' ? !near : true); } }
 function label(text, fg, bg, size) { const t = tex(256, 88, (g, w, h) => { g.fillStyle = bg; const r = 26; g.beginPath(); g.moveTo(r, 4); g.arcTo(w - 4, 4, w - 4, h - 4, r); g.arcTo(w - 4, h - 4, 4, h - 4, r); g.arcTo(4, h - 4, 4, 4, r); g.arcTo(4, 4, w - 4, 4, r); g.fill();
   g.fillStyle = fg; g.font = `900 ${size * 2}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 2); });
   return new T3.Sprite(new T3.SpriteMaterial({ map: t, depthWrite: false, fog: false })); }
@@ -282,10 +309,11 @@ function buildRamp(H) {
 // ================= Braucamrīki un tēls =================
 const LOOKC = () => ({ skin: LOOK.skin || '#f2c9a0', body: LOOK.hood && LOOK.hood !== 'auto' ? LOOK.hood : '#e53935', pants: LOOK.pants || '#2b3a67', helm: LOOK.hood && LOOK.hood !== 'auto' && LOOK.hood !== '#eceff1' ? '#f5f5f5' : '#ffd34d', stripe: LOOK.cap || '#1b1b1f' });
 // ---- Blendera modeļi (models.glb; avots models_src.blend): katrs objekts – atsevišķa daļa, materiālu nosaukumi nosaka krāsu ----
-const MODELS = {};
+const MODELS = {}, CITYM = {};
 function loadModels(cb) {
   const go2 = () => { try { const ld = new T3.GLTFLoader(), get = u => new Promise(r => ld.load(u, g => r(g.scene), undefined, () => r(null)));
     (async () => { const g = await get('models.glb?v=4'); if (g) g.children.forEach(o => { MODELS[o.name] = o; });
+      for (const f of ['models/city.glb?v=3', 'models/people.glb?v=1']) { const cg = await get(f); if (cg) cg.traverse(o => { if (o.isMesh) CITYM[o.name.replace(/\.\d+$/, '')] = o; }); } // pilsēta un cilvēciņi (Kenney, Quaternius – CC0)
       for (const n of ['tree_oak', 'tree_default', 'tree_fat', 'tree_pineRoundA']) { const sc = await get('../atra-palidziba/models/nature/' + n + '.glb'); if (sc) TREES.push(treeParts(sc)); }
       cb(); })(); } catch (e) { cb(); } };
   if (T3.GLTFLoader) return go2();
