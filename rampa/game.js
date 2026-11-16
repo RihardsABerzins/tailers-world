@@ -14,7 +14,8 @@ let W = innerWidth, H = innerHeight;
 let save = { xp: 0, flights: 0, veh: 'plane', ramp: 0, own: { plane: { wheel: 0, wing: 0, eng: 0, long: 0 } }, best: { plane: 0, scoot: 0, car: 0 }, st: { landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, first: 0 };
 let OPT = { help: true, streaks: true }; try { Object.assign(OPT, JSON.parse(localStorage.getItem('rpOpt')) || {}); } catch (e) {}
 const saveOpt = () => { try { localStorage.setItem('rpOpt', JSON.stringify(OPT)); } catch (e) {} };
-let LOOK = { skin: '#f2c9a0', hood: 'auto', hat: 'cap', cap: '#1b1b1f', mask: 'none', pants: '#2b3a67' };
+// tēls – kopīgs visās spēlēs (users/{uid}/look, kā Graffiti LOOK0): ch – Kenney Mini Characters id; hood/pants/cap – 'auto'/'orig' vai krāsa
+let LOOK = { ch: 'male-a', skin: '#f2c9a0', hood: 'auto', hat: 'cap', cap: 'orig', mask: 'none', pants: 'orig' };
 
 // ================= Pilsēta (vienāda katru reizi – sēkla) =================
 const BLK = 70, RD = 14, NZ = 100, NX = 10, CITY_Z = NZ * BLK;
@@ -313,7 +314,22 @@ function buildRamp(H) {
 }
 
 // ================= Braucamrīki un tēls =================
-const LOOKC = () => ({ skin: LOOK.skin || '#f2c9a0', body: LOOK.hood && LOOK.hood !== 'auto' ? LOOK.hood : '#e53935', pants: LOOK.pants || '#2b3a67', helm: LOOK.hood && LOOK.hood !== 'auto' && LOOK.hood !== '#eceff1' ? '#f5f5f5' : '#ffd34d', stripe: LOOK.cap || '#1b1b1f' });
+const isCol = v => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+const LOOKC = () => ({ skin: isCol(LOOK.skin) ? LOOK.skin : '#f2c9a0', body: isCol(LOOK.hood) ? LOOK.hood : '#e53935', pants: isCol(LOOK.pants) ? LOOK.pants : '#2b3a67', helm: isCol(LOOK.hood) && LOOK.hood !== '#eceff1' ? '#f5f5f5' : '#ffd34d', stripe: isCol(LOOK.cap) ? LOOK.cap : '#1b1b1f' });
+// Kenney Mini Characters oriģinālās krāsas tekstūrā: krekls, bikses, mati (tās pašas, ko Graffiti SPR.chars) – pārkrāso pēc LOOK
+const MINIC = { 'male-a': ['#3da679', '#5f74ca', '#3e3e44'], 'male-b': ['#e76047', '#5f74ca', '#d07b56'], 'male-c': ['#5f74ca', '#3e3e44', '#d07b56'], 'male-d': ['#3e3e44', '#3e3e44', '#d07b56'], 'male-e': ['#dcdce9', '#3e3e44', '#995a41'], 'male-f': ['#3da679', '#dd9f79', '#3e3e44'], 'male-g': ['#9391c1', '#d07b56', '#66638b'],
+  'female-a': ['#8158cf', '#5f74ca', '#3e3e44'], 'female-b': ['#e7b96f', '#8158cf', '#dd9f79'], 'female-c': ['#5f74ca', '#66638b', '#66638b'], 'female-d': ['#66638b', '#66638b', '#dd9f79'], 'female-e': ['#dcdce9', '#3e3e44', '#3e3e44'], 'female-f': ['#3e3e44', '#5f74ca', '#995a41'] };
+function lookTex(map, ch) { const img = map && map.image, C = MINIC[ch]; if (!img || !C) return null; const hx = h => isCol(h) ? [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)) : null;
+  const pairs = [[C[0], hx(LOOK.hood)], [C[1], hx(LOOK.pants)], [C[2], hx(LOOK.cap)]].filter(p => p[1]); if (!pairs.length) return null;
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(0, 0, c.width, c.height), px = d.data;
+  pairs.forEach(([from, to]) => { const f = hx(from); for (let i = 0; i < px.length; i += 4) if (Math.abs(px[i] - f[0]) + Math.abs(px[i + 1] - f[1]) + Math.abs(px[i + 2] - f[2]) < 24) { px[i] = to[0]; px[i + 1] = to[1]; px[i + 2] = to[2]; } });
+  g.putImageData(d, 0, 0); const t = new T3.CanvasTexture(c); t.flipY = map.flipY; t.encoding = map.encoding; t.magFilter = map.magFilter; t.minFilter = map.minFilter; return t; }
+// pilots pēc LOOK.ch (var izsaukt atkārtoti, ja izskats mainās)
+async function loadPilot() { const ch = MINIC[LOOK.ch] ? LOOK.ch : 'male-a', ld = new T3.GLTFLoader();
+  const pg = await new Promise(r => ld.load('models/pilot/character-' + ch + '.glb?v=1', r, undefined, () => r(null))); if (!pg || !T3.SkeletonUtils) return;
+  let map = null; pg.scene.traverse(o => { if (o.isMesh && !map) map = o.material.map; }); const tt = lookTex(map, ch);
+  pg.scene.traverse(o => { if (o.isMesh) o.material = new T3.MeshLambertMaterial({ map: tt || o.material.map, skinning: !!o.isSkinnedMesh }); });
+  const bb = new T3.Box3().setFromObject(pg.scene); PILOT = { scene: pg.scene, anims: pg.animations, k: 1.33 / (bb.max.y - bb.min.y), ch }; }
 // ---- Blendera modeļi (models.glb; avots models_src.blend): katrs objekts – atsevišķa daļa, materiālu nosaukumi nosaka krāsu ----
 const MODELS = {}, CITYM = {}; let PILOT = null;
 function loadModels(cb) {
@@ -322,9 +338,7 @@ function loadModels(cb) {
       for (const f of ['models/city.glb?v=3', 'models/bgpeople.glb?v=1']) { const cg = await get(f); if (cg) cg.traverse(o => { if (!o.isMesh) return; if (!o.geometry.attributes.normal) { o.geometry = o.geometry.toNonIndexed(); o.geometry.computeVertexNormals(); } CITYM[o.name.replace(/\.\d+$/, '')] = o; }); } // pilsēta un fona cilvēki (Kenney, Quaternius – CC0)
       // pilots/vadītājs – Kenney Mini Character ar skeletu un animācijām (pozas); vajag SkeletonUtils klonēšanai
       try { if (!T3.SkeletonUtils) await new Promise((res, rej) => { const s2 = document.createElement('script'); s2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js'; s2.onload = res; s2.onerror = rej; document.head.appendChild(s2); });
-        const pg = await new Promise(r => ld.load('models/pilot/character-male-f.glb?v=1', r, undefined, () => r(null)));
-        if (pg && T3.SkeletonUtils) { pg.scene.traverse(o => { if (o.isMesh) o.material = new T3.MeshLambertMaterial({ map: o.material.map, skinning: !!o.isSkinnedMesh }); });
-          const bb = new T3.Box3().setFromObject(pg.scene); PILOT = { scene: pg.scene, anims: pg.animations, k: 1.33 / (bb.max.y - bb.min.y) }; } } catch (e) {}
+        await loadPilot(); } catch (e) {}
       for (const n of ['tree_oak', 'tree_default', 'tree_fat', 'tree_pineRoundA']) { const sc = await get('../atra-palidziba/models/nature/' + n + '.glb'); if (sc) TREES.push(treeParts(sc)); }
       cb(); })(); } catch (e) { cb(); } };
   if (T3.GLTFLoader) return go2();
