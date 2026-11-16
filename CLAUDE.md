@@ -119,7 +119,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - **🚽 Tualete** (`wcStart`/`wcDecide`): kāds paceļ roku „Var uz tualeti?” ar pogām Laist/Nē. Šmaucējs (`fake`) smīn, kabatā 📱; tiešām vajag – dīdās un svīst. Pareizs lēmums +4 noskaņojums, €1, 5 XP; palaists šmaucējs atgriežas un „spēlēja telefonā”; neatbildot 9 s – tiešām vajadzīgajam mīnuss.
 - **Tāfeles krāsa** (`BOARDS`, `save.board/boards`): zaļa (bez maksas), melna, zila, ķiršu, baltā marķieru – veikalā „🛍 Klase un tāfele”.
 - Pirmajā stundā mācības ar dzelteno baneri (1. jautājumā joku nav, 2. – lēns). Atvērts logs = pauze (`LT` neiet).
-- Atlīdzība: €3 + €2 par pareizo + €1 par pieķerto + €1 par pareizu tualetes lēmumu (+€5, ja noskaņojums ≥80; +€5 par 8/8; +€10 dienas beigās); XP 10 par pareizo + 5 par pieķerto/tualeti (+20 par 8/8).
+- Atlīdzība: €3 + €5 par pareizo + €1 par pieķerto + €1 par pareizu tualetes lēmumu (+€5, ja noskaņojums ≥80; +€5 par 8/8; +€10 dienas beigās); XP 10 par pareizo + 5 par pieķerto/tualeti (+20 par 8/8).
 - 🛍 Klases rotājumi (`DECO`, kopīgā nauda, `save.deco`). Saglabāšana `skola/saves/{uid}`, medaļas grupa `skola` (stundas, bez kļūdām, pieķertie, pareizās atbildes, līmenis, tualetes lēmumi `save.wcOk`, pilnas skolas dienas `day/4`, sasniegtā klase, kafija `save.coffee`, rotājumi+tāfeles).
 - Pagaidām **tikai adminiem/moderatoriem** (slēgums game.js; sākumlapā aizslēgta kartīte ar 🛠 `skTest`). Kešatmiņa: mainot failus, palielini `?v=` skola/index.html.
 

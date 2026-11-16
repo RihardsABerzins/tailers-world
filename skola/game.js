@@ -155,7 +155,7 @@ function layout() {
   const hv = hy - (fy - hy) * 1.3; // tēliem maigāka perspektīva nekā telpai
   const s = Math.max(6, Math.min(40, (H - dh - fy) / 8.2, (W / 2 - 4) / (1.5 * 5.4 + 2.05))), yf = H - dh - 1.9 * s, X = Math.min((W / 2 - 2.05 * s) / 1.5, s * 7);
   let i = 0;
-  rows.forEach((cnt, r) => { const y = fy + (yf - fy) * fr[r], k = (y - hv) / (yf - hv);
+  rows.forEach((cnt, r) => { const y = fy + (yf - fy) * fr[r], k = Math.max(.2, (y - hv) / (yf - hv)); // ļoti zemā logā (piem., pārlūka pārejas brīdī) – nekad negatīvs
     for (let c = 0; c < cnt; c++, i++) { const kd = kids[i]; if (!kd) continue; kd.r = r; kd.c = c; kd.s = s * k; kd.x = W / 2 + U[c] * X * k; kd.y = y; } });
   LY.u0 = s * (fy - hv) / (yf - hv); // mērogs pie aizmugurējās sienas
   LY.order = kids.slice().sort((a, b) => a.y - b.y);
@@ -308,7 +308,7 @@ function endLesson() {
   L.st = 'end'; banner(''); kids.forEach(k => { k.st = 'idle'; k.t = LT; k.lol = LT + 2; }); sfx('bell');
   const ok = L.ok, perfect = ok === QN, stars = ok >= 7 ? 3 : ok >= 5 ? 2 : 1, md = Math.round(L.mood);
   const lunch = save.day % 4 === 1, dayEnd = save.day % 4 === 3;
-  const money = 3 + ok * 2 + L.caught + L.wcOk + (md >= 80 ? 5 : 0) + (perfect ? 5 : 0) + (dayEnd ? 10 : 0), xp = ok * 10 + L.caught * 5 + L.wcOk * 5 + (perfect ? 20 : 0);
+  const money = 3 + ok * 5 + L.caught + L.wcOk + (md >= 80 ? 5 : 0) + (perfect ? 5 : 0) + (dayEnd ? 10 : 0), xp = ok * 10 + L.caught * 5 + L.wcOk * 5 + (perfect ? 20 : 0);
   save.day++; save.en = Math.round(energy);
   const lv0 = levelOf(save.xp).l; save.xp += xp; save.lessons++; save.correct += ok; save.caught += L.caught; if (perfect) save.perfect++; save.tut = 1;
   const lv1 = levelOf(save.xp).l; persist(); walletAdd(money); medals(); hud();
@@ -316,7 +316,7 @@ function endLesson() {
   const tot = L.caught + L.missed;
   later(.8, () => {
     sheet(`<div class="step">🔔 Zvans! Stunda beigusies</div><h2>${praise}</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
-      <div class="parts"><div class="part">✅ Pareizas atbildes <b>${ok}/${QN}</b></div>${tot ? `<div class="part">👀 Pieķerti draiskuļi <b>${L.caught}/${tot}</b></div>` : ''}${L.wcN ? `<div class="part">🚽 Tualetes lēmumi <b>${L.wcOk}/${L.wcN}</b></div>` : ''}<div class="part">😊 Klases noskaņojums <b>${md}%</b></div></div>
+      <div class="parts"><div class="part">✅ Pareizas atbildes <b>${ok}/${QN} · +€${ok * 5}</b></div>${tot ? `<div class="part">👀 Pieķerti draiskuļi <b>${L.caught}/${tot}</b></div>` : ''}${L.wcN ? `<div class="part">🚽 Tualetes lēmumi <b>${L.wcOk}/${L.wcN}</b></div>` : ''}<div class="part">😊 Klases noskaņojums <b>${md}%</b></div></div>
       ${dayEnd ? '<div class="fact" style="text-align:center">🏠 Skolas diena beigusies! <b>+€10</b> bonuss. Rīt – jauna diena ar pilnu enerģiju.</div>' : ''}
       <div class="big">+€${money} · +${xp} XP</div>${lv1 > lv0 ? `<div class="fact" style="text-align:center">🎉 Jauns līmenis – <b>${lv1}.</b>! Jautājumi kļūs grūtāki, draiskuļi – viltīgāki.</div>` : ''}
       ${L.wrong ? `<div class="fact">📌 Jautājumus, kuros kļūdījies, atkārtosim nākamajās stundās – tā tie labāk paliek atmiņā.</div>` : ''}
