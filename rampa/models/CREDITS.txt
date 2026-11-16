@@ -15,7 +15,9 @@ Pilsēta (rampa/models/city.glb, people.glb) – visi CC0 1.0 (publiskais īpaš
 Kenney City Kit (Commercial) ēkas – Kenney (www.kenney.nl), no Poly Pizza (https://poly.pizza/u/Kenney): skyscraperE/F, large_buildingC/E/F, low_buildingN, small_buildingF
   – sadalītas „siena” (krāsota katrai mājai) + „pārējais” (krāsas virsotnēs); tuvumā gar lidojuma ceļu (LOD).
 Kenney Car Kit – Kenney (licenses/Kenney_Car_Kit_License.txt): sedan, taxi, police, van, suv, hatchback-sports – vienkāršotas līdz ~520 trijstūriem.
-Kenney Mini Characters – Kenney (licenses/Kenney_Mini_Characters_License.txt): 8 tēli, „idle” poza ieceptā – skatītāji pie rampas.
+Kenney Mini Characters – Kenney (licenses/Kenney_Mini_Characters_License.txt): spēlētāja pilots (skat. zemāk).
 Quaternius koki „Tree” – Quaternius, no Poly Pizza (https://poly.pizza/m/b0boebSV1r, i4QMw4L64D, 1BkD9JnKrE) – vienkāršoti līdz ~320 trijstūriem.
 
 Minikarte – Kenney Minimap Pack (CC0), stils D: models/minimap.png (licenses/Kenney_Minimap_Pack_License.txt).
+Fona cilvēki – Quaternius Posed Background Characters (CC0, licenses/Quaternius_Posed_Background_Characters_License.txt): models/bgpeople.glb – 7 pozas × vīrietis/sieviete.
+Pilots/vadītājs – Kenney Mini Characters character-male-f (CC0): models/pilot/.

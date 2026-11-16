@@ -128,22 +128,28 @@ function buildCity0() {
   else { const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 0), mat(0xffffff), trees.length);
     trees.forEach(([x, z, h, t], i) => { const r = h * .45; tr.setMatrixAt(i, m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1))); cr.setMatrixAt(i, m4.compose(v3.set(x, 3 + r * .8, z), q0, new T3.Vector3(r, r * 1.2, r))); cr.setColorAt(i, col.set(t < .5 ? 0x4a9a3c : 0x5d8f2f)); });
     scene.add(tr); scene.add(cr); }
-  // cilvēki: ietvēs, parkos un skatītāji pie nolaišanās rampas (vienkārši low-poly – instancēti, 4 krāsu slāņi)
-  { const people = [], RP2 = mulberry(99);
+  // cilvēki: ietvēs, parkos un skatītāji pie nolaišanās rampas. Ja ielādēti – Quaternius Posed Background Characters (bgpeople.glb, CC0):
+  // skatītāji vienmēr, ielās/parkos – tuvumā (LOD near); tālumā – vienkāršie low-poly (3 krāsu slāņi)
+  { const people = [], RP2 = mulberry(99), PB = Object.keys(CITYM).some(k => k.startsWith('P_'));
     CITY.lots.forEach(b => { if (Math.abs(b.x0) < 300 && RP2() < .35) people.push([b.x0 - .8, b.z0 + RP2() * (b.z1 - b.z0), RP2() * 6.28]); });
     P.forEach(p => { if (Math.abs(p.x0) < 400) for (let n = 0; n < 4; n++) people.push([(p.x0 + p.x1) / 2 + (RP2() - .5) * 2, p.z0 + 4 + RP2() * (p.z1 - p.z0 - 8), RP2() * 6.28]); });
-    if (!Object.keys(CITYM).some(k => k.startsWith('H_'))) for (let n = 0; n < 46; n++) { const sx = n % 2 ? 1 : -1; people.push([sx * (15 + RP2() * 9), -10 + RP2() * 70, sx > 0 ? -Math.PI / 2 : Math.PI / 2]); }
-    // skatītāji pie rampas – Kenney Mini Characters (CC0), poza ieceptā (idle), 8 veidi, people.glb
-    const HN = Object.keys(CITYM).filter(k => k.startsWith('H_'));
-    if (HN.length) { const RS = mulberry(21), qh = new T3.Quaternion(), uy = new T3.Vector3(0, 1, 0), hm = new T3.MeshLambertMaterial({ map: CITYM[HN[0]].material.map }), per = Math.ceil(54 / HN.length);
-      HN.forEach((n, k) => { const src = CITYM[n]; const im = new T3.InstancedMesh(src.geometry, hm, per);
-        for (let i = 0; i < per; i++) { const sx = (i + k) % 2 ? 1 : -1, sc = 1.25 + RS() * .25; im.setMatrixAt(i, m4.compose(v3.set(sx * (15 + RS() * 9), 0, -10 + RS() * 70), qh.setFromAxisAngle(uy, (sx > 0 ? -Math.PI / 2 : Math.PI / 2) + (RS() - .5) * .8), new T3.Vector3(sc, sc, sc))); }
-        scene.add(im); }); }
+    const spect = []; for (let n = 0; n < 54; n++) { const sx = n % 2 ? 1 : -1; spect.push([sx * (15 + RP2() * 9), -10 + RP2() * 70, (sx > 0 ? -Math.PI / 2 : Math.PI / 2) + (RP2() - .5) * .8]); }
+    if (!PB) people.push(...spect);
     const SK = [0xf2c9a0, 0xe0ac80, 0xc68642, 0x8d5524, 0xffdbac], SH = [0xe53935, 0x1e88e5, 0x43a047, 0xfdd835, 0xec407a, 0xfb8c00, 0x8e24aa, 0x26c6da, 0xffffff], PA = [0x2b3a67, 0x37474f, 0x5d4037, 0x212121, 0x1565c0];
+    const qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0);
+    if (PB) { const rm = new T3.MeshLambertMaterial({ vertexColors: true }), sm = new T3.MeshLambertMaterial({ color: 0xffffff });
+      const posed = (list, poses, lod) => { const groups = poses.map(() => []); list.forEach((p, i) => groups[i % poses.length].push(p));
+        poses.forEach((n, k) => { if (!groups[k].length) return; ['rest', 'shirt'].forEach(part => { const src = CITYM['P_' + n + '_' + part]; if (!src) return;
+          const im = new T3.InstancedMesh(src.geometry, part === 'rest' ? rm : sm, groups[k].length);
+          groups[k].forEach(([x, z, r], i) => { const h = 1.6 + ((x * 13 + z * 7) % 1 + 1) % 1 * .3; im.setMatrixAt(i, m4.compose(v3.set(x, 0, z), qq.setFromAxisAngle(up, r), new T3.Vector3(h, h, h))); if (part === 'shirt') im.setColorAt(i, col.set(SH[(i * 7 + k * 3) % SH.length])); });
+          if (lod) im.userData.lod = lod; scene.add(im); }); }); };
+      posed(spect, ['m_Standing_Waving', 'f_LookingUp', 'm_Standing_Hips', 'f_Standing_Waving', 'm_LookingUp', 'f_Standing_CoveringEyes', 'm_Standing', 'f_Standing_Hips'], null);
+      posed(people.filter(p => Math.abs(p[0]) < 160), ['m_Walking', 'f_Walking', 'm_Standing', 'f_Standing', 'm_Running', 'f_LookingUp'], 'near'); }
     const Cy = (r, h, y, x) => new T3.CylinderGeometry(r, r * .9, h, 6).translate(x || 0, y, 0);
     const layers = [[mergeGeos([new T3.SphereGeometry(.17, 7, 5).translate(0, 1.5, 0)]), SK], [mergeGeos([Cy(.2, .55, 1.08), Cy(.06, .5, 1.05, -.27), Cy(.06, .5, 1.05, .27)]), SH], [mergeGeos([Cy(.08, .78, .4, -.1), Cy(.08, .78, .4, .1)]), PA]];
-    const qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0);
-    layers.forEach(([g, pal], L) => { const im = new T3.InstancedMesh(g, mat(0xffffff), people.length); people.forEach(([x, z, r], i) => { const s = .9 + (i * 37 % 10) / 40; im.setMatrixAt(i, m4.compose(v3.set(x, 0, z), qq.setFromAxisAngle(up, r), new T3.Vector3(s, s, s))); im.setColorAt(i, col.set(pal[(i * (7 + L * 3)) % pal.length])); }); scene.add(im); }); }
+    // vienkāršie: joslā gar ceļu – tikai tālumā (tuvumā Quaternius), ārpus joslas – vienmēr
+    (PB ? [[people.filter(p => Math.abs(p[0]) < 160), 'far'], [people.filter(p => Math.abs(p[0]) >= 160), null]] : [[people, null]]).forEach(([list, lod]) => layers.forEach(([g, pal], L) => { if (!list.length) return;
+      const im = new T3.InstancedMesh(g, mat(0xffffff), list.length); list.forEach(([x, z, r], i) => { const s = .9 + (i * 37 % 10) / 40; im.setMatrixAt(i, m4.compose(v3.set(x, 0, z), qq.setFromAxisAngle(up, r), new T3.Vector3(s, s, s))); im.setColorAt(i, col.set(pal[(i * (7 + L * 3)) % pal.length])); }); if (lod) im.userData.lod = lod; scene.add(im); })); }
   // ielu lampas (naktī spīd)
   { const lamps = []; for (let z = -400; z < CITY_Z; z += 35) for (let j = -4; j <= 4; j++) lamps.push([j * BLK + BLK / 2 - 5.5, z]);
     const pole = new T3.InstancedMesh(new T3.CylinderGeometry(.09, .12, 6, 5).translate(0, 3, 0), mat(0x5a6170), lamps.length), head = new T3.InstancedMesh(new T3.SphereGeometry(.38, 6, 3).translate(0, 6.1, 0), LAMPM, lamps.length);
@@ -309,11 +315,16 @@ function buildRamp(H) {
 // ================= Braucamrīki un tēls =================
 const LOOKC = () => ({ skin: LOOK.skin || '#f2c9a0', body: LOOK.hood && LOOK.hood !== 'auto' ? LOOK.hood : '#e53935', pants: LOOK.pants || '#2b3a67', helm: LOOK.hood && LOOK.hood !== 'auto' && LOOK.hood !== '#eceff1' ? '#f5f5f5' : '#ffd34d', stripe: LOOK.cap || '#1b1b1f' });
 // ---- Blendera modeļi (models.glb; avots models_src.blend): katrs objekts – atsevišķa daļa, materiālu nosaukumi nosaka krāsu ----
-const MODELS = {}, CITYM = {};
+const MODELS = {}, CITYM = {}; let PILOT = null;
 function loadModels(cb) {
   const go2 = () => { try { const ld = new T3.GLTFLoader(), get = u => new Promise(r => ld.load(u, g => r(g.scene), undefined, () => r(null)));
     (async () => { const g = await get('models.glb?v=4'); if (g) g.children.forEach(o => { MODELS[o.name] = o; });
-      for (const f of ['models/city.glb?v=3', 'models/people.glb?v=1']) { const cg = await get(f); if (cg) cg.traverse(o => { if (o.isMesh) CITYM[o.name.replace(/\.\d+$/, '')] = o; }); } // pilsēta un cilvēciņi (Kenney, Quaternius – CC0)
+      for (const f of ['models/city.glb?v=3', 'models/bgpeople.glb?v=1']) { const cg = await get(f); if (cg) cg.traverse(o => { if (!o.isMesh) return; if (!o.geometry.attributes.normal) { o.geometry = o.geometry.toNonIndexed(); o.geometry.computeVertexNormals(); } CITYM[o.name.replace(/\.\d+$/, '')] = o; }); } // pilsēta un fona cilvēki (Kenney, Quaternius – CC0)
+      // pilots/vadītājs – Kenney Mini Character ar skeletu un animācijām (pozas); vajag SkeletonUtils klonēšanai
+      try { if (!T3.SkeletonUtils) await new Promise((res, rej) => { const s2 = document.createElement('script'); s2.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js'; s2.onload = res; s2.onerror = rej; document.head.appendChild(s2); });
+        const pg = await new Promise(r => ld.load('models/pilot/character-male-f.glb?v=1', r, undefined, () => r(null)));
+        if (pg && T3.SkeletonUtils) { pg.scene.traverse(o => { if (o.isMesh) o.material = new T3.MeshLambertMaterial({ map: o.material.map, skinning: !!o.isSkinnedMesh }); });
+          const bb = new T3.Box3().setFromObject(pg.scene); PILOT = { scene: pg.scene, anims: pg.animations, k: 1.33 / (bb.max.y - bb.min.y) }; } } catch (e) {}
       for (const n of ['tree_oak', 'tree_default', 'tree_fat', 'tree_pineRoundA']) { const sc = await get('../atra-palidziba/models/nature/' + n + '.glb'); if (sc) TREES.push(treeParts(sc)); }
       cb(); })(); } catch (e) { cb(); } };
   if (T3.GLTFLoader) return go2();
@@ -331,7 +342,11 @@ function mdl(name, tint) { const src = MODELS[name]; if (!src) return null; cons
     else m.material = mat(c); });
   return o; }
 function geoOf(name, matName) { const src = MODELS[name]; if (!src) return null; let g = null; src.traverse(m => { if (m.isMesh && m.material.name === matName && !g) g = m.geometry.clone().applyMatrix4(new T3.Matrix4().makeTranslation(...src.position.toArray())); }); return g; }
-function makePerson(pose) { if (MODELS.Torso) return makePerson2(pose); const c = LOOKC(), g = new T3.Group(), B = (w, h, d) => new T3.BoxGeometry(w, h, d);
+// spēlētāja tēls – Kenney Mini Character (pozas no animācijām); fona cilvēki – Quaternius (instancēti pilsētā)
+const MINIPOSE = { sit: ['drive', .4], stand: ['idle', .5], crouch: ['crouch', .4], wave: ['emote-yes', .35], splat: ['static', 0], chute: ['fall', .3] };
+function makePersonMini(pose) { const o = T3.SkeletonUtils.clone(PILOT.scene), g = new T3.Group(); o.scale.setScalar(PILOT.k); g.add(o);
+  g.userData = { mini: true, mx: new T3.AnimationMixer(o) }; setPose(g, pose); return g; }
+function makePerson(pose) { if (PILOT) return makePersonMini(pose); if (MODELS.Torso) return makePerson2(pose); const c = LOOKC(), g = new T3.Group(), B = (w, h, d) => new T3.BoxGeometry(w, h, d);
   const legs = new T3.Group(); [-.1, .1].forEach(x => { const l = new T3.Mesh(B(.16, .6, .18).translate(0, -.3, 0), mat(c.pants)); l.position.x = x; legs.add(l); }); legs.position.y = .6; g.add(legs);
   const torso = new T3.Mesh(B(.44, .52, .28).translate(0, .26, 0), mat(c.body)); torso.position.y = .6; g.add(torso);
   const arms = []; [-.29, .29].forEach(x => { const a = new T3.Mesh(B(.12, .46, .14).translate(0, -.23, 0), mat(c.body)); a.position.set(x, 1.08, 0); g.add(a); arms.push(a); });
@@ -346,7 +361,8 @@ function makePerson2(pose) { const c = LOOKC(), t = { skin: c.skin, body: c.body
   const torso = mdl('Torso', t); g.add(torso); const arms = ['ArmL', 'ArmR'].map(n => { const a = mdl(n, t); g.add(a); return a; });
   const head = mdl('Head', t); g.add(head); const helm = mdl('Helmet', t); g.add(helm);
   g.userData = { legs, torso, arms, head }; setPose(g, pose); return g; }
-function setPose(p, pose) { const u = p.userData; u.legs.rotation.x = pose === 'sit' ? -Math.PI / 2 : 0; u.legs.position.y = pose === 'sit' ? .62 : .6; u.torso.rotation.x = pose === 'crouch' ? .45 : 0;
+function setPose(p, pose) { const u = p.userData;
+  if (u.mini) { const [n, t] = MINIPOSE[pose] || MINIPOSE.stand, clip = PILOT.anims.find(a => a.name === n) || PILOT.anims[0]; u.mx.stopAllAction(); u.mx.clipAction(clip).play(); u.mx.setTime(t); return; } u.legs.rotation.x = pose === 'sit' ? -Math.PI / 2 : 0; u.legs.position.y = pose === 'sit' ? .62 : .6; u.torso.rotation.x = pose === 'crouch' ? .45 : 0;
   u.arms.forEach(a => { a.rotation.x = pose === 'sit' ? -1.1 : pose === 'crouch' ? -1.2 : pose === 'wave' || pose === 'splat' ? 0 : -.3; a.rotation.z = pose === 'wave' ? (a.position.x > 0 ? -2.6 : .2) : pose === 'chute' ? (a.position.x > 0 ? -2.8 : 2.8) : pose === 'splat' ? (a.position.x > 0 ? 2.3 : -2.3) : 0; });
   u.legs.children.forEach((l, i) => { l.rotation.z = pose === 'splat' ? (i ? .32 : -.32) : 0; });
   if (pose === 'crouch') { u.legs.scale.y = .8; } else u.legs.scale.y = 1; }
@@ -390,14 +406,14 @@ function buildVehicle2(vid, sel, st) {
     else if (e === 3) { const ry = D.u - .16; putA(new T3.Mesh(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c))).position.set(0, ry, -.3); putA(new T3.Mesh(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5))).position.set(0, ry, .47); V.flames.push([0, hb + ry * s, -.95 * s, .5]); }
     else if (e === 4) { const jy = D.t + .2; putA(new T3.Mesh(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e))).position.set(0, jy, D.b * .35); putA(new T3.Mesh(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63))).position.set(0, jy, D.b * .35 + .85); V.flames.push([0, hb + jy * s, (D.b * .35 - .9) * s, .7]); }
     const p = makePerson('sit'); p.scale.setScalar(.72); g.add(p); V.pilot = p;
-    if (KM) p.position.set(0, hb - (KM === 'J' ? .5 : .4) * s, (KM === 'J' ? .55 : .25) * s); // kabīnē
-    else p.position.set(0, bT < 2 ? hb + D.t * s * .92 - .43 : hb - .3 * s, bT < 2 ? -.15 * s : .32 * s);
+    if (KM) p.position.set(0, hb - (KM === 'J' ? .5 : .4) * s - (PILOT ? .14 : 0), (KM === 'J' ? .55 : .25) * s); // kabīnē
+    else p.position.set(0, (bT < 2 ? hb + D.t * s * .92 - .43 : hb - .3 * s) + (PILOT ? .3 : 0), bT < 2 ? -.15 * s : .32 * s); // Mini tēls sēž zemāk – paceļ
     V.len = 4.7 * s; V.flow = { ax: .55 * s, ay: .55 * s, az: 2.3 * s, cy: hb + .05, cz: 0, blunt: [.65, .85, .45, .3, .22, .15][bT + 1], drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
   } else if (vid === 'scoot') {
     const wr = .11 + (sel.wheel || 0) * .0018;
     V.body = put(mdl('SDeck'), 0, wr - .11, 0, 'body'); put(mdl('SStem'), 0, wr - .11, 0);
     [-.42, .42].forEach(z => { const w = put(mdl('Wheel'), 0, wr, z); w.scale.setScalar(wr); });
-    const aero = sel.aero || 0, p = makePerson(aero ? 'crouch' : 'stand'); p.position.set(0, wr + .08, -.06); g.add(p); V.pilot = p;
+    const aero = sel.aero || 0, p = makePerson(aero ? 'crouch' : 'stand'); p.position.set(0, wr + .08, -.06); if (PILOT) p.scale.setScalar(.82); g.add(p); V.pilot = p;
     if (sel.eng) { [-.12, .12].forEach(x => add(Cyl(.09, .09, .5), mat(0xd23c2c), x, wr + 1.05 - (aero ? .08 : 0), -.3)); V.flames.push([-.12, wr + .75, -.3, .35, true], [.12, wr + .75, -.3, .35, true]); }
     V.len = 1.4; V.flow = { ax: .35, ay: .8, az: .45, cy: .95, cz: 0, blunt: clamp((st.cda - .1) / .22, 0, 1), drag: clamp(st.cda / .3, .4, 1), wing: null };
   } else {
