@@ -89,7 +89,7 @@ function buildCity0() {
   tank.forEach(([x, y, z, s], i) => { m4.compose(v3.set(x, y, z), q0, new T3.Vector3(s, 1, s)); tI.setMatrixAt(i, m4); tC.setMatrixAt(i, m4); for (let k = 0; k < 3; k++) tL.setMatrixAt(i * 3 + k, m4.compose(v3.set(x + Math.cos(k * 2.1) * s * .7, y, z + Math.sin(k * 2.1) * s * .7), q0, new T3.Vector3(1, 1, 1))); });
   scene.add(tI); scene.add(tC); scene.add(tL);
   // slīpie jumti (nolaišanās rampas uz jumtiem) un lielā nolaišanās rampa
-  const wedge = wedgeGeo(), wl = L.filter(b => b.w), wI = new T3.InstancedMesh(wedge, new T3.MeshLambertMaterial({ map: rampTex() }), wl.length + 1);
+  const wedge = wedgeGeo(), wl = L.filter(b => b.w), wI = new T3.InstancedMesh(wedge, new T3.MeshLambertMaterial({ map: rampTex('steel') }), wl.length + 1);
   wl.forEach((b, i) => wI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, b.h - b.w, b.z0), q0, new T3.Vector3(b.x1 - b.x0, b.w, b.z1 - b.z0))));
   const LR = WORLD.landing; wI.setMatrixAt(wl.length, m4.compose(v3.set(0, 0, LR.z0), q0, new T3.Vector3(22, LR.h, LR.z1 - LR.z0))); scene.add(wI);
   // parki: zāliens, dzīvžogs, celiņi krustā, soliņi, dīķi; koki – Kenney CC0 modeļi (ja ielādēti)
@@ -200,25 +200,42 @@ function wedgeGeo() { // prizma: aizmugurē augstums 1, uz priekšu (z) slīpi l
   const U = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 1], [1, 1]];
   f.forEach(tri => tri.forEach(i => { pos.push(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); uv.push(U[i][0], i >= 4 ? 4 : i >= 2 ? 0 : 0); }));
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(uv, 2)); g.computeVertexNormals(); return g; }
-// rampas tekstūra: u – viss šķērsgriezums (0..1, vidū grīda), v – 24 m garumā; tumšs segums, bultas, apmales, ātruma svītras
-let RTEX = null;
-function rampTex() { return RTEX || (RTEX = tex(512, 256, (g, w, h) => { const U = u => u * w, F0 = .369, F1 = .631;
+// rampas izskats pēc rampas līmeņa: papīra (0–7) → koka (8–17) → tērauda (18+)
+const rampStyle = () => save.ramp < 8 ? 'paper' : save.ramp < 18 ? 'wood' : 'steel';
+const RSTY = { paper: { rail: 0xc9a272, post: 0xb8915c, under: 0x9c8c6c, sup: 0xb8915c, beam: 0xc9a272, plat: 0xa89878, led: false },
+  wood: { rail: 0x6e4a2a, post: 0x5a3b22, under: 0x5a3b22, sup: 0x7a5230, beam: 0x6e4a2a, plat: 0x8a5a34, led: false },
+  steel: { rail: 0x454b56, post: 0x2b2f36, under: 0x1c2027, sup: 0x3b414c, beam: 0x2b3039, plat: 0x2c313a, led: true } };
+// rampas tekstūra: u – viss šķērsgriezums (0..1, vidū grīda), v – 24 m garumā
+const RTEX = {};
+function rampTex(st) { st = st || 'steel'; if (RTEX[st]) return RTEX[st]; const F0 = .293, F1 = .707;
+  if (st === 'paper') return RTEX[st] = tex(512, 256, (g, w, h) => { const U = u => u * w; // papīrs: rūtiņu lapa, līmlente, ar zīmuli zīmētas bultas
+    g.fillStyle = '#cbbf9f'; g.fillRect(0, 0, w, h); g.fillStyle = '#dcd2b8'; g.fillRect(U(F0), 0, U(F1 - F0), h); g.fillStyle = '#c9a272'; g.fillRect(0, 0, U(.066), h); g.fillRect(U(.934), 0, U(.066), h);
+    g.fillStyle = '#6f9cc8'; for (let y = 0; y < h; y += 16) g.fillRect(0, y, w, 2); g.fillStyle = '#6f9cc888'; for (let x = 0; x < w; x += 16) g.fillRect(x, 0, 1, h);
+    g.fillStyle = '#d9534f'; g.fillRect(U(F0) - 4, 0, 4, h); g.fillRect(U(F1), 0, 4, h);
+    g.fillStyle = '#f2d98c99'; for (let i = 0; i < 6; i++) { g.save(); g.translate(Math.random() * w, Math.random() * h); g.rotate(Math.random() - .5); g.fillRect(-30, -7, 60, 14); g.restore(); }
+    g.strokeStyle = '#4a4f5acc'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round'; for (const cy of [80, 112]) { g.beginPath(); g.moveTo(w * .45, cy + 22); g.lineTo(w / 2, cy); g.lineTo(w * .55, cy + 22); g.stroke(); } }, true);
+  if (st === 'wood') return RTEX[st] = tex(512, 256, (g, w, h) => { const U = u => u * w; // koks: dēļi ar šķiedrām, naglas, balti krāsotas bultas
+    g.fillStyle = '#9a6a3e'; g.fillRect(0, 0, w, h); g.fillStyle = '#b07a48'; g.fillRect(U(F0), 0, U(F1 - F0), h); g.fillStyle = '#6e4a2a'; g.fillRect(0, 0, U(.066), h); g.fillRect(U(.934), 0, U(.066), h);
+    for (let y = 0; y < h; y += 32) { g.fillStyle = '#00000055'; g.fillRect(0, y, w, 2); g.fillStyle = '#2a1a0e'; for (let x = 20; x < w; x += 64) { g.fillRect(x, y + 6, 3, 3); g.fillRect(x, y + 24, 3, 3); } }
+    g.strokeStyle = '#5a3a1e44'; g.lineWidth = 1.5; for (let i = 0; i < 160; i++) { const y = Math.random() * h, x = Math.random() * w; g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + 20, y + 2, x + 40, y - 2, x + 70, y + 1); g.stroke(); }
+    g.strokeStyle = '#f5ecd8dd'; g.lineWidth = 8; g.lineCap = 'round'; g.lineJoin = 'round'; for (const cy of [80, 108, 136]) { g.beginPath(); g.moveTo(w * .45, cy + 22); g.lineTo(w / 2, cy); g.lineTo(w * .55, cy + 22); g.stroke(); } }, true);
+  return RTEX[st] = tex(512, 256, (g, w, h) => { const U = u => u * w; // tērauds: tumšs segums, bultas, apmales, ātruma svītras
   g.fillStyle = '#20252e'; g.fillRect(0, 0, w, h); g.fillStyle = '#2a2f38'; g.fillRect(U(F0), 0, U(F1 - F0), h); // sienas / grīda
-  g.fillStyle = '#7e8794'; g.fillRect(0, 0, U(.045), h); g.fillRect(U(.955), 0, U(.045), h); // augšmala
+  g.fillStyle = '#7e8794'; g.fillRect(0, 0, U(.066), h); g.fillRect(U(.934), 0, U(.066), h); // augšmala
   g.fillStyle = '#00000040'; for (let y = 0; y < h; y += 32) g.fillRect(0, y, w, 2); for (const u of [.12, .25, .44, .56, .75, .88]) g.fillRect(U(u), 0, 2, h); // paneļu šuves
   g.fillStyle = '#ffffff10'; for (let i = 0; i < 500; i++) g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
   for (const [u, c, wd] of [[.16, '#ff7a1a', 9], [.84, '#ff7a1a', 9], [.185, '#ffffffaa', 3], [.815, '#ffffffaa', 3]]) { g.fillStyle = c; g.fillRect(U(u) - wd / 2, 0, wd, h); } // ātruma svītras
   for (let y = 0; y < h; y += 32) [[F0 - .016, F0], [F1, F1 + .016]].forEach(([a, b]) => { g.fillStyle = (y / 32) % 2 ? '#ffffff' : '#e53935'; g.fillRect(U(a), y, U(b - a), 32); }); // apmales
   g.fillStyle = '#ffffffcc'; for (let y = 8; y < h; y += 64) g.fillRect(w / 2 - 2, y, 4, 34); // vidus līnija
   g.strokeStyle = '#ffd34dd0'; g.lineWidth = 9; g.lineCap = 'round'; g.lineJoin = 'round'; // bulta uz priekšu (tekstūrā uz augšu)
-  for (const cy of [80, 108, 136]) { g.beginPath(); g.moveTo(w * .45, cy + 22); g.lineTo(w / 2, cy); g.lineTo(w * .55, cy + 22); g.stroke(); } }, true)); }
+  for (const cy of [80, 108, 136]) { g.beginPath(); g.moveTo(w * .45, cy + 22); g.lineTo(w / 2, cy); g.lineTo(w * .55, cy + 22); g.stroke(); } }, true); }
 
 // ---- milzu rampa (U formas šķērsgriezums) ----
 let RAMP = null, rampGroup = null, GATE = null, gateA = 0, leverK = 0;
 function buildRamp(H) {
   if (rampGroup) { scene.remove(rampGroup); rampGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
   RAMP = rampProfile(H); rampGroup = new T3.Group(); scene.add(rampGroup);
-  const cs = []; const FW = 5, RR = 8; cs.push([-FW - RR - 1.6, RR]); cs.push([-FW - RR, RR]);
+  const cs = []; const FW = 5, RR = 3.5; // sienas 3,5 m (bija 8 m – par augstu) cs.push([-FW - RR - 1.6, RR]); cs.push([-FW - RR, RR]);
   for (let i = 0; i <= 8; i++) { const a = Math.PI / 2 * (1 - i / 8); cs.push([-FW - RR * Math.cos(Math.PI / 2 - a) + 0 * a, RR - RR * Math.sin(Math.PI / 2 - a)]); }
   // pārrēķina: ceturtdaļaplis no sienas augšas līdz grīdai
   cs.length = 0; cs.push([-FW - RR - 1.6, RR]); for (let i = 0; i <= 14; i++) { const a = i / 14 * Math.PI / 2; cs.push([-FW - RR * Math.cos(a), RR - RR * Math.sin(a)]); }
@@ -228,28 +245,28 @@ function buildRamp(H) {
   pts.forEach(p => full.forEach(([x, y], j) => { pos.push(x, p.y + y, p.z); uv.push(1 - ux[j] / ux[n - 1], p.s / 24); }));
   for (let i = 0; i < pts.length - 1; i++) for (let j = 0; j < n - 1; j++) { const a = i * n + j, b = a + 1, c = a + n, d = c + 1; idx.push(a, c, b, b, c, d); }
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
-  const rt = rampTex(); const rm = new T3.MeshLambertMaterial({ map: rt, side: T3.DoubleSide }); rampGroup.add(new T3.Mesh(g, rm));
+  const ST = rampStyle(), SC = RSTY[ST], rt = rampTex(ST); const rm = new T3.MeshLambertMaterial({ map: rt, side: T3.DoubleSide }); rampGroup.add(new T3.Mesh(g, rm));
   // margas pa malām (gludas caurules) + apakšpuse tumšāka
   const rail = pts.filter((p, i) => i % 2 === 0).map(p => new T3.Vector3(0, p.y + RR + 1.05, p.z));
   [-1, 1].forEach(sx => { const c = new T3.CatmullRomCurve3(rail.map(v => new T3.Vector3(sx * (FW + RR + 1.1), v.y, v.z)));
-    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(c, Math.min(400, rail.length * 2), .16, 6, false), mat(0x454b56)));
-    // LED līnija sienas augšmalā (spīd arī naktī)
-    const led = new T3.CatmullRomCurve3(rail.map(v => new T3.Vector3(sx * (FW + RR + .05), v.y - 1.0, v.z)));
-    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(led, Math.min(400, rail.length * 2), .09, 5, false), new T3.MeshBasicMaterial({ color: 0x2fe6ff })));
-    const posts = rail.filter((v, i) => i % 3 === 0), pI = new T3.InstancedMesh(new T3.CylinderGeometry(.07, .07, 1.05, 5).translate(0, -.52, 0), mat(0x2b2f36), posts.length);
+    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(c, Math.min(400, rail.length * 2), .16, 6, false), mat(SC.rail)));
+    // LED līnija sienas augšmalā (spīd arī naktī) – tikai tērauda rampai
+    if (SC.led) { const led = new T3.CatmullRomCurve3(rail.map(v => new T3.Vector3(sx * (FW + RR + .05), v.y - 1.0, v.z)));
+    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(led, Math.min(400, rail.length * 2), .09, 5, false), new T3.MeshBasicMaterial({ color: 0x2fe6ff }))); }
+    const posts = rail.filter((v, i) => i % 3 === 0), pI = new T3.InstancedMesh(new T3.CylinderGeometry(.07, .07, 1.05, 5).translate(0, -.52, 0), mat(SC.post), posts.length);
     posts.forEach((v, i) => pI.setMatrixAt(i, m4.compose(v3.set(sx * (FW + RR + 1.1), v.y, v.z), q0, new T3.Vector3(1, 1, 1)))); rampGroup.add(pI); });
-  const under = new T3.Mesh(g, new T3.MeshLambertMaterial({ color: 0x1c2027, side: T3.BackSide })); under.position.y = -.25; rampGroup.add(under);
+  const under = new T3.Mesh(g, new T3.MeshLambertMaterial({ color: SC.under, side: T3.BackSide })); under.position.y = -.25; rampGroup.add(under);
   rm.side = T3.FrontSide;
   // balsti
-  const sup = pts.filter((p, i) => i % 4 === 0), sI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, 0), mat(0x3b414c), sup.length * 2);
+  const sup = pts.filter((p, i) => i % 4 === 0), sI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, 0), mat(SC.sup), sup.length * 2);
   sup.forEach((p, i) => [-11, 11].forEach((x, k) => sI.setMatrixAt(i * 2 + k, m4.compose(v3.set(x, 0, p.z), q0, new T3.Vector3(1.1, Math.max(.1, p.y - .3), 1.1))))); rampGroup.add(sI);
   // šķērssijas starp balstiem ik 12 m augstumā (kopne)
   const bm = []; sup.forEach(p => { for (let y = 10; y < p.y - 2; y += 12) bm.push([p.z, y]); });
-  const bI = new T3.InstancedMesh(new T3.BoxGeometry(22, .5, .5), mat(0x2b3039), Math.max(1, bm.length)); bm.forEach(([z, y], i) => bI.setMatrixAt(i, m4.compose(v3.set(0, y, z), q0, new T3.Vector3(1, 1, 1)))); bI.count = bm.length; rampGroup.add(bI);
+  const bI = new T3.InstancedMesh(new T3.BoxGeometry(22, .5, .5), mat(SC.beam), Math.max(1, bm.length)); bm.forEach(([z, y], i) => bI.setMatrixAt(i, m4.compose(v3.set(0, y, z), q0, new T3.Vector3(1, 1, 1)))); bI.count = bm.length; rampGroup.add(bI);
   // starta platforma ar darbnīcu
-  const p0 = RAMP.pts[0], plat = new T3.Mesh(new T3.BoxGeometry(34, 2, 26), mat(0x2c313a));
+  const p0 = RAMP.pts[0], plat = new T3.Mesh(new T3.BoxGeometry(34, 2, 26), mat(SC.plat));
   const hz = tex(128, 16, (g2, w) => { g2.fillStyle = '#1b1b1f'; g2.fillRect(0, 0, w, 16); g2.fillStyle = '#ffd34d'; for (let i = -1; i < 9; i++) { g2.beginPath(); g2.moveTo(i * 16, 16); g2.lineTo(i * 16 + 8, 0); g2.lineTo(i * 16 + 16, 0); g2.lineTo(i * 16 + 8, 16); g2.fill(); } }, true); hz.repeat.set(4, 1);
-  const edge = new T3.Mesh(new T3.BoxGeometry(34.2, .7, .3), new T3.MeshLambertMaterial({ map: hz })); edge.position.set(0, p0.y - .35, p0.z + 1.05); rampGroup.add(edge); plat.position.set(0, p0.y - 1, p0.z - 12); rampGroup.add(plat);
+  const edge = new T3.Mesh(new T3.BoxGeometry(34.2, .7, .3), new T3.MeshLambertMaterial({ map: hz })); edge.position.set(0, p0.y - .38, p0.z - .17); rampGroup.add(edge); plat.position.set(0, p0.y - 1.03, p0.z - 13.05); rampGroup.add(plat);
   const gar = new T3.Mesh(new T3.BoxGeometry(16, 8, 10), mat(0xe8c9a8)); gar.position.set(0, p0.y + 4, p0.z - 20); rampGroup.add(gar);
   const door = new T3.Mesh(new T3.BoxGeometry(9, 5.5, .2), mat(0x3d4552)); door.position.set(0, p0.y + 2.75, p0.z - 14.9); rampGroup.add(door);
   const sign = label('🔧 DARBNĪCA', '#2b1a00', '#ffd34d', 22); sign.position.set(0, p0.y + 9.6, p0.z - 14.8); sign.scale.set(9, 3.1, 1); rampGroup.add(sign);
@@ -646,13 +663,6 @@ function finish(kind) {
 }
 
 // ================= Darbnīca =================
-// darbnīcā: cik tālāk aizlidotu ar nākamo līmeni (simulācija bez mājām, ar palīgu un turbo; kešatmiņā)
-const GAINW = indexWorld({ obs: [], landing: WORLD.landing }), GAINC = new Map(), RPROF = [];
-function simDist(vid, sel, ramp) { const key = vid + JSON.stringify(sel) + ramp; if (GAINC.has(key)) return GAINC.get(key);
-  const s = new Sim(stats(vid, sel), RPROF[ramp] || (RPROF[ramp] = rampProfile(RAMPS[ramp].h)), GAINW), ip = { pitch: 0, roll: 0, turbo: true, help: true };
-  for (let i = 0; i < 120 * 150 && s.mode !== 'crash' && s.mode !== 'done'; i++) { s.step(ip); s.ev.length = 0; } GAINC.set(key, s.maxZ); return s.maxZ; }
-function gainTxt(vid, sel, k) { const d0 = simDist(vid, sel, save.ramp), d1 = k === 'ramp' ? simDist(vid, sel, save.ramp + 1) : simDist(vid, Object.assign({}, sel, { [k]: (own(vid)[k] || 0) + 1 }), save.ramp), g = Math.round((d1 / Math.max(1, d0) - 1) * 100);
-  return g >= 1 ? `<em class="gain">⬆ +${g} % tālāk</em>` : ''; }
 function rampSpeed(st) { const s = new Sim(st, RAMP, WORLD); for (let i = 0; i < 120 * 40 && s.mode === 'ramp'; i++) s.step({ pitch: 0 }); return s.mode === 'ramp' ? s.v : (s.ev[0] || [0, s.v])[1]; }
 function openShop() {
   camSnap = true;
@@ -666,10 +676,10 @@ function renderShop() {
   for (const [k, S] of Object.entries(V.slots)) { const lv = sel[k], have = o[k] || 0, nx = S.lv[have + 1];
     h += `<div class="slot"><i>${S.lv[lv].i || S.i}</i><div><b>${S.n} <span class="lvn">${lv}/${RP.NL}</span></b><small>${S.lv[lv].n}</small>
       <div class="lvs"><button data-k="${k}" data-l="${lv - 1}" ${lv > 0 ? '' : 'disabled'}>◀</button><div class="lvbar"><i style="width:${have / RP.NL * 100}%"></i><u style="width:${lv / RP.NL * 100}%"></u></div><button data-k="${k}" data-l="${lv + 1}" ${lv < have ? '' : 'disabled'}>▶</button></div></div>
-      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">+1<br>€${nx.p}${gainTxt(vid, sel, k)}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
+      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">+1<br>€${nx.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
   const r = RAMPS[save.ramp], rn = RAMPS[save.ramp + 1];
   h += `<div class="slot"><i>🏗️</i><div><b>Rampa <span class="lvn">${save.ramp}/${RP.NL}</span></b><small>${r.h} m</small><div class="lvs"><div class="lvbar"><i style="width:${save.ramp / RP.NL * 100}%"></i><u style="width:${save.ramp / RP.NL * 100}%"></u></div></div></div>
-    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">+1<br>€${rn.p}${gainTxt(vid, sel, 'ramp')}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>
+    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">+1<br>€${rn.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>
     <p style="margin:6px 0 0;font-size:13px;color:#c9d2ff">🏆 <b style="color:#ffd34d">${Math.round(save.best[vid] || 0)} m</b></p>
     <button id="go">🚀 Aiziet!</button>`;
   sh.innerHTML = h; wireShop();

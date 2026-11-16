@@ -114,7 +114,6 @@ body{background:#9fd3ff}
 .slot small{display:block;font-size:12.5px;color:#c9d2ff}
 .pips{display:flex;gap:3px;margin-top:3px}.pips u{width:14px;height:6px;border-radius:3px;background:#ffffff25;text-decoration:none}.pips u.on{background:#57e389}
 .buy{border:0;border-radius:12px;padding:8px 10px;min-width:74px;min-height:46px;font-weight:900;font-size:14px;background:linear-gradient(160deg,#ffd34d,#ffb020);color:#2b1a00}
-.buy .gain{display:block;font-style:normal;font-size:11px;font-weight:800;color:#0b5d2a;background:#ffffffaa;border-radius:8px;padding:1px 5px;margin-top:3px;white-space:nowrap}
 .buy.no{opacity:.45}.buy.max{background:#2ecc7133;color:#7dffa8}
 .lr{display:flex;gap:4px;margin-top:4px}.lr button{flex:1;border-radius:10px;border:2px solid #ffffff22;background:#ffffff10;color:#fff;font-weight:800;font-size:12.5px;padding:5px 4px;min-height:34px}.lr button.on{border-color:#ffd34d;background:#ffd34d22}
 .bars{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;font-size:12.5px;font-weight:800;margin:8px 0 2px}
