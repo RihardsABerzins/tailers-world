@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0f1220">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -30,6 +30,7 @@
 <div id="dist"><b id="dM">0 m</b><span id="dSub"></span></div>
 <div id="warn"></div>
 <canvas id="sfx"></canvas>
+<canvas id="mm"></canvas>
 <div id="speedo"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#0f1220b3" stroke="#ffffff40" stroke-width="2"/><path d="M22.4 77.6A39 39 0 1 1 77.6 77.6" fill="none" stroke="#ffffff2e" stroke-width="8" stroke-linecap="round"/><path id="spArc" d="M22.4 77.6A39 39 0 1 1 77.6 77.6" fill="none" stroke="#ffd34d" stroke-width="8" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/><line id="spNeedle" x1="50" y1="50" x2="50" y2="20" stroke="#ff5a4e" stroke-width="3.5" stroke-linecap="round"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg><b id="spV">0</b><small>km/h</small></div>
 <div id="padL" class="pad"></div><div id="padR" class="pad"></div>
 <div id="lever"><div class="lvT">⬇ Velc!</div><div class="lvTrack"><i></i><div id="knob"></div></div></div>
@@ -47,6 +48,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="physics.js?v=12"></script>
-<script src="game.js?v=29"></script>
+<script src="game.js?v=30"></script>
 </body>
 </html>

@@ -603,7 +603,7 @@ function viewOffset() { if (state === 'shop') { const land = W > H, sh = $('shop
 addEventListener('resize', () => { resize(); });
 
 // ---- lidojums ----
-function go() {
+function go() { MM.trail = [];
   if (state !== 'shop' && state !== 'end') return;
   audioInit(); closeSheet(); $('shop').classList.remove('on'); setVehicle(); updateStreaks(VEHM, 0, 0, 0, 0, false); clearFX();
   sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0, s: 0 }; camPsi = 0; camSnap = true; resetBirds(); ejected = false; boomT = 0; FOCUS = null; camW = 0; runId++; $('eject').classList.remove('on'); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
@@ -738,6 +738,22 @@ function speedFx(dt, v) { const c = SFX.c, g = SFX.g, k = clamp((v - 18) / 55, 0
     const ca = Math.cos(l.a), sa = Math.sin(l.a), r0 = l.d * R, r1 = r0 + (.04 + .22 * fovK) * R * l.w;
     g.strokeStyle = `rgba(255,255,255,${(.08 + .42 * fovK) * Math.min(1, (l.d - .22) * 5)})`; g.lineWidth = 1.2 + 2.2 * l.d * fovK;
     g.beginPath(); g.moveTo(cx + ca * r0, cy + sa * r0); g.lineTo(cx + ca * r1, cy + sa * r1); g.stroke(); } }
+// ---- minikarte (Kenney Minimap Pack, CC0, stils D – models/minimap.png): ielas no augšas, lidmašīna, trajektorija, rampa, rekords ----
+// 1 flīze = 35 m (krustojums ik 2 flīzes = 70 m kvartāls); augšā – uz priekšu (+z), pa labi – −x (kā skatā no aizmugures)
+const MM = { cv: $('mm'), img: new Image(), trail: [], t: 0, COLS: 9, ROWS: 12, T: 8, parks: null };
+MM.img.src = 'models/minimap.png'; MM.cv.width = MM.COLS * MM.T; MM.cv.height = MM.ROWS * MM.T; MM.g = MM.cv.getContext('2d'); MM.g.imageSmoothingEnabled = false;
+function mmDraw(px, pz) { const { g, T, COLS, ROWS } = MM, S = BLK / 2; if (!MM.img.complete) return;
+  if (!MM.parks) MM.parks = new Set(CITY.parks.map(p => Math.round((p.x0 + p.x1) / 2 / BLK) + ':' + Math.floor((p.z0 + p.z1) / 2 / BLK)));
+  const tile = (i, x, y) => g.drawImage(MM.img, (i % 5) * T, Math.floor(i / 5) * T, T, T, Math.round(x), Math.round(y), T, T);
+  const tx0 = Math.round(-px / S) - (COLS >> 1), tz0 = Math.floor(pz / S) - 3; g.clearRect(0, 0, COLS * T, ROWS * T);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const tx = tx0 + c, tz = tz0 + ROWS - 1 - r, x = -tx * S, z = tz * S;
+    const onX = ((tx % 2) + 2) % 2 === 1, onZ = ((tz % 2) + 2) % 2 === 0;
+    tile(onX && onZ ? 6 : onX ? 5 : onZ ? 1 : MM.parks.has(Math.round(x / BLK) + ':' + Math.floor(z / BLK)) ? 13 : 14, c * T, r * T); }
+  const at = (x, z) => [(-x / S - tx0) * T, (ROWS - 1 - (z / S - tz0)) * T + T / 2], inMap = y => y > -T && y < ROWS * T + T;
+  for (let z = -RAMP.len * .8; z <= 0; z += S) { const [a, b] = at(0, z); if (inMap(b)) tile(20, a - T / 2, b - T / 2); } // rampa
+  const best = save.best[save.veh] || 0; if (best > 20) { const [a, b] = at(0, best); if (inMap(b)) tile(24, a - T / 2, b - T / 2); } // rekords
+  g.fillStyle = '#ffd34d'; MM.trail.forEach(([x, z]) => { const [a, b] = at(x, z); g.fillRect(Math.round(a) - 1, Math.round(b) - 1, 2, 2); });
+  const [a, b] = at(px, pz); tile(15, a - T / 2, b - T / 2); }
 const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3(), camOff = new T3.Vector3(); let camPsi = 0, camSnap = true;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -795,7 +811,8 @@ function frame(now) {
   camera.lookAt(camL);
   cullChunks(); updateDecoBirds(dt);
   // ātrumā skats paplašinās (līdz +12°) un no vidus skrien līnijas
-  speedFx(dt, state === 'run' && sim && !ejected ? sim.speed : 0); const fv = BASEFOV + 12 * fovK; if (Math.abs(camera.fov - fv) > .05) { camera.fov = fv; camera.updateProjectionMatrix(); }
+  speedFx(dt, state === 'run' && sim && !ejected ? sim.speed : 0);
+  if (state === 'run' && sim && (MM.t += dt) > .1) { MM.t = 0; const mp = ejected && PIL ? PIL.o.position : VEHM.g.position; if (sim.mode !== 'ramp') { MM.trail.push([mp.x, mp.z]); if (MM.trail.length > 400) MM.trail.shift(); } mmDraw(mp.x, mp.z); } const fv = BASEFOV + 12 * fovK; if (Math.abs(camera.fov - fv) > .05) { camera.fov = fv; camera.updateProjectionMatrix(); }
   if (camShake > 0) { camShake = Math.max(0, camShake - dt * 1.6); camera.position.x += rnd(-.3, .3) * camShake; camera.position.y += rnd(-.3, .3) * camShake; }
   renderer.render(scene, camera);
 }
