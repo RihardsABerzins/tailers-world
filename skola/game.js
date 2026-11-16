@@ -710,7 +710,9 @@ cv.addEventListener('pointerdown', e => { e.preventDefault(); audioInit();
 // ================= Logi =================
 function sheet(html, x) { $('sheet').innerHTML = (x ? '<button class="xBtn" id="xClose" aria-label="Aizvērt">✕</button>' : '') + html; $('ov').classList.add('on'); $('sheet').scrollTop = 0; if (x) $('xClose').onclick = x; }
 function closeSheet() { $('ov').classList.remove('on'); }
-let toastT = 0; function toast(t) { const e = $('toast'); e.innerHTML = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3400); }
+let toastT = 0; function toast(t) { const e = $('toast'), b = $('banner'); e.innerHTML = t; e.classList.add('on');
+  // ja dzeltenais padoms jau ir redzams, paziņojums parādās virs tā, nevis tam pa virsu
+  e.style.bottom = `calc(${Math.round(LY.td.h + 8 + (b.classList.contains('on') ? b.offsetHeight + 8 : 0))}px + env(safe-area-inset-bottom))`; clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3400); }
 let banT = 0; function banner(t, ms) { const e = $('banner'); clearTimeout(banT); if (!t) { e.classList.remove('on'); return; } e.innerHTML = t; e.classList.add('on'); if (ms) banT = setTimeout(() => e.classList.remove('on'), ms); }
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
 let hudKey = '';
