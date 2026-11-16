@@ -31,6 +31,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 
 ## Instrukcija spēlē
 - Graffiti pirms spēles – `TW.intro('grafiti', INTRO)` (game.js): 4 īsti kadri no spēles `grafiti/intro/1..4.webp` (800×500, 15–32 KB) ar 3–5 vārdiem (EN kodā, LV – `PHRASES`); spēle stāv pauzē, līdz aizver. Pauzē „❓ Kā spēlēt” atver to pašu logu (`force`). Pēc tam pirmajā reizē – mācības darot (`GUIDE`: bultiņa uz sienu → Zīmēt → apvelc → padomi), dzeltens baneris, atzīme `grafitiTut`.
+- **Graffiti minikarte** – `drawMinimap()` game.js (vecās punktu ielas joslas vietā): Kenney „Minimap Pack” flīzes (CC0, `grafiti/minimap/tiles.png` = stils **E** silts, licence `minimap/License.txt`). Viena kolonna = viens pilsētas gabals; X – brīva siena, zaļš punkts – žūst, pelēks – slēgta, S rozā – krāsu depo, S oranžs – kafejnīca/pica, S balts – cits veikals, zils – metro, galvaskauss – policija (mirgo), dzeltens kvadrāts – spēlētājs, zaļi punkti apakšā – slēptuves. Flīze 12 px telefonā / 16 px planšetē (veseli ierīces pikseļi), rāda ~25–30 gabalus ap spēlētāju un slīd līdzi (pilsētā ~38). Novietojas virs apakšējām pogām, ko pārklātu (`mmBottom`: skārienpogas, ⚙, pilnekrāns; pārbauda 1×/s). Metro iekšā nerāda.
 - Pēc sienas – rezultāta kartīte `showResult` (1–3 zvaigznes, zīmējums virs kontūras, ikonas) garā teksta vietā.
 - Telefonā nerāda tastatūras taustiņus (`.kh`, `.kbOnly`, `isTouch` teksti).
 - Spēlētāju vārdus kanvā zīmē ar `fillTextRaw` (netulko, piem. „Gold”).

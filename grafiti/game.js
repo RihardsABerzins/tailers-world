@@ -970,7 +970,8 @@ function render(){
       ctx.fillStyle=t.c; ctx.beginPath(); if(left){ ctx.moveTo(18,ey); ctx.lineTo(32,ey-9); ctx.lineTo(32,ey+9); } else { ctx.moveTo(W-18,ey); ctx.lineTo(W-32,ey-9); ctx.lineTo(W-32,ey+9); } ctx.closePath(); ctx.fill();
       ctx.font='bold 14px system-ui'; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillText(`${t.t} · ${m} m`,left?42:W-pw+4,ey); ctx.restore(); }); }
   // ielas josla
-  if((mode==='world'||mode==='shop')&&!inMetro){ const bw=Math.min(520,W*.55,W-40), bx=(W-bw)/2, by=H-(H>W&&isTouch?96:26);
+  if((mode==='world'||mode==='shop')&&!inMetro&&MM.ok) drawMinimap();
+  else if((mode==='world'||mode==='shop')&&!inMetro){ const bw=Math.min(520,W*.55,W-40), bx=(W-bw)/2, by=H-(H>W&&isTouch?96:26);
     ctx.fillStyle='#000a'; ctx.beginPath(); ctx.roundRect(bx-8,by-9,bw+16,18,9); ctx.fill();
     const cr=cityRange[curCity], mx_=x=>bx+clamp((x-cr[0])/(cr[1]-cr[0]),0,1)*bw;
     lots.forEach(l=>{ if(l.city!==curCity) return; const x=mx_(l.x+l.w/2); ctx.fillStyle=l.kind==='wall'?(locked(l)?'#555':l.art&&l.cool>0?'#66bb6a':TIER_COL[l.tier]):(l.kind==='paint'?'#ff4fd8':l.kind==='metro'?'#5aa8e8':l.kind==='cafe'||l.kind==='pizza'?'#ffb347':'#8892a6'); ctx.beginPath(); ctx.arc(x,by,l.kind==='wall'?4:3,0,7); ctx.fill(); });
@@ -981,6 +982,37 @@ function render(){
   for(let i=ripples.length-1;i>=0;i--){ const r=ripples[i]; r.t+=1/60; if(r.t>.5){ ripples.splice(i,1); continue; } ctx.save(); ctx.globalAlpha=1-r.t/.5; ctx.strokeStyle=r.c; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(r.x,r.y,10+r.t*70,0,7); ctx.stroke(); ctx.restore(); }
   renderFx();
 }
+// ---- minikarte no Kenney Minimap Pack (CC0) flīzēm: viena kolonna = viens ielas gabals ----
+const MM={ok:false,tint:{}};
+{ const im=new Image(); im.onload=()=>{ MM.img=im; MM.ok=true; }; im.src='minimap/tiles.png'; } // Style E (silts)
+// flīzes gaišos pikseļus pārkrāso vajadzīgajā krāsā (fons paliek)
+function mmTile(i,col){ const k=i+col; if(!col) return null; if(MM.tint[k]) return MM.tint[k];
+  const c=document.createElement('canvas'); c.width=c.height=8; const g=c.getContext('2d'); g.drawImage(MM.img,(i%5)*8,(i/5|0)*8,8,8,0,0,8,8);
+  const d=g.getImageData(0,0,8,8), p=d.data, [r,gr,b]=hexN(col); for(let j=0;j<p.length;j+=4){ if(p[j]+p[j+1]+p[j+2]>420){ p[j]=r; p[j+1]=gr; p[j+2]=b; } }
+  g.putImageData(d,0,0); return MM.tint[k]=c; }
+// visa pilsēta tiek uzzīmēta 8px flīzēs atsevišķā audeklā (pārzīmē 4× sekundē), uz ekrāna redzams logs ap spēlētāju
+function mmStrip(cl){ const n=cl.length+2, c=MM.cv||(MM.cv=document.createElement('canvas')); if(c.width!==n*8){ c.width=n*8; c.height=24; } const g=c.getContext('2d');
+  const t=(i,cx,cy,col)=>{ const tc=mmTile(i,col); if(tc) g.drawImage(tc,cx*8,cy*8); else g.drawImage(MM.img,(i%5)*8,(i/5|0)*8,8,8,cx*8,cy*8,8,8); };
+  for(let x=0;x<n;x++){ const e=x===0?0:x===n-1?2:1; t(e,x,0); t(x===0?5:x===n-1?7:14,x,1); t(e+10,x,2); }
+  cl.forEach((l,i)=>{ const x=i+1; if(l.kind==='wall'){ if(locked(l)) t(13,x,1,'#5c6178'); else if(l.cool>0) t(13,x,1,'#66bb6a'); else t(24,x,1); }
+    else if(l.kind==='metro') t(19,x,1,'#5aa8e8'); else if(l.kind==='paint') t(23,x,1,'#ff4fd8'); else if(l.kind==='cafe'||l.kind==='pizza') t(23,x,1,'#ffb347'); else t(23,x,1); });
+  hideSpots.forEach(s=>{ const i=cl.indexOf(s.lot); if(i>=0) t(13,i+1,2,'#69f0ae'); }); }
+// apakšējās pogas (skārienpogas, ⚙, pilnekrāns), kas ir zem kartes – karte paliek virs tām
+const mmBottom=(half)=>{ if(time>(MM.tk||0)||MM.half!==half){ MM.tk=time+1; MM.half=half; const r=[...document.querySelectorAll('#touch button,#setBtn,#fsBtn')].map(b=>b.getBoundingClientRect()).filter(r=>r.width>0&&r.top>H*.6&&r.right>W/2-half&&r.left<W/2+half).map(r=>r.top); MM.tt=r.length?Math.min(...r):H; } return MM.tt; };
+function drawMinimap(){ const cl=lots.filter(l=>l.city===curCity), n=cl.length+2, port=H>W;
+  if(time>(MM.at||0)||MM.city!==curCity){ MM.at=time+.25; MM.city=curCity; mmStrip(cl); }
+  const ts=Math.max(8,Math.round((W>=900&&H>=700?15:11)*dpr/8)*8/dpr), avail=port?Math.min(W*.8,W-24):Math.min(W*.5,W-320), vis=Math.min(n,Math.floor(avail/ts)), mw=vis*ts, x0=Math.round((W-mw)/2), y0=Math.round(mmBottom(mw/2+4)-8-ts*3);
+  const colOf=x=>{ for(let i=0;i<cl.length;i++){ const l=cl[i]; if(x<l.x+l.w) return i+1+clamp((x-l.x)/l.w,0,1); } return n-1; };
+  const pc=colOf(player.x); MM.v=MM.v==null||MM.city2!==curCity?pc:MM.v+(pc-MM.v)*.15; MM.city2=curCity; const v0=clamp(MM.v-vis/2,0,n-vis), sx=c=>x0+(c-v0)*ts;
+  ctx.save(); ctx.imageSmoothingEnabled=false; ctx.shadowColor='#0009'; ctx.shadowBlur=10; ctx.fillStyle='#0007'; ctx.fillRect(x0,y0+3,mw,ts*3-6); ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.rect(x0,y0,mw,ts*3); ctx.clip(); ctx.drawImage(MM.cv,v0*8,0,vis*8,24,x0,y0,mw,ts*3);
+  const ic=(i,c,col,s)=>{ const sz=ts*s; ctx.drawImage(mmTile(i,col)||MM.img,...(mmTile(i,col)?[0,0,8,8]:[(i%5)*8,(i/5|0)*8,8,8]),sx(c)-sz/2,y0+ts*1.5-sz/2,sz,sz); };
+  if(police.car) ic(18,colOf(police.off?police.off.x:police.car.x),Math.sin(police.car.siren)>0?'#ff1744':'#2979ff',1.1);
+  ctx.fillStyle='#000'; ctx.fillRect(sx(pc)-ts*.36,y0+ts*1.14,ts*.72,ts*.72); ic(15,pc,null,.56);
+  ctx.restore(); ctx.save(); // malās tumšāka pāreja, ja pilsēta turpinās
+  [[v0>0,x0,1],[v0<n-vis,x0+mw,-1]].forEach(([on,x,d])=>{ if(!on) return; const g=ctx.createLinearGradient(x,0,x+d*ts*1.5,0); g.addColorStop(0,'#000c'); g.addColorStop(1,'#0000'); ctx.fillStyle=g; ctx.fillRect(d>0?x:x-ts*1.5,y0,ts*1.5,ts*3);
+    ctx.fillStyle='#fff'; ctx.font=`bold ${ts*.7}px system-ui`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(d>0?'‹':'›',x+d*ts*.35,y0+ts*1.5); });
+  ctx.fillStyle='#ccd'; ctx.font='bold 11px system-ui'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.shadowColor='#000'; ctx.shadowBlur=4; ctx.fillText(`City ${curCity+1} · ${CITY_NAMES[curCity]}`,W/2,y0-3); ctx.restore(); }
 const hexN=h=>{ if(h==='#111111') h='#8899aa'; const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
 
 // izsalcis tēls: domu burbulis ar 🍔, kas pulsē (badā – sarkans un biežāk)
