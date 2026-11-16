@@ -52,6 +52,7 @@
   .lkRow{margin-bottom:8px}.lkRow small{display:block;color:#aab;margin-bottom:4px;font-weight:700}
   .lkRow>div{display:flex;flex-wrap:wrap;gap:6px}
   .lk{width:36px;height:36px;padding:0;border-radius:50%;border:3px solid #fff3;font-size:17px;display:flex;align-items:center;justify-content:center}
+  .lk .lkc{width:30px;height:30px;border-radius:50%;pointer-events:none}
   .lk.sel{border-color:#fff;box-shadow:0 0 10px #fff8;transform:scale(1.1)}
   .sw.empty{opacity:.45;border-style:dashed}
   .paintCtl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}

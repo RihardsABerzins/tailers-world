@@ -150,10 +150,11 @@ const dayK=()=>clamp((Math.sin((clock-6)/24*Math.PI*2)+.2)/.6,0,1);
 // gājēji un satiksme
 const SKINS=['#f2c9a0','#e0ac80','#c68642','#8d5524','#ffdbac'];
 const HOODS=['#e53935','#1e88e5','#43a047','#fdd835','#ec407a','#fb8c00','#8e24aa','#26c6da','#eceff1'];
-const npcs=Array.from({length:150},()=>({x:rnd(200,WORLD_W-200),y:rnd(574,604),dir:Math.random()<.5?-1:1,t:rnd(1,4),pause:0,speed:rnd(35,75),
+const npcs=Array.from({length:150},()=>({bg:(Math.random()*16)|0,x:rnd(200,WORLD_W-200),y:rnd(574,604),dir:Math.random()<.5?-1:1,t:rnd(1,4),pause:0,speed:rnd(35,75),
   hood:HOODS[(Math.random()*HOODS.length)|0],skin:SKINS[(Math.random()*SKINS.length)|0],cap:['#222','#444','#6d4c41','#37474f'][(Math.random()*4)|0],
   pants:['#2b3a67','#3e2723','#212121','#455a64'][(Math.random()*4)|0],step:rnd(0,6),face:'side',flip:1,bubble:null,bt:0,snitch:Math.random()<.35,watch:0,called:false,callT:0,seen:false}));
-const traffic=Array.from({length:30},(_,i)=>{ const left=i%2===0; return {x:rnd(0,WORLD_W),dir:left?-1:1,y:left?662:700,speed:rnd(150,260),L:rnd(150,185),spin:0,
+const TRAFFIC_M=[['sedan',165],['taxi',165],['van',175],['suv',170],['truck',180],['delivery',195],['garbage-truck',205],['hatchback-sports',158],['sedan-sports',172]];
+const traffic=Array.from({length:30},(_,i)=>{ const left=i%2===0, tm=TRAFFIC_M[(Math.random()*TRAFFIC_M.length)|0]; return {x:rnd(0,WORLD_W),dir:left?-1:1,y:left?662:700,speed:rnd(150,260),L:i%6===3?170:tm[1],model:i%6===3?'police':tm[0],spin:0,
   color:['#ef5350','#42a5f5','#66bb6a','#ffee58','#ab47bc','#eceff1','#ff7043'][(Math.random()*7)|0],cop:i%6===3}; }); // katra 6. mašīna – policijas patrulis
 
 // ================= Kanvasi =================
@@ -304,6 +305,7 @@ document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('bu
 
 // ================= Tēli =================
 function drawPerson(g,x,y,s,o){
+  if(SPR.ok) return drawSprite(g,x,y,s,o);
   const face=o.face||'down', flip=o.flip||1, step=o.step||0, side=face==='side';
   const hood=o.hood||'#e53935', skin=o.skin||'#f2c9a0', cap=o.cap||'#1b1b1f', pants=o.pants||'#2b3a67', shoe='#f5f5f5';
   const sw=Math.sin(step)*4.5, bob=o.still?Math.sin(performance.now()/380)*.7:-Math.abs(Math.cos(step))*1.6;
@@ -343,7 +345,60 @@ function drawPerson(g,x,y,s,o){
   }
   g.restore();
 }
+// ---- Kenney Mini Characters + Car Kit (CC0) kā 2D sprites (ieceptas no 3D, sk. sprites/CREDITS.txt) ----
+// chars.webp: rinda = tēls, 15 kadri (0–7 iet sānis, 8 stāv sānis, 9 lec, 10 sēž, 11 priekša, 12–13 mugura ar baloniņu, 14 tupstas)
+// chars_m.webp: R jaka, G bikses, B mati (tonēšanai); chars_k.webp: lakats (balts, tonē ar maskas krāsu)
+const SPR={ok:false,fw:128,fh:172,cw:384,ch:240,rows:new Map(),
+  chars:[['male-a','#3da679','#5f74ca','#3e3e44'],['male-b','#e76047','#5f74ca','#d07b56'],['male-c','#5f74ca','#3e3e44','#d07b56'],['male-d','#3e3e44','#3e3e44','#d07b56'],['male-e','#dcdce9','#3e3e44','#995a41'],['male-f','#3da679','#dd9f79','#3e3e44'],['male-g','#9391c1','#d07b56','#66638b'],
+    ['female-a','#8158cf','#5f74ca','#3e3e44'],['female-b','#e7b96f','#8158cf','#dd9f79'],['female-c','#5f74ca','#66638b','#66638b'],['female-d','#66638b','#66638b','#dd9f79'],['female-e','#dcdce9','#3e3e44','#3e3e44'],['female-f','#3e3e44','#5f74ca','#995a41']],
+  cars:['sedan','police','taxi','van','hatchback-sports','sedan-sports','race-future','suv','truck','delivery','garbage-truck']};
+const SPR_COP=16; // people.webp rinda: 0–15 gājēji, 16 policists
+// fona gājēji – Quaternius Posed Background Characters (CC0): 6 kadri (0 solis, 1 stāv sānis, 2 otrs solis, 3 priekša, 4 skatās augšup, 5 rokas sānos)
+function drawPeople(g,x,y,s,o){ const k=s*58/154.8, fw=96*k, fh=172*k, face=o.face||'down', row=o.bg|0;
+  let f=1; if(face==='side'){ if(!o.still) f=[0,1,2,1][Math.floor(((o.step||0)/(Math.PI*2))*4)%4&3]; } else f=o.watch>0?4:o.called?5:3;
+  if(!o.noShadow){ g.fillStyle='rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(x,y+1*s,10*s,3.5*s,0,0,7); g.fill(); }
+  g.save(); g.translate(x,y); if(face==='side'&&(o.flip||1)<0) g.scale(-1,1); g.drawImage(SPR.people,f*96,row*172,96,172,-fw/2,-166.8*k,fw,fh); g.restore(); }
+(function loadSprites(){ const im=n=>new Promise((ok,no)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=no; i.src='sprites/'+n+'?v=4'; });
+  Promise.all(['chars.webp','chars_m.webp','chars_k.webp','cars.webp','people.webp'].map(im)).then(([b,m,k,c,pp])=>{
+    const px=i=>{ const cv_=document.createElement('canvas'); cv_.width=i.width; cv_.height=i.height; const g=cv_.getContext('2d',{willReadFrequently:true}); g.drawImage(i,0,0); return g.getImageData(0,0,i.width,i.height); };
+    SPR.base=px(b); SPR.mask=px(m); SPR.band=k; SPR.carImg=c; SPR.people=pp; SPR.ok=true; }).catch(()=>{}); })();
+const sprCh=id=>{ const i=SPR.chars.findIndex(c=>c[0]===id); return i<0?0:i; };
+// tonēta tēla rinda (kešota pēc izskata): baltie laukumi × krāsa, lakats virsū
+function sprRow(ci,shirt,pants,hair,mask){ const C=SPR.chars[ci], key=[ci,shirt,pants,hair,mask].join('|'); let r=SPR.rows.get(key); if(r) return r;
+  const W=SPR.fw*15, H=SPR.fh, y0=ci*H, src=SPR.base.data, mk=SPR.mask.data, sw=SPR.base.width, out=new ImageData(W,H), p=out.data;
+  const hx=h=>{ h=!h||h==='orig'?null:h; return h?[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255):null; }, T=[hx(shirt)||hx(C[1]),hx(pants)||hx(C[2]),hx(hair)||hx(C[3])];
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=((y0+y)*sw+x)*4, o=(y*W+x)*4, a=src[i+3]; if(!a) continue; const ma=mk[i+3]/255; let t0=1,t1=1,t2=1;
+    for(let k=0;k<3;k++){ const w=mk[i+k]/255*ma; if(w>0){ const c=T[k]; t0=t0*(1-w)+c[0]*w; t1=t1*(1-w)+c[1]*w; t2=t2*(1-w)+c[2]*w; } }
+    p[o]=src[i]*t0; p[o+1]=src[i+1]*t1; p[o+2]=src[i+2]*t2; p[o+3]=a; }
+  r=document.createElement('canvas'); r.width=W; r.height=H; const g=r.getContext('2d'); g.putImageData(out,0,0);
+  if(mask&&mask!=='none'){ const k=document.createElement('canvas'); k.width=W; k.height=H; const kg=k.getContext('2d'); kg.drawImage(SPR.band,0,y0,W,H,0,0,W,H); kg.globalCompositeOperation='multiply'; kg.fillStyle=mask; kg.fillRect(0,0,W,H); kg.globalCompositeOperation='destination-in'; kg.drawImage(SPR.band,0,y0,W,H,0,0,W,H); g.drawImage(k,0,0); }
+  if(SPR.rows.size>24) SPR.rows.delete(SPR.rows.keys().next().value); SPR.rows.set(key,r); return r; }
+function drawSprite(g,x,y,s,o){
+  if(o.bg!=null) return drawPeople(g,x,y,s,o);
+  const ci=o.ch!=null?(typeof o.ch==='number'?o.ch:sprCh(o.ch)):0, row=sprRow(ci,o.hood,o.pants,o.cap,o.mask), face=o.face||'down', side=face==='side';
+  let f=8; if(face==='down') f=11; else if(face==='up') f=o.spray?12+((performance.now()/140|0)%2):12; else if(o.ride) f=8; else if(o.jump) f=9; else if(o.crouch) f=14; else if(!o.still) f=(Math.floor(((o.step||0)/(Math.PI*2))*8)%8+8)%8;
+  const k=s*46/(.729*SPR.fh), fy=-.9457*SPR.fh*k, fw=SPR.fw*k, fh=SPR.fh*k, bob=o.still&&face!=='up'?Math.sin(performance.now()/380)*.6*s:0;
+  if(!o.noShadow){ g.fillStyle='rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(x,y+1*s,12*s,4*s,0,0,7); g.fill(); }
+  g.save(); g.translate(x,y+bob); if(side&&(o.flip||1)<0) g.scale(-1,1);
+  if(o.spray&&side){ // zīmēšanas stūrī: stāv sānis, roka ar baloniņu uz mērķi
+    g.drawImage(row,8*SPR.fw,0,SPR.fw,SPR.fh,-fw/2,fy,fw,fh);
+    const sx0=3*s, sy0=-22*s; let hx=12*s, hy=-40*s; if(o.target){ const dx_=o.target.x-x-sx0, dy_=o.target.y-y-sy0, d=Math.hypot(dx_,dy_)||1, L=Math.min(d,16*s); hx=sx0+dx_/d*L; hy=sy0+dy_/d*L; }
+    g.lineCap='round'; g.strokeStyle=o.hood||'#e53935'; g.lineWidth=5.5*s; g.beginPath(); g.moveTo(sx0,sy0); g.lineTo(hx,hy); g.stroke();
+    const ang=Math.atan2(hy-sy0,hx-sx0); g.save(); g.translate(hx,hy); g.rotate(ang); rr(g,-1*s,-4*s,8*s,8*s,2*s,o.can||'#e53935'); rr(g,7*s,-1.5*s,3*s,3*s,1*s,'#ddd'); g.restore();
+    o.hand={x:x+hx+Math.cos(ang)*10*s, y:y+hy+Math.sin(ang)*10*s}; g.restore(); return; }
+  g.drawImage(row,f*SPR.fw,0,SPR.fw,SPR.fh,-fw/2,fy,fw,fh);
+  if(face==='up'&&o.spray){ rr(g,14*s,-36*s,7*s,7*s,2*s,o.can||'#e53935'); o.hand={x:x+18*s,y:y-38*s}; }
+  g.restore(); }
+// mašīna no sāniem; L – garums ekrānā, y – riteņu pieskāriens
+const CAR_MODEL={hatch:'hatchback-sports',sport:'sedan-sports',super:'race-future'};
+function drawCarSprite(g,x,y,dir,L,o){ const ci=Math.max(0,SPR.cars.indexOf(o.model)), w=L/.962, h=w*SPR.ch/SPR.cw;
+  g.save(); g.translate(x,y); g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(0,2,L*.52,6,0,0,7); g.fill(); g.scale(dir,1);
+  g.drawImage(SPR.carImg,0,ci*SPR.ch,SPR.cw,SPR.ch,-w/2,-h*.96,w,h);
+  if(o.lights!==false){ g.globalCompositeOperation='lighter'; g.fillStyle='#fff1b555'; g.shadowColor='#ffe28a'; g.shadowBlur=18; g.fillRect(L*.44,-L*.17,L*.05,L*.05); g.fillStyle='#ff303055'; g.shadowColor='#f00'; g.fillRect(-L*.5,-L*.17,L*.03,L*.05); }
+  if(o.siren!=null){ const on=Math.sin(o.siren)>0; g.globalCompositeOperation='lighter'; g.shadowBlur=22; g.shadowColor=g.fillStyle=on?'#ff1744':'#2979ff'; g.beginPath(); g.arc(on?-L*.04:L*.04,-h*.66,L*.05,0,7); g.fill(); }
+  g.restore(); }
 function carSide(g,x,y,dir,L,color,o={}){ // y = riteņu pieskāriena līnija
+  if(SPR.ok&&o.model) return drawCarSprite(g,x,y,dir,L,o);
   g.save(); g.translate(x,y); g.scale(dir,1);
   const Hh=L*.3, wr=L*.1;
   g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(0,2,L*.52,6,0,0,7); g.fill();
@@ -364,9 +419,9 @@ function carSide(g,x,y,dir,L,color,o={}){ // y = riteņu pieskāriena līnija
   g.restore();
 }
 // Izskats (frizētava): save.look. Jaka 'auto' = krāsas toni, kā agrāk.
-const LOOK0={skin:'#f2c9a0',hood:'auto',hat:'cap',cap:'#1b1b1f',mask:'#b71c1c',pants:'#2b3a67'};
+const LOOK0={ch:'male-a',skin:'#f2c9a0',hood:'auto',hat:'cap',cap:'orig',mask:'#b71c1c',pants:'orig'};
 const lookOf=()=>Object.assign({},LOOK0,save.look||{});
-const playerOutfit=()=>{ const c=colorById(save.color).hex, L=lookOf(); return {hood:L.hood==='auto'?(c==='#111111'?'#37474f':c):L.hood,skin:L.skin,hat:L.hat,cap:L.cap,pants:L.pants,mask:L.mask,can:c}; };
+const playerOutfit=()=>{ const c=colorById(save.color).hex, L=lookOf(); return {ch:L.ch,hood:L.hood==='auto'?(c==='#111111'?'#37474f':c):L.hood,skin:L.skin,hat:L.hat,cap:L.cap,pants:L.pants,mask:L.mask,can:c}; };
 
 // ================= Fona zīmēšana (kešota) =================
 const mkCanvas=(w,h)=>{ const c=document.createElement('canvas'); c.width=w*2; c.height=h*2; const g=c.getContext('2d'); g.scale(2,2); return {c,g}; };
@@ -666,7 +721,7 @@ function updateFoodUi(){ const f_=Math.round(save.food), ft=document.getElementB
   if(ft.textContent!==fs_){ ft.textContent=fs_; ft.style.color=f_<=0?'#ff5252':f_<25?'#ffca28':'#cfd'; }
   hudBox.classList.toggle('food-low',f_<50); hudBox.classList.toggle('heat-on',heat>=1||police.active); }
 function drawOfficer(o){ if(!o) return;
-  drawPerson(ctx,o.x,o.y,PS,{face:o.face,flip:o.flip,step:o.step,hood:o.hood,skin:o.skin,cap:o.cap,pants:o.pants,mask:o.mask,still:o.state==='search'||o.face==='down'});
+  drawPerson(ctx,o.x,o.y,PS,{face:o.face,flip:o.flip,step:o.step,hood:o.hood,skin:o.skin,cap:o.cap,pants:o.pants,mask:o.mask,still:o.state==='search'||o.face==='down',bg:SPR_COP});
   if(o.state==='search'||o.state==='goHide'){ ctx.save(); ctx.globalCompositeOperation='lighter'; const dir=o.flip||1, g=ctx.createLinearGradient(o.x,0,o.x+dir*170,0); g.addColorStop(0,'rgba(255,255,200,.35)'); g.addColorStop(1,'rgba(255,255,200,0)'); ctx.fillStyle=g;
     ctx.beginPath(); ctx.moveTo(o.x+dir*14,o.y-60); ctx.lineTo(o.x+dir*190,o.y-20); ctx.lineTo(o.x+dir*190,o.y+10); ctx.closePath(); ctx.fill(); ctx.restore(); }
   if(o.bt>0){ ctx.save(); ctx.font='30px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,o.bt); ctx.fillText(o.bubble,o.x,o.y-104); ctx.restore(); } }
@@ -898,7 +953,7 @@ function render(){
   // cilvēki, spēlētājs
   const list=npcs.filter(n=>n.x>vx0-60&&n.x<vx1+60).map(n=>({y:n.y,fn:()=>{ const s=PS*(.92+.16*(n.y-574)/30); drawPerson(ctx,n.x,n.y,s,n);
     if(n.bt>0){ ctx.save(); ctx.font='28px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=Math.min(1,n.bt); ctx.fillText(n.bubble,n.x,n.y-100-(2.5-n.bt)*5); ctx.restore(); }
-    else if(n.snitch&&!n.called){ ctx.save(); ctx.font='18px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=.9; ctx.fillText('📱',n.x+(n.flip>0?14:-14),n.y-76); ctx.restore(); } }}));
+    else if(n.snitch&&!n.called){ ctx.save(); ctx.font='18px system-ui'; ctx.textAlign='center'; ctx.globalAlpha=.9; ctx.fillText('📱',n.x+(n.flip>0?16:-16),n.y-(SPR.ok?50:76)); ctx.restore(); } }}));
   if(mode!=='draw'&&!hidden) list.push({y:GROUND,fn:drawPlayer});
   police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
   if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
@@ -909,8 +964,8 @@ function render(){
   // satiksme (priekšplānā)
   const copLivery=(c,L,siren)=>{ const Hh=L*.3; ctx.save(); ctx.translate(c.x,c.y); ctx.scale(c.dir,1); ctx.fillStyle='#1e5bd8'; ctx.fillRect(-L*.5+4,-Hh*.4,L-8,L*.035);
     const on=siren!=null&&Math.sin(siren)>0; rr(ctx,-L*.06,-Hh*1.2,L*.07,L*.035,2,siren==null?'#7a1d2a':on?'#ff1744':'#3a0d14'); rr(ctx,L*.01,-Hh*1.2,L*.07,L*.035,2,siren==null?'#1d3a7a':on?'#10204a':'#2979ff'); ctx.restore(); };
-  traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.cop?'#f4f6fa':c.color,{spin:c.spin}); if(c.cop) copLivery(c,c.L,null); });
-  [police.car,...police.extra].forEach(c=>{ if(!c) return; const L=175; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir}); copLivery(c,L,c.siren); });
+  traffic.forEach(c=>{ if(c.x<vx0-250||c.x>vx1+250) return; carSide(ctx,c.x,c.y,c.dir,c.L,c.cop?'#f4f6fa':c.color,{spin:c.spin,model:c.model}); if(c.cop&&!SPR.ok) copLivery(c,c.L,null); });
+  [police.car,...police.extra].forEach(c=>{ if(!c) return; const L=175; carSide(ctx,c.x,c.y,c.dir,L,'#f4f6fa',{spin:c.state==='parked'?0:time*14*c.dir,model:'police',siren:c.siren}); if(!SPR.ok) copLivery(c,L,c.siren); });
   drawHeli();
   drawParts(ctx,parts.filter(p=>p.type!=='dust'&&p.type!=='smoke'));
   floats.forEach(f=>{ ctx.save(); const a=1-f.t/1.8; ctx.globalAlpha=Math.min(1,a*2); ctx.font='bold 38px system-ui'; ctx.textAlign='center'; ctx.lineWidth=5; ctx.strokeStyle='#000'; ctx.strokeText(f.txt,f.x,f.y-f.t*70); ctx.fillStyle=f.col; ctx.shadowColor=f.col; ctx.shadowBlur=14; ctx.fillText(f.txt,f.x,f.y-f.t*70); ctx.restore(); });
@@ -998,10 +1053,13 @@ function mmStrip(cl){ const n=cl.length+2, c=MM.cv||(MM.cv=document.createElemen
     else if(l.kind==='metro') t(19,x,1,'#5aa8e8'); else if(l.kind==='paint') t(23,x,1,'#ff4fd8'); else if(l.kind==='cafe'||l.kind==='pizza') t(23,x,1,'#ffb347'); else t(23,x,1); });
   hideSpots.forEach(s=>{ const i=cl.indexOf(s.lot); if(i>=0) t(13,i+1,2,'#69f0ae'); }); }
 // apakšējās pogas (skārienpogas, ⚙, pilnekrāns), kas ir zem kartes – karte paliek virs tām
+// horizontāli: brīvā vieta starp kreisajām un labajām pogām (🙈 poga vieta rezervēta, lai karte nelēkā)
+const mmGap=()=>{ if(time>(MM.gk||0)){ MM.gk=time+1; const rs=[...document.querySelectorAll('#touch button')].map(b=>b.getBoundingClientRect()).filter(r=>r.width>0&&r.top>H*.6); const L=rs.filter(r=>r.right<W/2).map(r=>r.right), Rr=rs.filter(r=>r.left>W/2).map(r=>r.left), tS=document.getElementById('tS');
+    let rx=Rr.length?Math.min(...Rr):W, lx=L.length?Math.max(...L):0; if(tS&&!tS.getBoundingClientRect().width&&Rr.length) rx-=62; MM.gap=Math.min(W/2-lx,rx-W/2); } return MM.gap; };
 const mmBottom=(half)=>{ if(time>(MM.tk||0)||MM.half!==half){ MM.tk=time+1; MM.half=half; const r=[...document.querySelectorAll('#touch button,#setBtn,#fsBtn')].map(b=>b.getBoundingClientRect()).filter(r=>r.width>0&&r.top>H*.6&&r.right>W/2-half&&r.left<W/2+half).map(r=>r.top); MM.tt=r.length?Math.min(...r):H; } return MM.tt; };
 function drawMinimap(){ const cl=lots.filter(l=>l.city===curCity), n=cl.length+2, port=H>W;
   if(time>(MM.at||0)||MM.city!==curCity){ MM.at=time+.25; MM.city=curCity; mmStrip(cl); }
-  const ts=Math.max(8,Math.round((W>=900&&H>=700?15:11)*dpr/8)*8/dpr), avail=port?Math.min(W*.8,W-24):Math.min(W*.5,W-320), vis=Math.min(n,Math.floor(avail/ts)), mw=vis*ts, x0=Math.round((W-mw)/2), y0=Math.round(mmBottom(mw/2+4)-8-ts*3);
+  const ts=Math.max(8,Math.round((W>=900&&H>=700?15:11)*dpr/8)*8/dpr), avail=port?Math.min(W*.8,W-24):isTouch?Math.min(W*.5,2*mmGap()-16):Math.min(W*.5,W-320), vis=Math.min(n,Math.floor(avail/ts)), mw=vis*ts, x0=Math.round((W-mw)/2), y0=Math.round(mmBottom(mw/2+4)-8-ts*3);
   const colOf=x=>{ for(let i=0;i<cl.length;i++){ const l=cl[i]; if(x<l.x+l.w) return i+1+clamp((x-l.x)/l.w,0,1); } return n-1; };
   const pc=colOf(player.x); MM.v=MM.v==null||MM.city2!==curCity?pc:MM.v+(pc-MM.v)*.15; MM.city2=curCity; const v0=clamp(MM.v-vis/2,0,n-vis), sx=c=>x0+(c-v0)*ts;
   ctx.save(); ctx.imageSmoothingEnabled=false; ctx.shadowColor='#0009'; ctx.shadowBlur=10; ctx.fillStyle='#0007'; ctx.fillRect(x0,y0+3,mw,ts*3-6); ctx.shadowBlur=0;
@@ -1027,11 +1085,11 @@ function drawPlayer(){
   const car=carById(save.car), o=playerOutfit(), busy=mode==='entering'||mode==='exiting';
   const y=GROUND-player.h;
   if(busy){
-    if(car.kind!=='foot'){ const px=tr.sx-110; if(car.kind==='car') carSide(ctx,px,GROUND+6,1,car.L,car.color,{lights:false}); else { rr(ctx,px-20,GROUND-8,40,6,3,car.color); ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(px-12,GROUND-3,4,0,7); ctx.arc(px+12,GROUND-3,4,0,7); ctx.fill(); } }
+    if(car.kind!=='foot'){ const px=tr.sx-110; if(car.kind==='car') carSide(ctx,px,GROUND+6,1,car.L,car.color,{lights:false,model:CAR_MODEL[car.id]}); else { rr(ctx,px-20,GROUND-8,40,6,3,car.color); ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(px-12,GROUND-3,4,0,7); ctx.arc(px+12,GROUND-3,4,0,7); ctx.fill(); } }
     drawPerson(ctx,player.x,GROUND,PS,Object.assign({},o,{face:player.face,flip:player.flip,step:player.step,spray:player.face==='up'||(mode==='exiting'),still:player.face==='up'}));
     return;
   }
-  if(car.kind==='car'){ carSide(ctx,player.x,y+6,player.flip,car.L,car.color,{driver:o,spin:player.spin}); return; }
+  if(car.kind==='car'){ carSide(ctx,player.x,y+6,player.flip,car.L,car.color,{driver:o,spin:player.spin,model:CAR_MODEL[car.id]}); return; }
   if(car.kind==='board'||car.kind==='scoot'){
     ctx.save(); ctx.translate(player.x,y); ctx.scale(player.flip,1);
     rr(ctx,-24,-9,48,6,3,car.color); ctx.fillStyle='#1a1a1a'; [-15,15].forEach(wx=>{ ctx.beginPath(); ctx.arc(wx,-3,5.5,0,7); ctx.fill(); });
@@ -1040,7 +1098,7 @@ function drawPlayer(){
     drawPerson(ctx,player.x,y-8,PS,Object.assign({},o,{face:'side',flip:player.flip,step:0,ride:true,still:true,noShadow:true}));
     return;
   }
-  drawPerson(ctx,player.x,y,PS,Object.assign({},o,{face:player.h>0?'side':player.face,flip:player.flip,step:player.h>0?1.2:player.step,still:!player.moving}));
+  drawPerson(ctx,player.x,y,PS,Object.assign({},o,{face:player.h>0?'side':player.face,flip:player.flip,step:player.h>0?1.2:player.step,still:!player.moving,jump:player.h>0}));
 }
 
 // ================= Zīmēšanas režīms =================
@@ -1494,28 +1552,29 @@ function doTeleport(d){ if(police.active){ closeShop(); toast('🚓 The police a
   player.x=d.x; player.vx=0; player.h=0; hidden=false; cam.x=d.x; cam.flash=.7; burst(d.x,GROUND-40,'#8ee3ff',32); sfx('zap'); ding([880,1175]); toast('⚡ '+d.n); }
 // Frizētava: tēla izskats ar dzīvu priekšskatu (bez maksas)
 const LOOK_OPTS={
-  skin:['#ffdbac','#f2c9a0','#e0ac80','#c68642','#8d5524','#5c3a21'],
+  ch:SPR.chars.map(c=>c[0]).filter(id=>id!=='male-c'),
   hood:['auto','#e53935','#1e88e5','#43a047','#fdd835','#ec407a','#fb8c00','#8e24aa','#26c6da','#eceff1','#37474f','#111111'],
-  hat:['cap','beanie','hair'],
-  cap:['#1b1b1f','#e53935','#1e88e5','#43a047','#fdd835','#ec407a','#8e24aa','#eceff1','#6d4c41','#f5c542'],
+  cap:['orig','#1b1b1f','#6d4c41','#f5c542','#e53935','#1e88e5','#43a047','#ec407a','#8e24aa','#eceff1'],
   mask:['none','#b71c1c','#111111','#1e88e5','#43a047','#ec407a','#eceff1','#fb8c00'],
-  pants:['#2b3a67','#1b1b1f','#5d4037','#455a64','#2e7d32','#6a1b9a','#c62828','#9e9e9e'],
+  pants:['orig','#2b3a67','#1b1b1f','#5d4037','#455a64','#2e7d32','#6a1b9a','#c62828','#9e9e9e'],
 };
-const LOOK_ROWS=[['skin','Skin'],['hood','Hoodie'],['hat','Head'],['cap','Hat / hair color'],['mask','Mask'],['pants','Pants']];
+const LOOK_ROWS=[['ch','Character'],['hood','Hoodie'],['cap','Hair color'],['pants','Pants'],['mask','Mask']];
 function openBarber(){ mode='shop'; promptEl.style.display='none'; renderBarber(); shopOv.classList.add('on'); stat('barber'); }
 function renderBarber(){ const L=lookOf();
   const sw=(k,v)=>{ const sel=L[k]===v; let inner='', bg=v;
     if(v==='auto'){ bg=`conic-gradient(#e53935,#fdd835,#43a047,#1e88e5,#8e24aa,#e53935)`; inner='🎨'; }
     else if(v==='none'){ bg='#2a2a33'; inner='🙂'; }
-    else if(k==='hat'){ bg='#2a2a33'; inner={cap:'🧢',beanie:'🧶',hair:'💇'}[v]; }
+    else if(v==='orig'){ bg='#2a2a33'; inner='↺'; }
+    else if(k==='ch'){ bg='#2a2a33'; inner=`<canvas class="lkc" data-ch="${v}" width="40" height="40"></canvas>`; }
     return `<button class="lk${sel?' sel':''}" data-k="${k}" data-v="${v}" style="background:${bg}">${inner}</button>`; };
   shopEl.innerHTML=`<h2>💈 Barber</h2><div class="bb"><canvas id="lookPrev" width="240" height="300"></canvas><div class="bbr">${LOOK_ROWS.map(([k,n])=>`<div class="lkRow"><small>${n}</small><div>${LOOK_OPTS[k].map(v=>sw(k,v)).join('')}</div></div>`).join('')}</div></div>
     <button id="lookRnd" class="sec">🎲 Random</button> <button id="shopClose">✔ Done<span class="kh"> (E / Esc)</span></button>`;
   const c=document.getElementById('lookPrev'), g=c.getContext('2d'); g.fillStyle='#1d1b29'; g.fillRect(0,0,240,300); g.fillStyle='#2b2d38'; g.fillRect(0,250,240,50);
-  drawPerson(g,120,262,4.6,Object.assign({},playerOutfit(),{face:'down',still:true}));
+  drawPerson(g,120,270,SPR.ok?3.6:4.6,Object.assign({},playerOutfit(),{face:'down',still:true}));
+  if(SPR.ok) shopEl.querySelectorAll('.lkc').forEach(c=>{ const r=sprRow(sprCh(c.dataset.ch),'orig','orig','orig','none'); c.getContext('2d').drawImage(r,11*SPR.fw+19,28,90,90,0,0,40,40); });
   const pushLook=()=>{ if(NET.on&&NET.db) NET.db.ref('users/'+NET.uid+'/look').set(save.look).catch(()=>{}); };
   shopEl.querySelectorAll('.lk').forEach(b=>b.onclick=()=>{ save.look=Object.assign(lookOf(),{[b.dataset.k]:b.dataset.v}); persist(); pushLook(); renderBarber(); });
-  document.getElementById('lookRnd').onclick=()=>{ const r=a=>a[(Math.random()*a.length)|0]; save.look={skin:r(LOOK_OPTS.skin),hood:r(LOOK_OPTS.hood),hat:r(LOOK_OPTS.hat),cap:r(LOOK_OPTS.cap),mask:r(LOOK_OPTS.mask),pants:r(LOOK_OPTS.pants)}; persist(); pushLook(); renderBarber(); };
+  document.getElementById('lookRnd').onclick=()=>{ const r=a=>a[(Math.random()*a.length)|0]; save.look=Object.assign(lookOf(),{ch:r(LOOK_OPTS.ch),hood:r(LOOK_OPTS.hood),cap:r(LOOK_OPTS.cap),mask:r(LOOK_OPTS.mask),pants:r(LOOK_OPTS.pants)}); persist(); pushLook(); renderBarber(); };
   document.getElementById('shopClose').onclick=closeShop; }
 function openShoes(){ mode='shop'; promptEl.style.display='none'; renderShoes(); shopOv.classList.add('on'); }
 function renderShoes(){ save.shoes=save.shoes||['old'];
@@ -1703,7 +1762,7 @@ function netTick(){ if(!NET.on) return;
       NET.sub=NET.db.ref('presence/'+c); NET.sub.on('value',s=>{ const now=Date.now()+NET.off, o={};
         s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({uid:p.key,dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
   const now=Date.now();
-  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,l:(()=>{ const o=playerOutfit(); return {s:o.skin,t:o.hat,c:o.cap,m:o.mask,p:o.pants}; })(),hid:hidden?1:0,m:myMedals()||null,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
+  if(NET.ref&&now-NET.lastSent>1500){ NET.lastSent=now; NET.ref.set({n:NET.name,nk:NET.nick||null,x:Math.round(player.x),f:player.flip,h:playerOutfit().hood,l:(()=>{ const o=playerOutfit(); return {s:o.skin,t:o.hat,c:o.cap,m:o.mask,p:o.pants,ch:o.ch}; })(),hid:hidden?1:0,m:myMedals()||null,t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{}); } }
 function netStats(force){ if(!NET.on) return; const now=Date.now(); if(!force&&now-NET.lastStats<5000){ if(!NET.trail) NET.trail=setTimeout(()=>{ NET.trail=null; netStats(true); },5000-(now-NET.lastStats)); return; } NET.lastStats=now; cloudSave();
   NET.db.ref('stats/'+NET.uid).set({name:NET.name,nick:NET.nick||null,level:Math.min(99,level()),xp:save.xp||0,painted:save.painted||0,city:curCity+1,updated:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
   if(window.TWA) TWA.sync(NET.uid,Object.assign({},save.st,NET.visits,{level:level(),painted:save.painted||0,city:save.st.maxCity=Math.max(save.st.maxCity||1,curCity+1),rich:save.st.rich=Math.max(save.st.rich||0,save.money),colors:save.colors.length,cars:save.cars})).then(n=>{ n.forEach((m,i)=>setTimeout(()=>{ toast(`🏅 <b>New medal!</b><br><span style="font-size:30px">${m.i}</span> ${TWA.title(m)}`); ding([784,988,1175,1568]); buzz(30); },4200*i)); }).catch(()=>{}); }
@@ -1757,7 +1816,7 @@ async function openStaff(){ if(!NET.on||!TW.isStaff(NET.uid)||mode!=='world') re
     try{ await NET.db.ref('kicks/'+r.uid).set({by:NET.name,until:TW.now()+600000,t:firebase.database.ServerValue.TIMESTAMP}); b.textContent='✓ Izmests'; }catch(e){ b.textContent='Nav atļauts'; } });
   document.getElementById('tpClose').onclick=closeShop; }
 // cita spēlētāja izskats no presence (tikai krāsu virknes un zināmie galvas veidi)
-const lookFrom=l=>{ if(!l||typeof l!=='object') return {}; const col=v=>typeof v==='string'&&/^#[0-9a-f]{3,8}$/i.test(v)?v:undefined, r={skin:col(l.s),cap:col(l.c),pants:col(l.p),mask:l.m==='none'?'none':col(l.m),hat:['cap','beanie','hair'].includes(l.t)?l.t:undefined}; Object.keys(r).forEach(k=>r[k]===undefined&&delete r[k]); return r; };
+const lookFrom=l=>{ if(!l||typeof l!=='object') return {}; const col=v=>typeof v==='string'&&/^#[0-9a-f]{3,8}$/i.test(v)?v:undefined, r={skin:col(l.s),cap:l.c==='orig'?'orig':col(l.c),pants:l.p==='orig'?'orig':col(l.p),mask:l.m==='none'?'none':col(l.m),hat:['cap','beanie','hair'].includes(l.t)?l.t:undefined,ch:SPR.chars.some(c=>c[0]===l.ch)?l.ch:undefined}; Object.keys(r).forEach(k=>r[k]===undefined&&delete r[k]); return r; };
 function drawOther(o,mv){ ctx.save(); ctx.globalAlpha=.93;
   drawPerson(ctx,o.dx,GROUND-2,PS,Object.assign({face:mv?'side':'down',flip:o.f||1,step:o.step,hood:o.h||'#888',skin:'#f2c9a0',cap:'#1b1b1f',pants:'#2b3a67',mask:'#b71c1c',still:!mv},lookFrom(o.l))); ctx.restore();
   drawNameTag(o.dx,GROUND-104,o.nk||o.n,o.uid,o.m||0); drawBubble(o.dx,GROUND-126,chatBubble(o.uid)); }

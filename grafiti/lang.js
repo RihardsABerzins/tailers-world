@@ -38,7 +38,7 @@
     ['Keep the old drawing','Atstāt veco zīmējumu'],['Clean the wall first','Vispirms notīrīt sienu'],
     ['Police backup is coming from the other side!','Policijas pastiprinājums brauc no otras puses!'],
     ['Needs level','Vajag līmeni'],
-    ['💈 Barber','💈 Frizētava'],['Hat / hair color','Cepures / matu krāsa'],['Hoodie','Jaka'],['Head','Galva'],['Pants','Bikses'],['🎲 Random','🎲 Nejauši'],
+    ['💈 Barber','💈 Frizētava'],['Hat / hair color','Cepures / matu krāsa'],['Hair color','Matu krāsa'],['Character','Tēls'],['Hoodie','Jaka'],['Head','Galva'],['Pants','Bikses'],['🎲 Random','🎲 Nejauši'],
     ['E – barber (change your look)','E – frizētava (maini izskatu)'],['Look','Izskats'],
     ['👉 Walk to the brick wall with ◀ ▶ – or just tap the wall','👉 Aizej līdz ķieģeļu sienai ar ◀ ▶ – vai vienkārši uzspied uz sienas'],['👉 Walk to the brick wall (A / D)','👉 Aizej līdz ķieģeļu sienai (A / D)'],
     ['🎨 Tap the big Paint button','🎨 Spied lielo pogu Zīmēt'],['🎨 Press E to paint','🎨 Spied E, lai zīmētu'],
