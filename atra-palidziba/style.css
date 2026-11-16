@@ -117,7 +117,7 @@ body.kb #stick{display:none}
 #bView.on{background:linear-gradient(160deg,#4cd97b,#1e9e50)}
 body.fpOn #mini{opacity:.9}
 
-#mini.big{position:fixed;left:50%;top:50%;width:min(92vw,78vh);height:min(92vw,78vh);transform:translate(-50%,-50%);z-index:25;border-width:3px;box-shadow:0 20px 60px #000a}
+#mini.big{image-rendering:pixelated;position:fixed;left:50%;top:50%;width:min(92vw,78vh);height:min(92vw,78vh);transform:translate(-50%,-50%);z-index:25;border-width:3px;box-shadow:0 20px 60px #000a}
 #mapShade{position:fixed;inset:0;background:#0008;z-index:24;display:none}#mapShade.on{display:block}
 @media (max-width:380px){ #mini{width:128px;height:128px} }
 

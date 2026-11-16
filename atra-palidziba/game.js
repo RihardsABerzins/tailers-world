@@ -688,6 +688,7 @@ function drawCar(x, y, a, L, Wd, col, isAmb, t, c) {
   ctx.restore();
 }
 function drawMini(t) {
+  if (window.KMap && KMap.on() && KMap.draw(t)) return;
   const MW = mini.width, k = MW / (S + RW), g = mctx; g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#4f7d43'; g.fillRect(0, 0, MW, MW); g.save(); g.translate(RW / 2 * k, RW / 2 * k); g.scale(k, k);
   g.strokeStyle = '#2b2f3a'; g.lineWidth = RW * .7; for (let i = 0; i < N; i++) { g.beginPath(); g.moveTo(i * G, 0); g.lineTo(i * G, S); g.moveTo(0, i * G); g.lineTo(S, i * G); g.stroke(); }
   g.strokeStyle = '#ff4d4d'; jams.forEach(key => { const ax = key[0], idx = +key.slice(1, key.indexOf('_')), seg = +key.slice(key.indexOf('_') + 1); g.beginPath(); if (ax === 'h') { g.moveTo(seg * G, idx * G); g.lineTo((seg + 1) * G, idx * G); } else { g.moveTo(idx * G, seg * G); g.lineTo(idx * G, (seg + 1) * G); } g.stroke(); });
