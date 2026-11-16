@@ -820,8 +820,8 @@ function medals() { if (!UID || !window.TWA) return; const L = levelOf(save.xp).
   TWA.sync(UID, { apCalls: save.calls, apSaved: save.saved, apCpr: save.cpr || 0, apPerfect: save.perfect || 0, apLevel: L }).then(n => n.forEach((m, i) => setTimeout(() => toast(`🏅 Jauna medaļa!<br><span style="font-size:28px">${m.i}</span> ${TWA.title ? TWA.title(m) : m.t}`), 3600 * i + 1500))).catch(() => {}); }
 try { const s = JSON.parse(localStorage.getItem('apSave')); if (s && !ONLINE) save = Object.assign(save, s); } catch (e) {}
 // instrukcija pirms spēles (kopīgais TW.intro): īsti kadri no spēles + daži vārdi; pirmajā reizē pati, vēlāk ⚙ → ❓ Kā spēlēt
-const INTRO = [{ img: 'intro/1.webp', t: 'Brauc pa dzelteno līniju 🚑' }, { img: 'intro/2.webp', t: 'Uzdod pareizos jautājumus' }, { img: 'intro/3.webp', t: 'Velc rīku uz traumu' },
-  { img: 'intro/4.webp', t: 'Spied ritmā – sirds masāža ❤️' }, { img: 'intro/5.webp', t: 'Noķer izlicējus! 😄' }];
+const INTRO = [{ img: 'intro/1.webp?v=2', t: 'Brauc pa dzelteno līniju 🚑' }, { img: 'intro/2.webp?v=2', t: 'Uzdod pareizos jautājumus' }, { img: 'intro/3.webp?v=2', t: 'Velc rīku uz traumu' },
+  { img: 'intro/4.webp?v=2', t: 'Spied ritmā – sirds masāža ❤️' }, { img: 'intro/5.webp?v=2', t: 'Noķer izlicējus! 😄' }];
 const showIntro = force => window.TW && TW.intro ? TW.intro('ap', INTRO, force) : Promise.resolve();
 function start() { heliBtn(); if (save.fuel != null) amb.fuel = save.fuel; requestAnimationFrame(frame); showIntro().then(intro); }
 function intro() {
