@@ -194,7 +194,7 @@ let energy = 100, mugAt = -99;
 const mugFull = () => LT - mugAt > 35;
 function drinkCoffee() {
   if (!mugFull()) { toast('☕ Krūze tukša – jaunā kafija drīz būs gatava'); sfx('tick'); return; }
-  mugAt = LT; energy = Math.min(100, energy + 40); sfx('slurp'); buzz(20); addFx(LY.mug.x - 30, LY.mug.y - 50, '☕ +40 ⚡', '#ffd34d'); hud();
+  mugAt = LT; save.coffee = (save.coffee || 0) + 1; energy = Math.min(100, energy + 40); sfx('slurp'); buzz(20); addFx(LY.mug.x - 30, LY.mug.y - 50, '☕ +40 ⚡', '#ffd34d'); hud();
   if (L.tutCoffee === 1) { L.tutCoffee = 2; banner(''); }
 }
 const clockMin = () => { const d = DAY[save.day % 4], p = L && L.st !== 'end' ? clamp((L.n + clamp((LT - L.qT) / (L.qd || 20), 0, 1)) / QN, 0, 1) : 0; return d[0] * 60 + d[1] + p * 40; };
@@ -207,7 +207,7 @@ function wcStart() {
 }
 function wcDecide(k, yes) {
   const good = yes !== k.fake; k.wcBtn = null;
-  if (good) { L.wcOk++; mood(4); sfx('good'); addFx(k.x, k.y - 4.4 * k.s, yes ? '👍 Pareizi!' : '🕵️ Pieķerts šmaucoties!', '#7dffa8'); }
+  if (good) { L.wcOk++; save.wcOk = (save.wcOk || 0) + 1; mood(4); sfx('good'); addFx(k.x, k.y - 4.4 * k.s, yes ? '👍 Pareizi!' : '🕵️ Pieķerts šmaucoties!', '#7dffa8'); }
   else { L.wcBad++; mood(-6); sfx('bad'); addFx(k.x, k.y - 4.4 * k.s, yes ? '😏 Viņš šmaucās!' : '😣 Viņam tiešām vajadzēja…', '#ffb0b8'); }
   if (yes) { k.st = 'idle'; k.out = LT + 10; k.ans = ''; } else { k.st = k.fake ? 'caught' : 'sad'; k.say = k.fake ? 'Labi, labi… 😅' : ''; k.back = 'idle'; k.t = LT; if (!k.fake) later(1.5, () => { if (k.st === 'sad') k.st = 'idle'; }); }
   hud();
@@ -713,7 +713,8 @@ function closeSheet() { $('ov').classList.remove('on'); }
 let toastT = 0; function toast(t) { const e = $('toast'), b = $('banner'); e.innerHTML = t; e.classList.add('on');
   // ja dzeltenais padoms jau ir redzams, paziņojums parādās virs tā, nevis tam pa virsu
   e.style.bottom = `calc(${Math.round(LY.td.h + 8 + (b.classList.contains('on') ? b.offsetHeight + 8 : 0))}px + env(safe-area-inset-bottom))`; clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 3400); }
-let banT = 0; function banner(t, ms) { const e = $('banner'); clearTimeout(banT); if (!t) { e.classList.remove('on'); return; } e.innerHTML = t; e.classList.add('on'); if (ms) banT = setTimeout(() => e.classList.remove('on'), ms); }
+// padoms pazūd pats (≤5 s), lai neaizsedz priekšējās rindas atbildes
+let banT = 0; function banner(t, ms) { const e = $('banner'); clearTimeout(banT); if (!t) { e.classList.remove('on'); return; } e.innerHTML = t; e.classList.add('on'); banT = setTimeout(() => e.classList.remove('on'), Math.min(ms || 5000, 5000)); }
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
 let hudKey = '';
 // taimeris apakšā (atjauno katru kadru, kamēr jautājums aktīvs)
@@ -751,11 +752,11 @@ function shop(back) {
     <div class="shop">${DECO.map(d => `<button data-d="${d.id}" class="${save.deco[d.id] ? 'own' : wallet < d.p ? 'no' : ''}"><i>${d.i}</i>${d.n}<em>${save.deco[d.id] ? '✔ Ir klasē' : '€' + d.p}</em></button>`).join('')}</div>
     <button class="main" id="shopOk">✔ Gatavs</button>`, back);
   document.querySelectorAll('[data-b]').forEach(el => el.onclick = () => { const b = BOARDS.find(o => o.id === el.dataset.b);
-    if (!save.boards[b.id]) { if (wallet < b.p) { toast(`💰 Vēl jānopelna €${b.p - wallet} – vadi stundas!`); sfx('bad'); return; } walletAdd(-b.p); save.boards[b.id] = 1; sfx('win'); }
-    else sfx('tick'); save.board = b.id; persist(); shop(back); });
+    if (!save.boards[b.id]) { if (wallet < b.p) { toast(`💰 Vēl jānopelna €${b.p - wallet} – vadi stundas!`); sfx('bad'); return; } walletAdd(-b.p); save.boards[b.id] = 1; sfx('win'); medals(); }
+    else sfx('tick'); save.board = b.id; persist(); shop(back); toast(`🖍 Tāfele tagad ir ${b.n.toLowerCase()}!`); });
   document.querySelectorAll('[data-d]').forEach(el => el.onclick = () => { const d = DECO.find(o => o.id === el.dataset.d); if (save.deco[d.id]) return;
     if (wallet < d.p) { toast(`💰 Vēl jānopelna €${d.p - wallet} – vadi stundas!`); sfx('bad'); return; }
-    walletAdd(-d.p); save.deco[d.id] = 1; persist(); sfx('win'); toast(`${d.i} ${d.n} ir tavā klasē!`); shop(back); });
+    walletAdd(-d.p); save.deco[d.id] = 1; persist(); medals(); sfx('win'); toast(`${d.i} ${d.n} ir tavā klasē!`); shop(back); });
   $('shopOk').onclick = back;
 }
 $('gear').onclick = e => { e.stopPropagation(); audioInit(); const wasOpen = $('ov').classList.contains('on'), prev = wasOpen ? $('sheet').innerHTML : null;
@@ -803,7 +804,8 @@ const LKEY = () => 'skSave' + (UID ? ':' + UID : '');
 function persist() { try { localStorage.setItem(LKEY(), JSON.stringify(save)); } catch (e) {} if (UID) firebase.database().ref('skola/saves/' + UID).set(save).catch(() => {}); }
 function walletAdd(m) { wallet = wallet + m; hud(); if (UID) TW.wallet.add(UID, m).then(v => { wallet = v; hudKey = ''; hud(); }).catch(() => {}); }
 function medals() { if (!UID || !window.TWA) return;
-  TWA.sync(UID, { skLessons: save.lessons, skPerfect: save.perfect, skCaught: save.caught, skCorrect: save.correct, skLevel: levelOf(save.xp).l })
+  TWA.sync(UID, { skLessons: save.lessons, skPerfect: save.perfect, skCaught: save.caught, skCorrect: save.correct, skLevel: levelOf(save.xp).l,
+    skWc: save.wcOk || 0, skDays: Math.floor((save.day || 0) / 4), skGrade: autoGrade(), skCoffee: save.coffee || 0, skDeco: Object.keys(save.deco).length + Object.keys(save.boards).length - 1 })
     .then(n => n.forEach((m, i) => setTimeout(() => toast(`🏅 Jauna medaļa!<br><span style="font-size:28px">${m.i}</span> ${TWA.title ? TWA.title(m) : m.t}`), 3600 * i + 2500))).catch(() => {}); }
 try { const s = JSON.parse(localStorage.getItem('skSave')); if (s && !ONLINE) save = Object.assign(save, s); } catch (e) {}
 function start() { resize(); pickKids(); hud(); requestAnimationFrame(frame); lobby(); }
