@@ -69,25 +69,26 @@
     const k = 'twIntro:' + key; let seen = false; try { seen = !!localStorage.getItem(k); } catch (e) {}
     if ((seen && !force) || !slides || !slides.length) return res();
     if (!document.getElementById('twIntroCss')) { const st = document.createElement('style'); st.id = 'twIntroCss'; st.textContent = `
-      #twIntro{position:fixed;inset:0;z-index:2147482000;background:radial-gradient(circle at 50% 30%,#1c2350,#080a16 75%);display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom));box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+      #twIntro{position:fixed;inset:0;z-index:2147482000;background:rgba(8,10,22,.5);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top)) 16px calc(12px + env(safe-area-inset-bottom));box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff;touch-action:manipulation;-webkit-user-select:none;user-select:none}
       #twIntro .box{width:min(520px,100%);max-height:100%;display:flex;flex-direction:column;gap:12px;align-items:center}
       #twIntro .pic{width:100%;aspect-ratio:16/10;max-height:52vh;border-radius:18px;background:#1b2140 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:min(30vw,26vh);line-height:1;box-shadow:0 8px 30px #0008;border:3px solid #ffffff22;overflow:hidden}
       #twIntro .pic img{width:100%;height:100%;object-fit:cover;display:block}
       #twIntro .txt{font:900 clamp(20px,5.5vw,30px)/1.2 system-ui,sans-serif;text-align:center;min-height:2.4em;display:flex;align-items:center;text-shadow:0 2px 8px #000a}
       #twIntro .dots{display:flex;gap:8px}#twIntro .dots i{width:10px;height:10px;border-radius:50%;background:#ffffff44}#twIntro .dots i.on{background:#ffd34d;transform:scale(1.25)}
+      @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){#twIntro{background:rgba(8,10,22,.88)}}
       #twIntro .row{display:flex;gap:10px;width:100%}
       #twIntro button{flex:1;min-height:56px;border-radius:16px;border:0;font:900 20px system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
-      #twIntro .skip{flex:0 0 auto;padding:0 18px;background:#ffffff1c;color:#fffc;font-size:16px}
+      #twIntro .skip{flex:none;min-height:44px;padding:0 22px;background:#0006;color:#fffd;font-size:16px;border-radius:22px}#twIntro .skip.hide{visibility:hidden}
       #twIntro .next{background:linear-gradient(160deg,#ffd34d,#ffb020);color:#2b1a00;box-shadow:0 4px 0 #b97800}
       #twIntro .next.go{background:linear-gradient(160deg,#5ef08a,#22c55e);color:#062b12;box-shadow:0 4px 0 #15803d}
-      @media (orientation:landscape) and (max-height:520px){#twIntro{padding-left:calc(68px + env(safe-area-inset-left))}#twIntro .pic{font-size:40vh}#twIntro .box{width:min(860px,100%);height:100%;display:grid;grid-template-columns:1.25fr 1fr;grid-template-rows:1fr auto auto;gap:10px 18px}
-        #twIntro .pic{grid-row:1/4;max-height:none;height:100%;aspect-ratio:auto}#twIntro .txt{align-self:end}#twIntro .dots{justify-content:center}}`; document.head.appendChild(st); }
+      @media (orientation:landscape) and (max-height:520px){#twIntro{padding-left:calc(68px + env(safe-area-inset-left))}#twIntro .pic{font-size:40vh}#twIntro .box{width:min(860px,100%);height:100%;display:grid;grid-template-columns:1.6fr 1fr;align-content:center;grid-template-rows:1fr auto auto auto;gap:10px 18px}
+        #twIntro .pic{grid-row:1/5;align-self:center;max-height:none;width:100%;height:auto;aspect-ratio:16/10}#twIntro .txt{align-self:end}#twIntro .dots,#twIntro .skip{justify-self:center}}`; document.head.appendChild(st); }
     const ov = document.createElement('div'); ov.id = 'twIntro'; let i = 0;
     const e = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const draw = () => { const s = slides[i], last = i === slides.length - 1;
       ov.innerHTML = `<div class="box"><div class="pic">${s.img ? `<img src="${e(s.img)}" alt="">` : e(s.ico || '')}</div><div class="txt">${e(s.t || '')}</div>
         <div class="dots">${slides.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
-        <div class="row">${last ? '' : '<button class="skip" type="button">Izlaist</button>'}<button class="next${last ? ' go' : ''}" type="button">${last ? '▶ Spēlēt!' : 'Tālāk ▶'}</button></div></div>`; };
+        <div class="row"><button class="next${last ? ' go' : ''}" type="button">${last ? '▶ Spēlēt!' : 'Tālāk ▶'}</button></div><button class="skip${last ? ' hide' : ''}" type="button">Izlaist</button></div>`; };
     const close = () => { try { localStorage.setItem(k, '1'); } catch (er) {} ov.remove(); res(); };
     ov.addEventListener('pointerdown', ev => ev.stopPropagation());
     ov.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('button');
