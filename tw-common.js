@@ -53,14 +53,54 @@
     add: (uid, d) => db.ref('wallet/' + uid).transaction(v => Math.round((v || 0) + d)).then(r => r.snapshot.val()),
     watch: (uid, cb) => db.ref('wallet/' + uid).on('value', s => cb(s.val()), () => {}),
   };
-  // Tiešsaiste visās spēlēs (redz admins un moderatori)
+  // Tiešsaiste visās spēlēs: online/{uid} (redz admins un moderatori) + playing/{spēle}/{uid} (redz visi ielogotie –
+  // „👥 Kas vēl spēlē”: tikai iesauka, līmenis, medaļu skaits un īss statuss). info: {game, where, name, nick, lv}.
+  const GAMEKEY = (location.pathname.split('/').filter(Boolean)[0] || '').replace(/\.html$/, '');
+  TW.GAMES = { grafiti: ['🎨', 'Graffiti'], 'atra-palidziba': ['🚑', 'Ātrā palīdzība'], skola: ['🏫', 'Skola'], rampa: ['🚀', 'Mega rampa'] };
+  let myMedals = 0;
   TW.heartbeat = (uid, info) => {
-    const ref = db.ref('online/' + uid);
-    const beat = () => { if (TW.active()) ref.set(Object.assign({ t: firebase.database.ServerValue.TIMESTAMP }, typeof info === 'function' ? info() : info)).catch(() => {}); };
-    const arm = () => { ref.onDisconnect().remove(); beat(); };
-    document.addEventListener('tw-away', () => { ref.remove().catch(() => {}); });
+    const ref = db.ref('online/' + uid), pref = TW.GAMES[GAMEKEY] ? db.ref('playing/' + GAMEKEY + '/' + uid) : null;
+    const medals = () => db.ref('ach/' + uid).get().then(s => { if (window.TWA && TWA.count) myMedals = TWA.count(s.val()); }).catch(() => {});
+    const beat = () => { if (!TW.active()) return; const i = typeof info === 'function' ? info() : info;
+      ref.set(Object.assign({ t: firebase.database.ServerValue.TIMESTAMP }, i)).catch(() => {});
+      if (pref && i && i.name) { const p = { n: String(i.name), lv: Math.max(1, Math.round(+i.lv || +(String(i.where || '').match(/Līm\.?\s*(\d+)/) || [])[1] || 1)), m: myMedals, w: String(i.where || '').slice(0, 40), t: firebase.database.ServerValue.TIMESTAMP };
+        if (i.nick) p.nk = String(i.nick).slice(0, 16); pref.set(p).catch(() => {}); } };
+    const arm = () => { ref.onDisconnect().remove(); if (pref) pref.onDisconnect().remove(); beat(); };
+    document.addEventListener('tw-away', () => { ref.remove().catch(() => {}); if (pref) pref.remove().catch(() => {}); });
     document.addEventListener('tw-back', arm);
-    arm(); return setInterval(beat, 15000);
+    medals(); setInterval(medals, 300000);
+    arm(); if (pref) TW.who(uid); return setInterval(beat, 15000);
+  };
+  // 👥 poga zem 🏠 (spēlēs): cik citu spēlētāju tagad spēlē; uzspiežot – saraksts (šajā spēlē + citās spēlēs).
+  TW.who = uid => {
+    if (TW.who.on || !document.body) return; TW.who.on = true; let all = {};
+    const st = document.createElement('style'); st.textContent = `
+      #twWho{position:fixed;left:calc(8px + env(safe-area-inset-left));top:calc(62px + env(safe-area-inset-top));z-index:2147482500;height:34px;min-width:48px;padding:0 10px;box-sizing:border-box;border-radius:17px;border:2px solid #ffffff44;background:rgba(16,20,36,.78);color:#fff;font:800 14px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);touch-action:manipulation}
+      #twWho.has{border-color:#5ef08a;box-shadow:0 0 0 2px #5ef08a44}
+      #twWhoOv{position:fixed;inset:0;z-index:2147482600;background:rgba(8,10,22,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top)) 14px calc(12px + env(safe-area-inset-bottom));box-sizing:border-box;font-family:system-ui,sans-serif;color:#fff}
+      #twWhoOv .p{width:min(440px,100%);max-height:100%;overflow:auto;background:#151a30;border:2px solid #ffffff22;border-radius:18px;padding:14px 14px 10px;box-sizing:border-box;box-shadow:0 10px 40px #000a}
+      #twWhoOv h3{margin:0 0 8px;font-size:20px}#twWhoOv h4{margin:12px 0 6px;font-size:14px;color:#aab3d8;font-weight:800}
+      #twWhoOv .r{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#ffffff0d;margin-bottom:6px;font-size:15px}
+      #twWhoOv .r .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
+      #twWhoOv .r .lv{background:#ffd34d;color:#2b1a00;border-radius:10px;padding:2px 8px;font-weight:900;font-size:13px;white-space:nowrap}
+      #twWhoOv .r small{display:block;color:#99a3c8;font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #twWhoOv .e{color:#aab3d8;padding:6px 2px}#twWhoOv button{width:100%;min-height:50px;margin-top:8px;border:0;border-radius:14px;background:linear-gradient(160deg,#ffd34d,#ffb020);color:#2b1a00;font:900 18px system-ui,sans-serif}`;
+    document.head.appendChild(st);
+    const b = document.createElement('button'); b.id = 'twWho'; b.type = 'button'; b.title = 'Kas vēl spēlē'; b.setAttribute('aria-label', 'Kas vēl spēlē'); b.innerHTML = '👥 <b>0</b>'; document.body.appendChild(b);
+    const live = () => { const out = [], now = TW.now(); for (const g in all) for (const u in all[g]) { const p = all[g][u]; if (p && now - (p.t || 0) < 60000) out.push(Object.assign({ g, u }, p)); } return out; };
+    const e = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const row = p => `<div class="r"><div class="n">${TW.nameHTML(TW.display(p.n, p.nk), p.u, p.m || 0)}${p.u === uid ? ' <span style="color:#99a3c8;font-weight:600">(tu)</span>' : ''}<small>${p.m ? '🏅 ' + (+p.m) + ' · ' : ''}${e(p.w || '')}</small></div><span class="lv">Līm. ${+p.lv || 1}</span></div>`;
+    const count = () => { const n = live().filter(p => p.u !== uid).length; b.querySelector('b').textContent = n; b.classList.toggle('has', n > 0); };
+    const open = () => { const L = live().sort((a, c) => (c.lv || 0) - (a.lv || 0)), here = L.filter(p => p.g === GAMEKEY), other = L.filter(p => p.g !== GAMEKEY && p.u !== uid);
+      const ov = document.createElement('div'); ov.id = 'twWhoOv';
+      ov.innerHTML = `<div class="p"><h3>👥 Kas vēl spēlē</h3><h4>${e(TW.GAMES[GAMEKEY][0] + ' ' + TW.GAMES[GAMEKEY][1])}</h4>${here.length ? here.map(row).join('') : '<div class="e">Tikai tu.</div>'}
+        <h4>Citās spēlēs</h4>${other.length ? Object.keys(TW.GAMES).filter(g => g !== GAMEKEY).map(g => { const ps = other.filter(p => p.g === g); return ps.length ? `<div style="font-size:13px;color:#ffd34d;font-weight:800;margin:6px 2px 4px">${e(TW.GAMES[g].join(' '))}</div>` + ps.map(row).join('') : ''; }).join('') : '<div class="e">Pagaidām neviens – uzaicini draugu!</div>'}
+        <button type="button">Labi</button></div>`;
+      ov.addEventListener('pointerdown', ev => ev.stopPropagation()); ov.addEventListener('click', ev => { ev.stopPropagation(); if (ev.target === ov || ev.target.closest('button')) ov.remove(); });
+      document.body.appendChild(ov); };
+    b.addEventListener('pointerdown', ev => ev.stopPropagation()); b.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); open(); });
+    db.ref('playing').on('value', s => { all = s.val() || {}; count(); }, () => { b.remove(); });
+    setInterval(count, 15000);
   };
   // Instrukcija pirms spēles: 3–5 bildes ar dažiem vārdiem, pēc tam „Spēlēt!”. Vienāds izskats visās spēlēs.
   // TW.intro(key, slides, force) → Promise (atrisinās, kad aizver). slides: [{img: 'intro/1.webp' | ico: '🚀', t: 'Īss teksts'}].

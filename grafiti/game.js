@@ -1712,7 +1712,7 @@ if(window.firebase&&window.TW_FIREBASE&&location.protocol==='https:'){
       await loadSave(u.uid);
       if(window.TWA){ const v=await TWA.visit(u.uid); NET.visits={streak:v.best||0,days:v.days||0}; }
       NET.on=true; netStats(true); toast(`👋 ${window.TW_LANG==='en'?'Hi':'Sveiks'}, <span data-notr>${String(TW.display(NET.name,NET.nick)).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';')}</span>${TW.badge(TW.role(NET.uid))?' '+TW.badge(TW.role(NET.uid)):''}!`);
-      TW.heartbeat(NET.uid,()=>({game:'Graffiti RPG',where:inMetro?'Metro':`City ${curCity+1} · Līm. ${level()}`,name:NET.name,nick:NET.nick||''}));
+      TW.heartbeat(NET.uid,()=>({game:'Graffiti RPG',where:inMetro?'Metro':`City ${curCity+1} · Līm. ${level()}`,name:NET.name,nick:NET.nick||'',lv:level()}));
       NET.db.ref('kicks/'+NET.uid).on('value',s=>{ const k=s.val(); if(k&&k.until>TW.now()) kickedOut(k); },()=>{});
       let st=''; try{ st=sessionStorage.getItem('twMode'); }catch(e){}
       if(window.TWS) TWS.init({uid:NET.uid,name:NET.name,nick:NET.nick||''},{fab:false,getCity:()=>inMetro?null:curCity,

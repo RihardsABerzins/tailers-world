@@ -996,7 +996,7 @@ if (ONLINE && window.firebase && window.TW_FIREBASE) {
     // spēle vēl nav atvērta visiem – pagaidām tikai admini/moderatori var testēt
     if (window.TW && !TW.isStaff(UID)) { loadModels(() => { fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[0].h); resize(); state = 'shop'; setVehicle(); requestAnimationFrame(frame); });
       sheet(`<h2>🛫 Mega rampa</h2><p>Drīzumā! Spēle vēl top. 🔒</p><a class="main" style="display:block;text-align:center;text-decoration:none" href="../index.html">← Uz sākumlapu</a>`); return; }
-    if (window.TW) TW.heartbeat(UID, () => ({ game: 'Mega rampa', where: state === 'run' || state === 'ready' ? `Lido ${VEH[save.veh].i} ${Math.round(sim ? sim.maxZ : 0)} m` : `Darbnīcā (līm. ${levelOf(save.xp).l})`, name: NAME, nick: NICK }));
+    if (window.TW) TW.heartbeat(UID, () => ({ game: 'Mega rampa', where: state === 'run' || state === 'ready' ? `Lido ${VEH[save.veh].i} ${Math.round(sim ? sim.maxZ : 0)} m` : `Darbnīcā (līm. ${levelOf(save.xp).l})`, name: NAME, nick: NICK, lv: levelOf(save.xp).l }));
     db.ref('kicks/' + UID).on('value', s => { const k = s.val(); if (k && k.until > TW.now()) { alert('Tevi uz laiku izmeta no spēles. Spēlē draudzīgi! 🙂'); location.href = '../index.html'; } }, () => {});
     if (window.TWA && TWA.load) TWA.load(UID).catch(() => {});
     start();

@@ -138,7 +138,16 @@
         ".validate": "newData.hasChildren(['uid','name','text','t']) && newData.child('text').isString() && newData.child('text').val().length >= 3 && newData.child('text').val().length <= 500"
       }
     },
-    "online": {
+    "playing": {
+    ".read": "auth != null",
+    "$game": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "!newData.exists() || (newData.hasChildren(['n','lv','t']) && newData.child('n').isString() && root.child('usernames/'+newData.child('n').val().toLowerCase()).val() === $uid && newData.child('lv').isNumber() && newData.child('lv').val() >= 1 && newData.child('lv').val() <= 999 && (!newData.child('m').exists() || newData.child('m').isNumber()) && (!newData.child('w').exists() || (newData.child('w').isString() && newData.child('w').val().length <= 40)) && (!newData.child('nk').exists() || (newData.child('nk').isString() && newData.child('nk').val().length >= 2 && newData.child('nk').val().length <= 16)))"
+      }
+    }
+  },
+  "online": {
       ".read": "auth != null && ((root.child('usernames/tailerboi').val() === auth.uid || root.child('usernames/rihardsgod').val() === auth.uid) || root.child('roles/'+auth.uid).val() === 'mod')",
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
