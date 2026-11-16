@@ -1,0 +1,149 @@
+// Mega rampa – fizika (bez three.js, lai var testēt ar node). Viss notiek vertikālā plaknē: z – uz priekšu, y – augšup (metri).
+// Viena fizika visiem braucamrīkiem, atšķiras tikai parametri (stats). Fiksēts solis DT, spēki: svars lejup,
+// cēlējspēks perpendikulāri ātrumam, pretestība pretēji ātrumam, vilce deguna virzienā.
+'use strict';
+(function (root) {
+  const G = 9.81, RHO = 1.225, DT = 1 / 120, D2R = Math.PI / 180;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const wrap = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+
+  // ---- rampas (kopīgas visiem braucamrīkiem) ----
+  const RAMPS = [{ h: 40, n: 'Koka rampa', p: 0 }, { h: 60, n: 'Augstā rampa', p: 60 }, { h: 85, n: 'Ūdenstornis', p: 200 }, { h: 120, n: 'Debesskrāpis', p: 550 }, { h: 160, n: 'Mega rampa', p: 1300 }];
+  const LIP = 25, EXIT = 30 * D2R, SLOPE = 42 * D2R, R1 = 10, R2 = 48, FLAT = 3;
+  // rampas profils: plakans starts → izliekums → taisns slīpums → liels izliekums → atlēciena mala z=0, y=LIP, leņķis EXIT
+  function rampProfile(H) {
+    const drop = R1 * (1 - Math.cos(SLOPE)) + R2 * (1 - Math.cos(SLOPE)) - R2 * (1 - Math.cos(EXIT));
+    const L = Math.max(10, (H - LIP - drop) / Math.sin(SLOPE));
+    const segs = [[FLAT, 0, 0], [R1 * SLOPE, 0, -SLOPE], [L, -SLOPE, -SLOPE], [R2 * (SLOPE + EXIT), -SLOPE, EXIT]];
+    const pts = []; let z = 0, y = 0, s = 0; const ds = .5;
+    for (const [len, a0, a1] of segs) { const n = Math.max(1, Math.round(len / ds)), k = (a1 - a0) / len;
+      for (let i = 0; i < n; i++) { const th = a0 + (a1 - a0) * (i + .5) / n; pts.push({ s, z, y, th: a0 + (a1 - a0) * i / n, k }); z += Math.cos(th) * len / n; y += Math.sin(th) * len / n; s += len / n; } }
+    pts.push({ s, z, y, th: EXIT, k: 0 });
+    const dz = -z, dy = LIP - y; pts.forEach(p => { p.z += dz; p.y += dy; });
+    return { pts, len: s, H: pts[0].y };
+  }
+  function rampAt(R, s) { const p = R.pts; let lo = 0, hi = p.length - 2; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (p[m].s <= s) lo = m; else hi = m - 1; }
+    const i = lo, a = p[i], b = p[i + 1], f = clamp((s - a.s) / ((b.s - a.s) || 1), 0, 1);
+    return { z: a.z + (b.z - a.z) * f, y: a.y + (b.y - a.y) * f, th: a.th + (b.th - a.th) * f, k: a.k }; }
+
+  // ---- braucamrīki un uzlabojumi ----
+  // wheel: mu – berze rampā, roll – ripošana pa zemi; wing: S laukums, ar [īsie, garie]; eng: T vilce (N), f degviela (s); aero: cda
+  const VEH = {
+    plane: { i: '✈️', n: 'Lidmašīna', p: 0, m: 120, cda: .3, crashV: 8, pitchK: 1, d: 'Planē ar spārniem. Garāki spārni – tālāk!',
+      slots: {
+        wheel: { i: '🛞', n: 'Riteņi', lv: [{ n: 'Nav – slīd uz vēdera', mu: .1, roll: .5 }, { n: 'Ratiņu riteņi', mu: .06, roll: .15, p: 20 }, { n: 'Velo riteņi', mu: .03, roll: .08, p: 90 }, { n: 'Gultņu riteņi', mu: .015, roll: .05, p: 260 }] },
+        wing: { i: '🪽', n: 'Spārni', lv: [{ n: 'Nav – kūleņo', S: 0 }, { n: 'Kartona', S: 4.5, ar: [3, 5], cd0: .035, m: 6, p: 30 }, { n: 'Saplākšņa', S: 5.5, ar: [4, 7], cd0: .028, m: 9, p: 120 },
+          { n: 'Pūķa auduma', S: 6.5, ar: [5, 10], cd0: .022, m: 9, p: 350 }, { n: 'Deltaplāna', S: 8, ar: [6, 13], cd0: .018, m: 12, p: 900 }, { n: 'Planiera', S: 9, ar: [8, 18], cd0: .014, m: 14, p: 2000 }] },
+        eng: { i: '🔥', n: 'Dzinējs', lv: [{ n: 'Nav' }, { n: 'Galda ventilators', T: 260, f: 4, m: 4, p: 100 }, { n: 'Propelleris', T: 480, f: 6, m: 9, p: 350 }, { n: 'Svētku raķete', T: 1400, f: 3, m: 8, p: 900 }, { n: 'Reaktīvais dzinējs', T: 1000, f: 8, m: 22, p: 2500 }] },
+      } },
+    scoot: { i: '🛴', n: 'Skūteris', p: 150, m: 70, cda: .3, crashV: 15, flips: true, d: 'Viegls un ātrs rampā. Neplanē, bet var mest salto!',
+      slots: {
+        wheel: { i: '🛞', n: 'Riteņi', lv: [{ n: 'Plastmasas', mu: .06, roll: .08 }, { n: 'Gumijas', mu: .035, roll: .05, p: 40 }, { n: 'Sacīkšu', mu: .018, roll: .035, p: 150 }, { n: 'Keramikas gultņi', mu: .008, roll: .025, p: 420 }] },
+        aero: { i: '🪖', n: 'Aerodinamika', lv: [{ n: 'Stāvus', cda: .3 }, { n: 'Pieliecies', cda: .23, p: 60 }, { n: 'Ķivere un tērps', cda: .18, p: 220 }, { n: 'Pilots-raķete', cda: .14, p: 600 }] },
+        eng: { i: '🚀', n: 'Raķešu soma', lv: [{ n: 'Nav' }, { n: 'Mazā raķete', T: 260, f: 2.5, m: 3, p: 300 }, { n: 'Dubultraķete', T: 420, f: 3.5, m: 5, p: 1000 }] },
+      } },
+    car: { i: '🚗', n: 'Mašīna', p: 500, m: 1100, cda: .8, crashV: 30, bounce: true, flips: true, d: 'Smaga – lido ātri, ripo tālu un lēkā pa jumtiem.',
+      slots: {
+        wheel: { i: '🛞', n: 'Riteņi un atsperes', lv: [{ n: 'Parastie', mu: .03, roll: .025, rest: .3 }, { n: 'Sporta', mu: .02, roll: .018, rest: .42, p: 80 }, { n: 'Rallija', mu: .015, roll: .014, rest: .52, p: 260 }, { n: 'Monstru trakā', mu: .012, roll: .012, rest: .62, p: 750 }] },
+        aero: { i: '🏁', n: 'Aerodinamika', lv: [{ n: 'Kaste', cda: .8 }, { n: 'Spoilers', cda: .62, p: 150 }, { n: 'Sacīkšu virsbūve', cda: .48, p: 500 }] },
+        eng: { i: '💨', n: 'Nitro', lv: [{ n: 'Nav' }, { n: 'Nitro', T: 4500, f: 3, m: 20, p: 400 }, { n: 'Super nitro', T: 7000, f: 4, m: 30, p: 1300 }] },
+      } },
+  };
+
+  // kopējie parametri no izvēlētajiem līmeņiem; sel = { wheel: n, wing: n, eng: n, aero: n, long: bool }
+  function stats(vid, sel) {
+    const V = VEH[vid], S = V.slots, lv = k => S[k] ? S[k].lv[clamp(sel[k] || 0, 0, S[k].lv.length - 1)] : null;
+    const w = lv('wheel'), wi = lv('wing'), e = lv('eng'), a = lv('aero');
+    const st = { vid, m: V.m, cda: a ? a.cda : V.cda, mu: w.mu, roll: w.roll, rest: w.rest || 0, crashV: V.crashV, S: 0, AR: 0, cd0: 0, T: 0, fuel: 0, flips: !!V.flips, bounce: !!V.bounce, wheels: (sel.wheel || 0) > 0 || vid !== 'plane', pitchK: 1 };
+    if (wi && wi.S) { const long = !!sel.long; st.S = wi.S * (long ? 1.15 : 1); st.AR = wi.ar[long ? 1 : 0]; st.cd0 = wi.cd0; st.m += wi.m * (long ? 1.4 : 1); st.pitchK = long ? .7 : 1.15; st.span = Math.sqrt(st.S * st.AR); st.chord = st.S / st.span; }
+    if (e && e.T) { st.T = e.T; st.fuel = e.f; st.m += e.m; }
+    if (vid === 'plane' && !st.wheels) st.crashV = 6;
+    st.aSlope = st.AR ? 2 * Math.PI * st.AR / (st.AR + 2) : 0; // cēlējspēka līknes slīpums (1/rad)
+    // labākais planēšanas leņķis (max L/D): CL* = sqrt(CD0 · π e AR)
+    if (st.S) { const cd0t = st.cd0 + st.cda / st.S, cl = Math.sqrt(cd0t * Math.PI * .8 * st.AR); st.aBest = clamp(cl / st.aSlope, 2 * D2R, 12 * D2R); st.LD = .5 * Math.sqrt(Math.PI * .8 * st.AR / cd0t); }
+    return st;
+  }
+  const STALL = 15 * D2R;
+  function CL(st, a) { if (!st.S) return 0; const s = Math.sign(a), x = Math.abs(a); return x < STALL ? st.aSlope * a : s * st.aSlope * STALL * .6; }
+  function forces(st, vz, vy, phi, thrust) {
+    const v = Math.hypot(vz, vy) || 1e-6, gam = Math.atan2(vy, vz), a = wrap(phi - gam), q = .5 * RHO * v * v, cl = CL(st, a);
+    let cd = st.cda; if (st.S) { cd += st.S * (st.cd0 + cl * cl / (Math.PI * .8 * st.AR)); if (Math.abs(a) > STALL) cd += st.S * 1.1 * Math.sin(Math.abs(a) - STALL + .2); }
+    const L = q * st.S * cl, D = q * cd, T = thrust ? st.T : 0;
+    return { az: (-D * Math.cos(gam) - L * Math.sin(gam) + T * Math.cos(phi)) / st.m, ay: (-D * Math.sin(gam) + L * Math.cos(gam) + T * Math.sin(phi)) / st.m - G, a, cl, L, D, stall: st.S && Math.abs(a) > STALL };
+  }
+
+  // ---- pilsēta uz lidojuma līnijas (x≈0): ēkas {z0, z1, h, w (slīps jumts: nolaišanās rampa)} ----
+  // world.obs – sakārtots pēc z; world.landing – liela nolaišanās rampa aiz atlēciena malas.
+  function surfAt(W, z) {
+    let best = { h: 0, b: null, slope: 0 };
+    const L = W.landing; if (z >= L.z0 && z <= L.z1) best = { h: L.h * (1 - (z - L.z0) / (L.z1 - L.z0)), b: L, slope: -Math.atan(L.h / (L.z1 - L.z0)) };
+    const arr = W.bucket[Math.floor(z / 10)];
+    if (arr) for (const b of arr) if (z >= b.z0 && z <= b.z1) { let h = b.h, sl = 0; if (b.w) { const t = (z - b.z0) / (b.z1 - b.z0); h = b.h - b.w * t; sl = -Math.atan(b.w / (b.z1 - b.z0)); } if (h > best.h) best = { h, b, slope: sl }; }
+    return best;
+  }
+  function indexWorld(W) { W.bucket = {}; for (const b of W.obs) for (let k = Math.floor(b.z0 / 10); k <= Math.floor(b.z1 / 10); k++) (W.bucket[k] = W.bucket[k] || []).push(b); return W; }
+
+  // ---- simulācija ----
+  class Sim {
+    constructor(st, ramp, world) { this.st = st; this.R = ramp; this.W = world; this.mode = 'ramp'; this.s = 0; this.v = 6; this.z = ramp.pts[0].z; this.y = ramp.pts[0].y; this.vz = 0; this.vy = 0;
+      this.phi = 0; this.w = 0; this.fuel = st.fuel; this.t = 0; this.ev = []; this.maxZ = 0; this.maxY = 0; this.rot = 0; this.flips = 0; this.air = 0; this.roofs = 0; this.vmax = 0; this.stall = false; this.alpha = 0; this.cl = 0; this.thr = false; }
+    get speed() { return this.mode === 'ramp' || this.mode === 'ground' ? Math.abs(this.v) : Math.hypot(this.vz, this.vy); }
+    energy() { return .5 * this.st.m * this.speed ** 2 + this.st.m * G * this.y; }
+    step(inp) { // inp: { pitch: -1..1 (1 = deguns augšup), turbo: bool, help: bool }
+      const st = this.st; this.t += DT; this.thr = !!(inp.turbo && this.fuel > 0 && st.T); if (this.thr) this.fuel = Math.max(0, this.fuel - DT);
+      if (this.mode === 'ramp') return this.rampStep();
+      if (this.mode === 'air') return this.airStep(inp);
+      if (this.mode === 'ground') return this.groundStep(inp);
+    }
+    rampStep() { const st = this.st, p = rampAt(this.R, this.s), v = this.v;
+      const N = G * Math.cos(p.th) + v * v * p.k, D = .5 * RHO * v * v * st.cda / st.m;
+      this.v += (-G * Math.sin(p.th) - st.mu * Math.max(0, N) - D + (this.thr ? st.T / st.m : 0)) * DT; this.v = Math.max(this.v, .5);
+      this.s += this.v * DT; const q = rampAt(this.R, this.s); this.z = q.z; this.y = q.y; this.phi = q.th; this.vmax = Math.max(this.vmax, this.v);
+      if (this.s >= this.R.len) { this.mode = 'air'; this.vz = this.v * Math.cos(EXIT); this.vy = this.v * Math.sin(EXIT); this.phi = EXIT; this.ev.push(['launch', this.v]); this.w = 0; } }
+    airStep(inp) { const st = this.st, z0 = this.z, y0 = this.y;
+      // deguna leņķis: ar spārniem – „vējrādītājs” + palīgs; bez spārniem – brīva griešanās (salto)
+      const gam = Math.atan2(this.vy, this.vz);
+      if (st.S) { const sp0 = Math.hypot(this.vz, this.vy), per = .5 * RHO * sp0 * sp0 * st.S * st.aSlope + 1, mg = st.m * G;
+        // augšup – līdz 3g (lēnā ātrumā tas nozīmē > 15° → cēlējspēks krīt); lejup – līdz −0,5g; palīgs – 1g lidojums, bet ne virs labākā planēšanas leņķa
+        const at = inp.pitch > 0 ? Math.min(20 * D2R, 3 * mg / per) : inp.pitch < 0 ? Math.max(-8 * D2R, -.5 * mg / per) : inp.help !== false ? Math.min(st.aBest, mg * clamp(Math.cos(gam) + 1.2 * (-Math.atan(1 / st.LD) - gam) * sp0 / G, 0, 2.5) / per) : wrap(this.phi - gam);
+        const want = wrap(gam + at - this.phi), rate = 1.8 * st.pitchK; this.w = clamp(want * 3, -rate, rate); this.phi += this.w * DT; }
+      else { const acc = inp.pitch ? inp.pitch * (st.flips ? 9 : 6) : 0; this.w += (acc - this.w * (inp.pitch ? .4 : 1.6)) * DT;
+        if (!inp.pitch && inp.help !== false && !st.flips) this.w += wrap(gam - this.phi) * 1.5 * DT; // lidmašīna bez spārniem lēnām nostājas pa vējam
+        if (!inp.pitch && inp.help !== false && st.flips) this.w += wrap(gam * .5 - this.phi) * 2.2 * DT;
+        this.phi += this.w * DT; this.rot += this.w * DT; if (Math.abs(this.rot) >= 2 * Math.PI) { this.rot -= Math.sign(this.rot) * 2 * Math.PI; this.flips++; this.ev.push(['flip', this.flips]); } }
+      // midpoint integrācija (stabila enerģijai)
+      const f1 = forces(st, this.vz, this.vy, this.phi, this.thr), mz = this.vz + f1.az * DT / 2, my = this.vy + f1.ay * DT / 2, f2 = forces(st, mz, my, this.phi, this.thr);
+      this.vz += f2.az * DT; this.vy += f2.ay * DT; const sp = Math.hypot(this.vz, this.vy); if (sp > 140) { this.vz *= 140 / sp; this.vy *= 140 / sp; }
+      this.z += mz * DT; this.y += my * DT; this.alpha = f2.a; this.cl = f2.cl; this.air += DT;
+      if (f2.stall && !this.stall) this.ev.push(['stall']); this.stall = !!f2.stall;
+      this.maxZ = Math.max(this.maxZ, this.z); this.maxY = Math.max(this.maxY, this.y); this.vmax = Math.max(this.vmax, sp);
+      this.contact(z0, y0); }
+    contact(z0, y0) { const st = this.st, s = surfAt(this.W, this.z); if (this.y >= s.h) return;
+      const b = s.b;
+      if (b && b !== this.W.landing && z0 < b.z0 && y0 < (b.w ? b.h : b.h) - .05) return this.hitWall(b, Math.max(0, this.vz));
+      const be = s.slope, nz = -Math.sin(be), ny = Math.cos(be), vn = -(this.vz * nz + this.vy * ny), vt = this.vz * Math.cos(be) + this.vy * Math.sin(be);
+      const err = Math.abs(wrap(this.phi - be)), maxErr = st.flips ? 50 * D2R : 40 * D2R;
+      this.y = s.h;
+      if (vn > st.crashV || (err > maxErr && !st.bounce) || (st.bounce && err > 100 * D2R && vn > 6)) return this.crash('hit', vn);
+      if (st.bounce && vn > 3) { const r = st.rest; this.vz = vt * Math.cos(be) * .9 + vn * r * nz; this.vy = vt * Math.sin(be) * .9 + vn * r * ny; this.phi = be + wrap(this.phi - be) * .3; this.w *= -.3;
+        if (b && b !== this.W.landing) this.roofs++; this.ev.push(['bounce', vn, b && b !== this.W.landing]); return; }
+      this.mode = 'ground'; this.v = Math.max(0, vt); this.phi = be; this.w = 0; this.rot = 0; this.ev.push(['touch', vn, !!b && b !== this.W.landing]); }
+    hitWall(b, v) { const st = this.st; this.z = b.z0 - .2; this.wall = b;
+      if (v > (st.bounce ? 14 : 7)) return this.crash('wall', v);
+      this.vz = 0; this.vy = Math.min(this.vy, 0); this.ev.push(['bonk', v]); if (this.mode === 'ground') this.done('stop'); }
+    groundStep(inp) { const st = this.st, s = surfAt(this.W, this.z), be = s.slope, v = this.v;
+      const D = .5 * RHO * v * v * st.cda / st.m;
+      this.v += (-G * Math.sin(be) - st.roll * G * Math.cos(be) - D + (this.thr ? st.T / st.m : 0)) * DT;
+      if (this.v <= .3) { this.v = 0; return this.done('stop'); }
+      const z0 = this.z; this.z += this.v * Math.cos(be) * DT; this.maxZ = Math.max(this.maxZ, this.z);
+      const s2 = surfAt(this.W, this.z);
+      if (s2.b && s2.b !== s.b && s2.h > this.y + .6 && s2.b !== this.W.landing) return this.hitWall(s2.b, this.v);
+      if (s2.h < this.y - .6) { this.mode = 'air'; this.vz = this.v * Math.cos(be); this.vy = this.v * Math.sin(be); this.ev.push(['edge']); return; }
+      this.y = s2.h; this.phi += (s2.slope - this.phi) * .2; this.vz = this.v * Math.cos(s2.slope); this.vy = this.v * Math.sin(s2.slope); }
+    crash(kind, v) { this.mode = 'crash'; this.ev.push(['crash', kind, v]); }
+    done(k) { this.mode = 'done'; this.ev.push(['done', k]); }
+  }
+
+  const P = { G, RHO, DT, D2R, RAMPS, VEH, LIP, EXIT, rampProfile, rampAt, stats, forces, CL, surfAt, indexWorld, Sim, wrap, clamp };
+  if (typeof module !== 'undefined') module.exports = P; else root.RP = P;
+})(this);

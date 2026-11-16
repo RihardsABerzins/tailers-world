@@ -6,7 +6,7 @@
 // Ar 50 medaļām vārds sarkani spīd, ar 100 – zili (TW.nameHTML / spēles vārda zīme).
 (function(){
   const A = window.TWA = { owned: null, uid: null };
-  A.GROUPS = [{ g: 'profils', t: '👤 Profils un draugi' }, { g: 'grafiti', t: '🎨 Graffiti RPG' }, { g: 'ap', t: '🚑 Ātrā palīdzība' }, { g: 'skola', t: '🏫 Skola' }];
+  A.GROUPS = [{ g: 'profils', t: '👤 Profils un draugi' }, { g: 'grafiti', t: '🎨 Graffiti RPG' }, { g: 'ap', t: '🚑 Ātrā palīdzība' }, { g: 'skola', t: '🏫 Skola' }, { g: 'rampa', t: '🛫 Mega rampa' }];
   const L = A.LIST = [];
   const add = (g, id, i, t, te, d, de, ok) => L.push({ g, id, i, t, te, d, de, ok });
   // Pakāpju medaļas: rows = [[skaits, ikona, nosaukums, nosaukums EN, id?]]
@@ -50,6 +50,28 @@
     n => `Kopā ${n} pareizas atbildes stundās`, n => `${n} right answers in lessons`);
   tiers('skola', 'skLevel', 'sklv', [[5, '📏', 'Skolotājs', 'Teacher'], [10, '🧑‍🏫', 'Vecākais skolotājs', 'Senior teacher'], [20, '🏛️', 'Direktors', 'Principal']],
     n => `Sasniedzi ${n}. līmeni skolā`, n => `Reached level ${n} in the school game`);
+
+  // ---- Mega rampa (ctx: rpFlights, rpPlane, rpLandP, rpScoot, rpLandS, rpFlip, rpCar, rpRoof, rpCrash, rpLevel; attālumi metros) ----
+  tiers('rampa', 'rpFlights', 'rpf', [[1, '🛫', 'Pirmais lēciens', 'First jump'], [25, '🎢', '25 lēcieni', '25 jumps'], [100, '🏗️', '100 lēcieni', '100 jumps']],
+    n => n === 1 ? 'Nobrauci no mega rampas' : `Nobrauci no rampas ${n} reizes`, n => `Went off the mega ramp ${n} time${n > 1 ? 's' : ''}`);
+  tiers('rampa', 'rpPlane', 'rpp', [[100, '✈️', 'Lidmašīna 100 m', 'Plane 100 m'], [500, '🛩️', 'Lidmašīna 500 m', 'Plane 500 m'], [1000, '🌤️', 'Kilometrs gaisā', 'A kilometre in the air'], [2500, '🦅', 'Ērglis', 'Eagle']],
+    n => `Aizlidoji ${n} m ar lidmašīnu`, n => `Flew ${n} m with the plane`);
+  tiers('rampa', 'rpLandP', 'rplp', [[1, '🛬', 'Maiga nosēšanās', 'Soft landing'], [10, '🧑‍✈️', 'Pilots', 'Pilot']],
+    n => n === 1 ? 'Nosēdies ar lidmašīnu bez avārijas' : `${n} nosēšanās ar lidmašīnu bez avārijas`, n => `${n} plane landing${n > 1 ? 's' : ''} without a crash`);
+  tiers('rampa', 'rpScoot', 'rps', [[50, '🛴', 'Skūteris 50 m', 'Scooter 50 m'], [150, '💨', 'Skūteris 150 m', 'Scooter 150 m'], [300, '🚀', 'Skūtera raķete', 'Scooter rocket']],
+    n => `Aizlēci ${n} m ar skūteri`, n => `Jumped ${n} m on the scooter`);
+  tiers('rampa', 'rpLandS', 'rpls', [[1, '🤙', 'Nolēci uz riteņiem', 'Landed it'], [10, '🛹', 'Triku meistars', 'Trick master']],
+    n => n === 1 ? 'Nolaidies ar skūteri bez avārijas' : `${n} skūtera nolaišanās bez avārijas`, n => `${n} scooter landing${n > 1 ? 's' : ''} without a crash`);
+  tiers('rampa', 'rpFlip', 'rpfl', [[1, '🤸', 'Salto', 'Flip'], [10, '🌀', '10 salto', '10 flips'], [50, '🎪', 'Cirka zvaigzne', 'Circus star']],
+    n => n === 1 ? 'Izmeti salto gaisā' : `Kopā ${n} salto gaisā`, n => `${n} flip${n > 1 ? 's' : ''} in the air`);
+  tiers('rampa', 'rpCar', 'rpc', [[100, '🚗', 'Mašīna 100 m', 'Car 100 m'], [300, '🏎️', 'Mašīna 300 m', 'Car 300 m'], [600, '🚀', 'Lidojošā mašīna', 'Flying car']],
+    n => `Aizlidoji ${n} m ar mašīnu`, n => `Flew ${n} m with the car`);
+  tiers('rampa', 'rpRoof', 'rpr', [[1, '🏠', 'Pa jumtiem', 'Over the roofs'], [10, '🏘️', '10 jumtu lēcieni', '10 roof bounces']],
+    n => n === 1 ? 'Atlēci no mājas jumta' : `Kopā ${n} lēcieni pa jumtiem`, n => `Bounced off ${n} roof${n > 1 ? 's' : ''}`);
+  tiers('rampa', 'rpCrash', 'rpx', [[1, '🪂', 'Izpletnis', 'Parachute'], [10, '💥', 'Kaskadieris', 'Stunt double'], [50, '🎬', 'Kino kaskadieris', 'Movie stuntman']],
+    n => n === 1 ? 'Pēc avārijas izlēci ar izpletni' : `${n} avārijas – katrā izlēci ar izpletni`, n => `${n} crashes – bailed out every time`);
+  tiers('rampa', 'rpLevel', 'rplv', [[5, '🎖️', 'Lēcējs', 'Jumper'], [10, '🏅', 'Mega lēcējs', 'Mega jumper'], [20, '👑', 'Rampas karalis', 'Ramp king']],
+    n => `Sasniedzi ${n}. līmeni mega rampā`, n => `Reached level ${n} on the mega ramp`);
 
   // ---- Graffiti RPG ----
   tiers('grafiti', 'painted', 'paint', [[1, '🎨', 'Pirmais grafiti', 'First graffiti'], [10, '🖍️', '10 sienas', '10 walls'], [25, '🖌️', 'Ielu mākslinieks', 'Street artist'], [50, '🧱', '50 sienas', '50 walls'], [100, '🌈', 'Grafiti meistars', 'Graffiti master'], [250, '🏙️', '250 sienas', '250 walls'], [500, '🎭', '500 sienas', '500 walls'], [1000, '🗿', '1000 sienas', '1000 walls'], [2000, '🏛️', 'Pilsētas leģenda', 'City legend']],

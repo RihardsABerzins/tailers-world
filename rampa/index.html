@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="lv">
+<head>
+<meta charset="utf-8">
+<title>Mega rampa</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../firebase-config.js?v=4"></script>
+<script src="../tw-common.js?v=6"></script>
+<script src="../tw-ach.js?v=8"></script>
+<script src="../tw-radio.js?v=3"></script>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f1220">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- augšā: līmenis/nauda; lidojumā – attālums -->
+<div id="top">
+  <div id="stat" class="glass"><a id="home" href="../index.html" title="Uz sākumlapu">🏠</a><button id="gear" title="Iestatījumi">⚙</button><b id="sLv">🛫 1. līm.</b><div class="xp"><i id="sXp"></i></div><span id="sMoney">💰 €0</span></div>
+</div>
+<div id="dist"><b id="dM">0 m</b><span id="dSub"></span></div>
+<div id="warn"></div>
+<div id="hintL" class="hint">⬆<small>Turi – deguns augšup</small></div>
+<div id="hintR" class="hint">⬇<small>Turi – deguns lejup</small></div>
+<div id="lever"><div class="lvT">⬇ Velc!</div><div class="lvTrack"><i></i><div id="knob"></div></div></div>
+<button id="turbo"><i></i><span>🔥<small>TURBO</small></span></button>
+<div id="banner"></div>
+
+<!-- darbnīca (lejā vertikāli, pa labi horizontāli) -->
+<div id="shop" class="glass"></div>
+
+<!-- logi -->
+<div id="ov" class="ov"><div id="sheet" class="sheet"></div></div>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="physics.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
