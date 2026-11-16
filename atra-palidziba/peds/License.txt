@@ -1,0 +1,20 @@
+Posed Background Characters by @Quaternius (https://quaternius.com) – CC0 1.0.
+Izmantots: gājēji un skatītāji (peds.webp – Blenderī renderēti sprite, peds.glb – 6 pozas 3D skatam). Matu modeļi (Hairstyles) uzlikti galvām, krāsas mūsu.
+(Zemāk – autora oriģinālais licences fails; virsraksts „Knight Pack” ir autora kļūda.)
+
+------------------------------------------------------
+Knight Pack by Quaternius
+Consider supporting me on Patreon, even $1 helps me a lot!
+
+https://www.patreon.com/quaternius
+-------------------------------------------------------
+
+License:
+CC0 1.0 Universal (CC0 1.0) 
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+-------------------------------------------------------
+If you want to credit me just say:
+Background characters by Quaternius
+https://www.patreon.com/quaternius

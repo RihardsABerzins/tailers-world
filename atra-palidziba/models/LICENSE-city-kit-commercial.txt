@@ -1,0 +1,3 @@
+Kenney City Kit (Commercial) – Kenney (www.kenney.nl), CC0 1.0 (publiskais īpašums), no Poly Pizza (https://poly.pizza/u/Kenney).
+Ēkas: skyscraperE/F, large_buildingC/E/F, low_buildingN, small_buildingF – apstrādātas Blenderī (mērogs 1×1×1, „wall” daļa tonējama katrai mājai);
+ņemtas no rampa/models/city.glb. city/roofs.webp – to pašu ēku jumti no augšas (2D skatam).

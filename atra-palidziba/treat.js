@@ -107,8 +107,31 @@
   const nightK = (col, night) => night ? mixc(col, '#2a2f60', .38) : col;
   // [slānis, krāsa] → zīmē visus vai neko (kamēr kāds nav ielādēts – false, tad zīmē vektoru tēlu)
   function chDraw(g, key, parts) { const ims = parts.map(([n, col]) => chTint(key + '_' + n, col)); if (!ims.every(Boolean)) return false; ims.forEach(im => g.drawImage(im, 0, 0, SW, SH)); return true; }
-  // mediķis (spēlētāja tēls ātrās palīdzības formā; izskats no frizētavas – LOOK)
-  function medic(g, x, ground, s) { const L = (typeof LOOK !== 'undefined' && LOOK) || {}, skin = L.skin || '#f2c9a0', uni = '#2e8b57'; g.save(); g.translate(x, ground); g.scale(s, s);
+  // ---- mediķis = spēlētāja Kenney Mini Characters tēls (tas pats, kas Graffiti: grafiti/sprites/chars.webp, kadrs 11 – no priekšas) ----
+  // modelis LOOK.ch, mati LOOK.cap; jaka – ātrās palīdzības zaļa ar atstarojošām svītrām, bikses tumši zilas (maskas: R jaka, G bikses, B mati)
+  const KCH = ['male-a', 'male-b', 'male-c', 'male-d', 'male-e', 'male-f', 'male-g', 'female-a', 'female-b', 'female-c', 'female-d', 'female-e', 'female-f'], KFW = 128, KFH = 172, KM = {};
+  const KBASE = new URL('../grafiti/sprites/', document.currentScript ? document.currentScript.src : location.href).href;
+  ['chars', 'chars_m'].forEach(n => { const im = KM[n] = new Image(); im.src = KBASE + n + '.webp?v=4'; });
+  function kMedicImg(ci, hair, night) { const key = ci + hair + night; if (KM[key]) return KM[key]; const B = KM.chars, Mk = KM.chars_m; if (!B.complete || !B.naturalWidth || !Mk.complete || !Mk.naturalWidth) return null;
+    const px = im => { const c = document.createElement('canvas'); c.width = KFW; c.height = KFH; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 11 * KFW, ci * KFH, KFW, KFH, 0, 0, KFW, KFH); return x.getImageData(0, 0, KFW, KFH); };
+    const b = px(B), m = px(Mk), p = b.data, q = m.data, T = ['#2e8b57', '#1f3a5f', hair].map(h => hx(h).map(v => v / 255)), ys = [];
+    for (let i = 0; i < p.length; i += 4) if (q[i] > 128 && q[i + 3] > 128) ys.push((i / 4 / KFW) | 0); const y0 = Math.min(...ys), y1 = Math.max(...ys);
+    for (let i = 0; i < p.length; i += 4) { if (!p[i + 3]) continue; const ma = q[i + 3] / 255; let t = [1, 1, 1];
+      for (let k = 0; k < 3; k++) { const w = q[i + k] / 255 * ma; if (w > 0) t = t.map((v, j) => v * (1 - w) + T[k][j] * w); }
+      const yy = (i / 4 / KFW) | 0, f = (yy - y0) / (y1 - y0 || 1), stripe = q[i] > 128 && ((f > .42 && f < .5) || (f > .68 && f < .76)); // atstarojošās svītras uz jakas
+      if (stripe) t = [1.25, 1.12, .35]; p[i] = Math.min(255, p[i] * t[0]); p[i + 1] = Math.min(255, p[i + 1] * t[1]); p[i + 2] = p[i + 2] * t[2]; }
+    const c = document.createElement('canvas'); c.width = KFW; c.height = KFH; const x = c.getContext('2d'); x.putImageData(b, 0, 0);
+    if (night) { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(42,47,96,.4)'; x.fillRect(0, 0, KFW, KFH); }
+    return KM[key] = c; }
+  function kMedic(g, x, ground, s) { const L = (typeof LOOK !== 'undefined' && LOOK) || {}, ci = Math.max(0, KCH.indexOf(L.ch || 'male-a')), im = kMedicImg(ci, /^#[0-9a-f]{6}$/i.test(L.cap || '') ? L.cap : '#3e3e44', !!medic.night); if (!im) return false;
+    const k = 132 * s / (.729 * KFH), w = KFW * k, h = KFH * k; x += 8 * s; // Kenney tēliem liela galva – mazliet mazāks, lai pacients paliek galvenais
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(x, ground + 2, 28 * s, 6 * s, 0, 0, 7); g.fill();
+    g.drawImage(im, x - w / 2, ground - .9457 * h, w, h);
+    // somiņa ar krustu blakus kājām
+    g.save(); g.translate(x + 24 * s, ground); g.scale(s, s); g.fillStyle = '#d63031'; g.strokeStyle = OL; g.lineWidth = LW; g.beginPath(); g.roundRect(-2, -22, 26, 20, 4); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.fillRect(8, -19, 5, 14); g.fillRect(3.5, -14.5, 14, 5); g.restore();
+    return true; }
+  // mediķis (spēlētāja tēls ātrās palīdzības formā; izskats no frizētavas – LOOK); ja Kenney tēls vēl nav ielādēts – vecais zīmētais
+  function medic(g, x, ground, s) { if (kMedic(g, x, ground, s)) return; const L = (typeof LOOK !== 'undefined' && LOOK) || {}, skin = L.skin || '#f2c9a0', uni = '#2e8b57'; g.save(); g.translate(x, ground); g.scale(s, s);
     { const hat = L.hat || 'cap', hv = hat === 'cap' ? 'hatCap' : hat === 'beanie' ? 'hatBeanie' : 'hairS', hc = L.cap || '#1b1b1f', N = medic.night;
       g.save(); g.translate(-240, -290);
       const ok = chDraw(g, 'medic', [['skin', nightK(skin, N)], ['fixed', nightK('#ffffff', N)], [hv, nightK(hc, N)], ['line_' + hv, '#ffffff']]);
@@ -388,7 +411,7 @@
     const hint = (t, bad) => { hintEl.innerHTML = t; hintEl.className = 'hint on' + (bad ? ' bad' : ''); clearTimeout(hintT); hintT = setTimeout(() => hintEl.classList.remove('on'), 3200); };
     const loop = now => { if (!alive) return; const dt = Math.min(.05, (now - last) / 1000); last = now; T.now += dt;
       for (const k in st.fx) st.fx[k] = Math.max(0, st.fx[k] - dt / 2.2);
-      g.setTransform(2, 0, 0, 2, 0, 0); bg(g, c); prop(g, c); const P = geo(c, st), [px, py] = piv(P), ks = ageK(c);
+      g.setTransform(2, 0, 0, 2, 0, 0); g.imageSmoothingQuality = 'high'; bg(g, c); if (window.PEDS) PEDS.scene(g, c, T.now); prop(g, c); const P = geo(c, st), [px, py] = piv(P), ks = ageK(c);
       g.save(); g.translate(px, py); g.scale(ks, ks); g.translate(-px, -py); patient(g, c, st, P); applied(g, c, st, P);
       if (st.hover) { const z = P.Z[st.hover.z] || P.Z.body; g.strokeStyle = st.hover.ok ? 'rgba(46,204,113,.95)' : 'rgba(255,211,77,.9)'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.arc(z[0], z[1], z[2] + 8 + Math.sin(now / 120) * 3, 0, 7); g.stroke(); g.setLineDash([]); }
       effects(g, st, dt); g.restore();

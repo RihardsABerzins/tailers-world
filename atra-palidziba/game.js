@@ -9,15 +9,16 @@ const isTouch = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in wind
 if (!isTouch) document.body.classList.add('kb');
 // ja tomēr pieskaras ekrānam (piem. skārienjūtīgs dators) – rāda kursorsviru
 addEventListener('pointerdown', e => { if (e.pointerType === 'touch') document.body.classList.remove('kb'); }, true);
-let W = innerWidth, H = innerHeight, DPR = Math.min(2, devicePixelRatio || 1);
-function resize() { W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
+let W = innerWidth, H = innerHeight, DPR = Math.min(2.5, devicePixelRatio || 1); // telefonos (DPR 3) 2,5 – ass, bet ne pārāk smags
+function resize() { W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.imageSmoothingQuality = 'high'; } // canvas izmēra maiņa atiestata kvalitāti
 addEventListener('resize', resize); resize();
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
 const wrapA = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
 // ================= Pilsēta =================
-const G = 440, RW = 124, LANE = 31, N = 14, S = (N - 1) * G, SWK = 18; // ielu solis, ielas platums, joslas nobīde, ielu skaits, pilsētas izmērs, ietve
+const G = 540, RW = 204, LANE = 50, N = 14, S = (N - 1) * G, SWK = 40; // ielu solis, ielas platums, joslas nobīde, ielu skaits, pilsētas izmērs, ietve (ar koku/laternu joslu iekšmalā)
+const TREE_IN = 29; // ielas koki un laternas – ietves iekšējā malā, lai vainagi un stabi nav virs brauktuves
 const H_NAMES = ['Brīvības', 'Krasta', 'Saules', 'Liepu', 'Ozolu', 'Skolas', 'Dzirnavu', 'Parka', 'Ābeļu', 'Jūras', 'Stacijas', 'Lazdu', 'Priežu', 'Upes'];
 const V_NAMES = ['Tilta', 'Lāčplēša', 'Bērzu', 'Rūpniecības', 'Kalna', 'Vējā', 'Rožu', 'Avotu', 'Meža', 'Pils', 'Ostas', 'Dārza', 'Kļavu', 'Ezera'];
 const RNG = mulberry(112);
@@ -26,16 +27,18 @@ const ROOF = ['#e9dcc8', '#d8c6b0', '#c8d5df', '#b9c6d8', '#e4caa8', '#dcae92', 
 const blocks = [];
 for (let i = 0; i < N - 1; i++) for (let j = 0; j < N - 1; j++) {
   const x0 = i * G + RW / 2, y0 = j * G + RW / 2, x1 = (i + 1) * G - RW / 2, y1 = (j + 1) * G - RW / 2;
-  const b = { i, j, x0, y0, x1, y1, kind: 'city', items: [], trees: [] };
+  const b = { i, j, x0, y0, x1, y1, kind: 'city', items: [], trees: [], greens: [] };
   const r = RNG();
   if (i === HOSP.i && j === HOSP.j) b.kind = 'hospital';
-  else if (r < .14) b.kind = 'park'; else if (r < .2) b.kind = 'parking'; else if (r < .25) b.kind = 'plaza';
+  else if (r < .24) b.kind = 'park'; else if (r < .29) b.kind = 'parking'; else if (r < .33) b.kind = 'plaza';
   const ix0 = x0 + SWK, iy0 = y0 + SWK, ix1 = x1 - SWK, iy1 = y1 - SWK;
   if (b.kind === 'city') { // sadala zemes gabalos, katrā māja
     const lots = [[ix0, iy0, ix1, iy1]];
     for (let k = 0; k < 3; k++) { const L = lots.shift(), [a, c, d, e] = L, w = d - a, h = e - c;
       if (w < 120 && h < 120) { lots.push(L); continue; }
       if (w >= h) { const m = a + w * (.35 + RNG() * .3); lots.push([a, c, m, e], [m, c, d, e]); } else { const m = c + h * (.35 + RNG() * .3); lots.push([a, c, d, m], [a, m, d, e]); } }
+    // zaļā zona: dažos kvartālos viens zemes gabals – zāliens ar kokiem, nevis māja
+    if (lots.length >= 3 && RNG() < .4) { const [a, c, d, e] = lots.shift(); b.greens.push([a, c, d, e]); for (let k = 0; k < 3; k++) b.trees.push({ x: lerp(a + 22, d - 22, RNG()), y: lerp(c + 22, e - 22, RNG()), r: 13 + RNG() * 8, fir: RNG() < .25, tint: RNG() }); }
     lots.forEach(([a, c, d, e]) => { const m = 7; b.items.push({ t: 'bld', x0: a + m, y0: c + m, x1: d - m, y1: e - m, col: ROOF[(RNG() * ROOF.length) | 0], h: 36 + RNG() * RNG() * 150, win: RNG() * 1e9 | 0, det: Array.from({ length: 1 + (RNG() * 3 | 0) }, () => ({ u: RNG(), v: RNG(), k: RNG() })) }); });
   } else if (b.kind === 'park') { // parks: zāles laukumi, līkumoti celiņi, dīķis, puķu dobes, soliņi, lapu koki un egles
     const W_ = ix1 - ix0, H_ = iy1 - iy0, P = b.park = { patches: [], paths: [], benches: [], beds: [] };
@@ -55,7 +58,7 @@ for (let i = 0; i < N - 1; i++) for (let j = 0; j < N - 1; j++) {
   if (b.kind === 'hospital') b.items.push({ t: 'bld', hosp: true, x0: ix0 + 14, y0: iy0 + 6, x1: ix1 - 14, y1: iy1 - 96, col: '#f4f6fa', h: 120, win: 7, det: [] });
   // koki uz ietves
   for (let k = 0; k < 6; k++) { const s = RNG(), side = (RNG() * 4) | 0, p = .1 + s * .8;
-    const tx = side < 2 ? lerp(x0, x1, p) : side === 2 ? x0 + 9 : x1 - 9, ty = side >= 2 ? lerp(y0, y1, p) : side === 0 ? y0 + 9 : y1 - 9;
+    const tx = side < 2 ? lerp(x0, x1, p) : side === 2 ? x0 + TREE_IN : x1 - TREE_IN, ty = side >= 2 ? lerp(y0, y1, p) : side === 0 ? y0 + TREE_IN : y1 - TREE_IN;
     if (b.kind !== 'hospital') b.trees.push({ x: tx, y: ty, r: 11 + RNG() * 5, side: true }); }
   blocks.push(b);
 }
@@ -64,7 +67,19 @@ for (let i = 0; i < N - 1; i++) for (let j = 0; j < N - 1; j++) {
   b.items = [{ t: 'bld', fuel: true, x0: cx - 110, y0: by - 160, x1: cx + 110, y1: by - 60, col: '#f4f6fa', h: 30, win: 3, det: [] }]; } });
 const FUEL = blocks.filter(b => b.kind === 'fuel').map(b => ({ x: (b.x0 + b.x1) / 2, y: b.y1 + 34, b }));
 const hospBlock = blocks.find(b => b.kind === 'hospital');
-const LAMPS = []; blocks.forEach(b => { [[b.x0 + 8, b.y0 + 8], [b.x1 - 8, b.y0 + 8], [b.x0 + 8, b.y1 - 8], [b.x1 - 8, b.y1 - 8], [(b.x0 + b.x1) / 2, b.y0 + 8], [(b.x0 + b.x1) / 2, b.y1 - 8], [b.x0 + 8, (b.y0 + b.y1) / 2], [b.x1 - 8, (b.y0 + b.y1) / 2]].forEach(([x, y]) => LAMPS.push({ x, y })); });
+// ielu lampas – pa vienai katram ielas posmam (kvartāla augšmalas un kreisās malas vidū)
+const LAMPS = []; blocks.forEach(b => { [[(b.x0 + b.x1) / 2 + 40, b.y0 + TREE_IN], [b.x0 + TREE_IN, (b.y0 + b.y1) / 2 + 40]].forEach(([x, y]) => LAMPS.push({ x, y })); });
+// koka veids t.m (0–3) → modelis TREE_MODEL: Mega rampas koki (Quaternius „Tree”, CC0) T_1..T_3 – tas pats 2D (models/nature/r/top.webp) un 🛞 skatā
+const TREE_MODEL = [0, 1, 2, 2];
+blocks.forEach(b => b.trees.forEach(t => { const h = ((t.x * 7 + t.y * 13) | 0) % 10; t.m = t.fir ? 3 : h < 6 ? 0 : h < 8 ? 1 : 2; }));
+// mājas – Kenney City Kit (Commercial, CC0) modeļi: augstas → debesskrāpji, vidējas → lielās ēkas, zemas → mazās (it.m; tas pats 2D jumtam un 🛞 skatam)
+const BMODELS = ['large1', 'large4', 'large5', 'low1', 'sky1', 'sky2', 'small1'], ROOFS = new Image(); ROOFS.src = 'models/city/roofs.webp?v=2';
+// sienu krāsas: Mega rampas dabiskās (ķieģelis, smilšu, rūsa, zilganpelēks, brūns, salvijas) + dažas priecīgākas; jumts – tās pašas krāsas gaišāks tonis
+const PALW = ['#a5523c', '#c9a77a', '#b8693f', '#6f8196', '#d9c7a2', '#8a5a44', '#7c8a7a', '#d9734e', '#e0b65a', '#5f9ec9', '#8fb866', '#c97b9a'];
+const tint = (h, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(h.slice(i, i + 2), 16) * (1 - t) + 255 * t).toString(16).padStart(2, '0')).join('');
+blocks.forEach(b => b.items.forEach(it => { if (it.t !== 'bld' || it.hosp || it.fuel) return; const g = it.h > 120 ? [4, 5] : it.h > 70 ? [0, 1, 2] : [3, 6, 0]; it.m = g[it.win % g.length];
+  it.wall = PALW[(it.win >>> 3) % PALW.length]; it.col = tint(it.wall, .45); }));
+const TREE_TOP = new Image(); TREE_TOP.src = 'models/nature/r/top.webp?v=2';
 const HOSP_BAY = { x: (hospBlock.x0 + hospBlock.x1) / 2, y: hospBlock.y1 + 34 }; // uzbrauktuve uz ielas pie slimnīcas
 // sastrēgumu posmi (ielas daļa starp krustojumiem): tur mašīnas brauc lēni un to ir daudz
 const jams = new Set();
@@ -123,7 +138,7 @@ function updateCars(dt, t) {
     { const fx = Math.cos(c.ang), fy = Math.sin(c.ang); for (const o of cars) { if (o === c || o.off) continue; const dx = o.x - c.x, dy = o.y - c.y; if (Math.abs(dx) > 120 || Math.abs(dy) > 120) continue;
       const fwd = dx * fx + dy * fy, lat = Math.abs(-dx * fy + dy * fx); if (fwd > 0 && lat < 24) { if (fwd < 62) { target = 0; if (fwd < 50) c.v = 0; } else if (fwd < 120) target = Math.min(target, o.v * .9 + (fwd - 62)); } } }
     // nākamais krustojums, stop līnija, luksofors (dzeltenajā apstājas, ja var paspēt)
-    const next = c.dir > 0 ? Math.ceil((c.s + 1) / G) * G : Math.floor((c.s - 1) / G) * G, ni = Math.round(next / G), stop = next - c.dir * (RW / 2 + 14), d = (stop - c.s) * c.dir;
+    const next = c.dir > 0 ? Math.ceil((c.s + 1) / G) * G : Math.floor((c.s - 1) / G) * G, ni = Math.round(next / G), stop = next - c.dir * (RW / 2 + 36 + c.len / 2), d = (stop - c.s) * c.dir;
     if (!c.plan && d < 170) c.plan = planAt(c, next);
     if (ni > 0 && ni < N - 1 && d > 0 && d < 120) { const [li, lj] = c.ax === 'h' ? [ni, c.idx] : [c.idx, ni], L = lightState(li, lj, c.ax, t);
       if (L === 'r' || (L === 'y' && d > 30)) target = Math.min(target, d < 6 ? 0 : d * 1.6); else if (L === 'f') target = Math.min(target, 110); }
@@ -460,23 +475,29 @@ function drawWorld(t) {
   // ceļa līnijas, gājēju pārejas, stop līnijas
   ctx.save(); ctx.strokeStyle = '#f3f3f3cc'; ctx.lineWidth = 4; ctx.setLineDash([26, 22]);
   for (let k = 0; k < N; k++) { const p = k * G;
-    for (let s = 0; s < N - 1; s++) { const a = s * G + RW / 2 + 30, b = (s + 1) * G - RW / 2 - 30;
+    for (let s = 0; s < N - 1; s++) { const a = s * G + RW / 2 + 44, b = (s + 1) * G - RW / 2 - 44;
       if (p > vy0 && p < vy1 && b > vx0 && a < vx1) { ctx.beginPath(); ctx.moveTo(a, p); ctx.lineTo(b, p); ctx.stroke(); }
       if (p > vx0 && p < vx1 && b > vy0 && a < vy1) { ctx.beginPath(); ctx.moveTo(p, a); ctx.lineTo(p, b); ctx.stroke(); } } }
+  ctx.setLineDash([]); ctx.lineWidth = 3; ctx.strokeStyle = '#e9e9e9b0'; const eo = RW / 2 - 7; // malu līnijas
+  for (let k = 0; k < N; k++) { const p = k * G;
+    for (let s = 0; s < N - 1; s++) { const a = s * G + RW / 2, b = (s + 1) * G - RW / 2; ctx.beginPath();
+      if (p > vy0 - RW && p < vy1 + RW && b > vx0 && a < vx1) { ctx.moveTo(a, p - eo); ctx.lineTo(b, p - eo); ctx.moveTo(a, p + eo); ctx.lineTo(b, p + eo); }
+      if (p > vx0 - RW && p < vx1 + RW && b > vy0 && a < vy1) { ctx.moveTo(p - eo, a); ctx.lineTo(p - eo, b); ctx.moveTo(p + eo, a); ctx.lineTo(p + eo, b); } ctx.stroke(); } }
   ctx.restore();
   ctx.fillStyle = '#f5f5f5d0';
   for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { const X = i * G, Y = j * G; if (X < vx0 - G || X > vx1 + G || Y < vy0 - G || Y > vy1 + G) continue;
-    for (let k = -2; k <= 2; k++) { // zebras
-      if (i < N - 1) ctx.fillRect(X + RW / 2 + 6, Y + k * 22 - 6, 18, 12); if (i > 0) ctx.fillRect(X - RW / 2 - 24, Y + k * 22 - 6, 18, 12);
-      if (j < N - 1) ctx.fillRect(X + k * 22 - 6, Y + RW / 2 + 6, 12, 18); if (j > 0) ctx.fillRect(X + k * 22 - 6, Y - RW / 2 - 24, 12, 18); } }
+    for (let k = 0, nz = Math.floor((RW - 14) / 19); k < nz; k++) { const o = (k - (nz - 1) / 2) * 19; // zebras – svītras pāri visai ielai
+      if (i < N - 1) ctx.fillRect(X + RW / 2 + 6, Y + o - 6, 20, 12); if (i > 0) ctx.fillRect(X - RW / 2 - 26, Y + o - 6, 20, 12);
+      if (j < N - 1) ctx.fillRect(X + o - 6, Y + RW / 2 + 6, 12, 20); if (j > 0) ctx.fillRect(X + o - 6, Y - RW / 2 - 26, 12, 20); } }
   // kvartāli
   for (const b of blocks) { if (b.x1 < vx0 || b.x0 > vx1 || b.y1 < vy0 || b.y0 > vy1) continue; drawBlock(b, t); }
+  if (window.PEDS) PEDS.draw(ctx, t, vx0, vy0, vx1, vy1); // gājēji uz ietvēm (Quaternius, peds.js)
   // luksofori: katrai pieejai sava krāsaina stop līnija joslas platumā + luksofors labajā stūrī (sarkans / dzeltens / zaļš)
   const LC = { r: '#ff3b3b', y: '#ffc533', g: '#36e06f', f: Math.sin(t * 6) > 0 ? '#ffc533' : '#3a3420' };
   for (let i = 1; i < N - 1; i++) for (let j = 1; j < N - 1; j++) { const X = i * G, Y = j * G; if (X < vx0 - 100 || X > vx1 + 100 || Y < vy0 - 100 || Y > vy1 + 100) continue;
-    const hs = lightState(i, j, 'h', t), vs = lightState(i, j, 'v', t), e = RW / 2 + 14;
+    const hs = lightState(i, j, 'h', t), vs = lightState(i, j, 'v', t), e = RW / 2 + 14, eb = RW / 2 + 38; // e – luksofori uz stūra, eb – stop līnija aiz zebras
     const bar = (x, y, w, h, st) => { ctx.fillStyle = LC[st]; ctx.globalAlpha = .85; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1; };
-    bar(X - e - 6, Y + 4, 8, RW / 2 - 8, hs); bar(X + e - 2, Y - RW / 2 + 4, 8, RW / 2 - 8, hs); bar(X - RW / 2 + 4, Y - e - 6, RW / 2 - 8, 8, vs); bar(X + 4, Y + e - 2, RW / 2 - 8, 8, vs);
+    bar(X - eb - 4, Y + 4, 8, RW / 2 - 10, hs); bar(X + eb - 4, Y - RW / 2 + 6, 8, RW / 2 - 10, hs); bar(X - RW / 2 + 6, Y - eb - 4, RW / 2 - 10, 8, vs); bar(X + 4, Y + eb - 4, RW / 2 - 10, 8, vs);
     const head = (x, y, st) => { ctx.fillStyle = '#5b6070'; ctx.fillRect(x - 2, y - 2, 4, 14); ctx.fillStyle = '#15171d'; ctx.beginPath(); ctx.roundRect(x - 8, y - 26, 16, 40, 5); ctx.fill();
       ['r', 'y', 'g'].forEach((k, n) => { const on = k === st || (st === 'f' && k === 'y' && Math.sin(t * 6) > 0); ctx.fillStyle = on ? LC[k === 'y' ? 'y' : k] : '#2c2f38'; ctx.beginPath(); ctx.arc(x, y - 18 + n * 12, 5, 0, 7); ctx.fill();
         if (on) { ctx.globalAlpha = .35; ctx.beginPath(); ctx.arc(x, y - 18 + n * 12, 11, 0, 7); ctx.fill(); ctx.globalAlpha = 1; } }); };
@@ -587,7 +608,7 @@ function drawBuilding(it, t, dk, lit, neon) {
   const f = it.h * PK, cx = cam.x, cy = cam.y, R = (x, y) => [x + (x - cx) * f, y + (y - cy) * f];
   const A = [it.x0, it.y0], B = [it.x1, it.y0], C = [it.x1, it.y1], D = [it.x0, it.y1], A2 = R(...A), B2 = R(...B), C2 = R(...C), D2 = R(...D);
   const floors = Math.max(1, Math.floor(it.h / 28)), night = dk > .25;
-  const wall = (p0, p1, q1, q0, k) => { ctx.fillStyle = shade(it.col, k); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.lineTo(q1[0], q1[1]); ctx.lineTo(q0[0], q0[1]); ctx.fill();
+  const wall = (p0, p1, q1, q0, k) => { ctx.fillStyle = shade(it.wall || it.col, k); ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.lineTo(q1[0], q1[1]); ctx.lineTo(q0[0], q0[1]); ctx.fill();
     const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), n = Math.max(1, Math.floor(len / 30)), P = (u, v) => [lerp(lerp(p0[0], p1[0], u), lerp(q0[0], q1[0], u), v), lerp(lerp(p0[1], p1[1], u), lerp(q0[1], q1[1], u), v)];
     if (it.fuel) return;
     for (let k2 = 0; k2 < floors; k2++) for (let i = 0; i < n; i++) { const u0 = (i + .28) / n, u1 = (i + .72) / n, v0 = (k2 + .3) / floors, v1 = (k2 + .72) / floors, a = P(u0, v0), b = P(u1, v0), c = P(u1, v1), d = P(u0, v1);
@@ -602,6 +623,7 @@ function drawBuilding(it, t, dk, lit, neon) {
   if (it.hosp) { const hx = (it.x0 + it.x1) / 2, hy = (it.y0 + it.y1) / 2; ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(hx, hy, 46, 0, 7); ctx.stroke(); ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 52px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('H', hx, hy + 3);
     ctx.fillStyle = '#e53950'; [[it.x0 + 30, it.y0 + 30], [it.x1 - 30, it.y0 + 30]].forEach(([x, y]) => { ctx.fillRect(x - 7, y - 20, 14, 40); ctx.fillRect(x - 20, y - 7, 40, 14); }); }
   else if (it.fuel) { ctx.fillStyle = '#16a34a'; ctx.fillRect(it.x0, it.y0, w, 14); ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('⛽ DEGVIELA', (it.x0 + it.x1) / 2, (it.y0 + it.y1) / 2 + 6); }
+  else if (it.m != null && ROOFS.complete && ROOFS.naturalWidth) { ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(ROOFS, it.m * 256, 0, 256, 256, it.x0, it.y0, w, h); ctx.globalCompositeOperation = 'source-over'; } // Kenney jumta detaļas uz mājas krāsas
   else { ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.lineWidth = 2; ctx.strokeRect(it.x0 + 9, it.y0 + 9, w - 18, h - 18);
     it.det.forEach(d => { const x = it.x0 + 16 + d.u * (w - 46), y = it.y0 + 16 + d.v * (h - 46);
       if (d.k < .4) { ctx.fillStyle = '#9aa3ad'; ctx.fillRect(x, y, 22, 16); ctx.fillStyle = '#7d858f'; ctx.beginPath(); ctx.arc(x + 11, y + 8, 5, 0, 7); ctx.fill(); }
@@ -613,6 +635,7 @@ function drawBlock(b, t) {
   ctx.fillStyle = '#d8d2c6'; ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0); // ietve
   ctx.fillStyle = '#c3bcae'; ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, 3); ctx.fillRect(b.x0, b.y1 - 3, b.x1 - b.x0, 3); ctx.fillRect(b.x0, b.y0, 3, b.y1 - b.y0); ctx.fillRect(b.x1 - 3, b.y0, 3, b.y1 - b.y0);
   const ix0 = b.x0 + SWK, iy0 = b.y0 + SWK, ix1 = b.x1 - SWK, iy1 = b.y1 - SWK;
+  b.greens.forEach(([a, c, d, e]) => { ctx.fillStyle = '#7cba5e'; ctx.beginPath(); ctx.roundRect(a + 4, c + 4, d - a - 8, e - c - 8, 10); ctx.fill(); ctx.fillStyle = '#8acb6c'; ctx.beginPath(); ctx.ellipse((a + d) / 2, (c + e) / 2, (d - a) * .3, (e - c) * .25, .4, 0, 7); ctx.fill(); });
   if (b.kind === 'park') { const P = b.park;
     ctx.fillStyle = '#4f8f3d'; ctx.beginPath(); ctx.roundRect(ix0 - 4, iy0 - 4, ix1 - ix0 + 8, iy1 - iy0 + 8, 20); ctx.fill(); // dzīvžogs
     ctx.fillStyle = '#84c466'; ctx.beginPath(); ctx.roundRect(ix0 + 6, iy0 + 6, ix1 - ix0 - 12, iy1 - iy0 - 12, 16); ctx.fill();
@@ -653,7 +676,8 @@ function drawBlock(b, t) {
   ctx.fillStyle = '#3d4250'; [[b.x0 + 8, b.y0 + 8], [b.x1 - 8, b.y0 + 8], [b.x0 + 8, b.y1 - 8], [b.x1 - 8, b.y1 - 8], [(b.x0 + b.x1) / 2, b.y0 + 8], [(b.x0 + b.x1) / 2, b.y1 - 8], [b.x0 + 8, (b.y0 + b.y1) / 2], [b.x1 - 8, (b.y0 + b.y1) / 2]].forEach(([x, y]) => { ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); });
   for (const tr of b.trees) { ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.arc(tr.x + 5, tr.y + 6, tr.r, 0, 7); ctx.fill();
     const f = 40 * PK, x = tr.x + (tr.x - cam.x) * f, y = tr.y + (tr.y - cam.y) * f; ctx.strokeStyle = '#6b4a2e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(tr.x, tr.y); ctx.lineTo(x, y); ctx.stroke();
-    if (tr.fir) { ctx.fillStyle = '#2f6b35'; ctx.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, rr_ = k % 2 ? tr.r * .55 : tr.r; ctx.lineTo(x + Math.cos(a) * rr_, y + Math.sin(a) * rr_); } ctx.fill(); ctx.fillStyle = '#3d8445'; ctx.beginPath(); ctx.arc(x, y, tr.r * .4, 0, 7); ctx.fill(); }
+    if (TREE_TOP.complete && TREE_TOP.naturalWidth) { const d = tr.r * 3.1; ctx.drawImage(TREE_TOP, TREE_MODEL[tr.m] * 256, 0, 256, 256, x - d / 2, y - d / 2, d, d); }
+    else if (tr.fir) { ctx.fillStyle = '#2f6b35'; ctx.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283, rr_ = k % 2 ? tr.r * .55 : tr.r; ctx.lineTo(x + Math.cos(a) * rr_, y + Math.sin(a) * rr_); } ctx.fill(); ctx.fillStyle = '#3d8445'; ctx.beginPath(); ctx.arc(x, y, tr.r * .4, 0, 7); ctx.fill(); }
     else { const tt = tr.tint || 0, c1 = tt < .33 ? '#3f8f3a' : tt < .66 ? '#4a9a3c' : '#5d8f2f', c2 = tt < .33 ? '#5bb04f' : tt < .66 ? '#6cbf55' : '#86b347';
       ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(x, y, tr.r, 0, 7); ctx.arc(x + tr.r * .5, y + tr.r * .2, tr.r * .7, 0, 7); ctx.fill(); ctx.fillStyle = c2; ctx.beginPath(); ctx.arc(x - tr.r * .25, y - tr.r * .25, tr.r * .55, 0, 7); ctx.fill(); } }
 }
@@ -662,7 +686,11 @@ function drawHospital(b, ix0, iy0, ix1, iy1, t) {
   ctx.fillStyle = '#6b7080'; ctx.fillRect(ix0 + 40, iy1 - 70, ix1 - ix0 - 80, 70); // uzbrauktuve
   const cx = (ix0 + ix1) / 2; ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🚑 SLIMNĪCA', cx, iy1 - 34);
 }
+// mašīnas no augšas – Kenney Car Kit (CC0) modeļi, Blenderī uzrenderēti (models/cars/top.webp: rindas pa 160 px, priekša pa labi);
+// tie paši modeļi kā 🛞 skatā (c.k % 8), pēdējā rinda – ātrā palīdzība. Kamēr nav ielādēts – zīmētās mašīnas
+const CAR_TOP = new Image(); CAR_TOP.src = 'models/cars/top.webp?v=1'; const CAR_TOP_H = [151, 131, 117, 142, 135, 140, 140, 118, 118];
 function drawCar(x, y, a, L, Wd, col, isAmb, t, c) {
+  if (CAR_TOP.complete && CAR_TOP.naturalWidth) return drawCarTop(x, y, a, L, isAmb, t, c);
   ctx.save(); ctx.translate(x, y); ctx.rotate(a);
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 4, -Wd / 2 + 5, L, Wd, 8); ctx.fill();
   if (isAmb && amb.siren) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const on = Math.sin(t * 16) > 0;
@@ -683,6 +711,22 @@ function drawCar(x, y, a, L, Wd, col, isAmb, t, c) {
   const br = c && c.brake; ctx.fillStyle = br ? '#ff2020' : '#a83a3a'; ctx.fillRect(-L / 2 - (br ? 1 : 0), -Wd / 2 + 3, br ? 4 : 2, 6); ctx.fillRect(-L / 2 - (br ? 1 : 0), Wd / 2 - 9, br ? 4 : 2, 6);
   if (br) { ctx.fillStyle = 'rgba(255,40,40,.25)'; ctx.beginPath(); ctx.arc(-L / 2 - 4, 0, 14, 0, 7); ctx.fill(); }
   // pagriezienu rādītāji (oranži mirgo): pa labi – labā puse (+y), pa kreisi – kreisā
+  const pl = c && (c.turn ? (wrapA(angOf(c.turn.ax, c.turn.dir) - angOf(c.ax, c.dir)) > 0 ? 'r' : 'l') : c.plan);
+  if ((pl === 'r' || pl === 'l') && Math.sin(t * 9) > 0) { ctx.fillStyle = '#ffae1a'; const sy = pl === 'r' ? Wd / 2 - 3 : -Wd / 2 - 1; ctx.fillRect(L / 2 - 6, sy, 6, 4); ctx.fillRect(-L / 2, sy, 6, 4); }
+  ctx.restore();
+}
+function drawCarTop(x, y, a, L, isAmb, t, c) {
+  const m = isAmb ? 8 : c ? c.k % 8 : Math.abs((x * 7 + y * 3) | 0) % 8, sh = CAR_TOP_H[m], w = L * 1.02, h = w * sh / 256, Wd = h * .82;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.roundRect(-L / 2 + 4, -Wd / 2 + 5, L, Wd, 8); ctx.fill();
+  if (isAmb && amb.siren) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const on = Math.sin(t * 16) > 0;
+    const g1 = ctx.createRadialGradient(4, 0, 4, 4, 0, 110); g1.addColorStop(0, on ? 'rgba(255,40,60,.45)' : 'rgba(40,110,255,.45)'); g1.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g1; ctx.beginPath(); ctx.arc(4, 0, 110, 0, 7); ctx.fill(); ctx.restore(); }
+  ctx.drawImage(CAR_TOP, 0, m * 160, 256, sh, -w / 2, -h / 2, w, h);
+  if (isAmb) { // sarkans krusts uz jumta un bākugunis (sirēna mirgo sarkani/zili)
+    ctx.fillStyle = '#e53950'; ctx.fillRect(-14, -3.5, 22, 7); ctx.fillRect(-6.5, -11, 7, 22);
+    const on = Math.sin(t * 16) > 0, bx = L * .2; ctx.fillStyle = amb.siren ? (on ? '#ff2a43' : '#5a1520') : '#7a2a33'; ctx.fillRect(bx, -Wd / 2 + 3, 6, Wd / 2 - 3);
+    ctx.fillStyle = amb.siren ? (!on ? '#2f7bff' : '#14244d') : '#24365a'; ctx.fillRect(bx, 0, 6, Wd / 2 - 3); }
+  const br = c && c.brake; if (br) { ctx.fillStyle = '#ff2020'; ctx.fillRect(-L / 2 - 1, -Wd / 2 + 2, 4, 6); ctx.fillRect(-L / 2 - 1, Wd / 2 - 8, 4, 6); ctx.fillStyle = 'rgba(255,40,40,.25)'; ctx.beginPath(); ctx.arc(-L / 2 - 4, 0, 14, 0, 7); ctx.fill(); }
   const pl = c && (c.turn ? (wrapA(angOf(c.turn.ax, c.turn.dir) - angOf(c.ax, c.dir)) > 0 ? 'r' : 'l') : c.plan);
   if ((pl === 'r' || pl === 'l') && Math.sin(t * 9) > 0) { ctx.fillStyle = '#ffae1a'; const sy = pl === 'r' ? Wd / 2 - 3 : -Wd / 2 - 1; ctx.fillRect(L / 2 - 6, sy, 6, 4); ctx.fillRect(-L / 2, sy, 6, 4); }
   ctx.restore();
@@ -709,7 +753,7 @@ function drawPointer() { let tx, ty; if (M.state === 'toPatient') { tx = M.rx; t
 // ================= Cikls =================
 let last = performance.now(), T = 0;
 function frame(now) { const dt = Math.max(0, Math.min(.05, (now - last) / 1000)); last = now; T += dt;
-  updateCars(dt, T); updateAmb(dt);
+  updateCars(dt, T); updateAmb(dt); if (window.PEDS) PEDS.update(dt);
   if (M.state === 'toPatient') M.t += dt; if (M.state === 'toHospital') { M.t2 += dt; M.cond = Math.max(5, M.cond - dt * (M.c.cpr ? .8 : .35)); }
   if ((M.state === 'toPatient' || M.state === 'toHospital') && (M.rt -= dt) <= 0) { M.rt = .6; M.route = M.state === 'toPatient' ? routeTo(M.rx, M.ry) : routeTo(HOSP_BAY.x, HOSP_BAY.y); }
   // kamera: seko ar skatu uz priekšu, ātrumā nedaudz attālinās
