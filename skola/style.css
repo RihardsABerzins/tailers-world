@@ -73,5 +73,6 @@ button{font:inherit;cursor:pointer}
   .sheet h2{font-size:18px;margin:0 0 4px} .sheet p{font-size:14.5px;margin:3px 0} .main{min-height:46px;padding:10px}
   .subj button{min-height:64px} .subj button i{font-size:22px} .shop{grid-template-columns:repeat(4,1fr)} .stars{font-size:30px}
   #stat{padding:6px 58px 6px 10px} #stat b{font-size:13.5px} #task{padding:6px 10px;gap:4px;font-size:13.5px}
+  #top{grid-template-columns:auto 1fr 190px} #task{grid-column:3}
 }
 @media (max-width:380px){ .subj{grid-template-columns:repeat(3,1fr)} }

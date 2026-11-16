@@ -67,6 +67,18 @@ function mathQ(lv) {
   return { mat: true, q, a: fmt(a), w: near(a, w).map(fmt), e };
 }
 
+// skaitļu virknes – „kas nāk tālāk?” (kā IQ testos), grūtāk ar līmeni
+function logicQ(lv) {
+  let seq, a, e, w = [];
+  const k = lv <= 2 ? 0 : lv <= 4 ? ri(0, 2) : ri(1, 4);
+  if (k === 0) { const s0 = ri(1, 10), d = ri(1, lv <= 1 ? 2 : 5); seq = [0, 1, 2, 3].map(i => s0 + d * i); a = s0 + 4 * d; e = `Katrs nākamais ir par ${d} lielāks: ${seq[3]} + ${d} = ${a}.`; w = [a + d, a - 1]; }
+  else if (k === 1) { const s0 = ri(30, 60), d = ri(2, 6); seq = [0, 1, 2, 3].map(i => s0 - d * i); a = s0 - 4 * d; e = `Katrs nākamais ir par ${d} mazāks: ${seq[3]} − ${d} = ${a}.`; w = [a - d, a + d]; }
+  else if (k === 2) { const s0 = ri(1, 3), m = lv <= 4 ? 2 : pick([2, 3]); seq = [0, 1, 2, 3].map(i => s0 * m ** i); a = s0 * m ** 4; e = `Katrs nākamais ir ${m} reizes lielāks: ${seq[3]} · ${m} = ${a}.`; w = [seq[3] + (seq[3] - seq[2]), a + m]; }
+  else if (k === 3) { const o = ri(1, 3); seq = [0, 1, 2, 3].map(i => (i + o) ** 2); a = (4 + o) ** 2; e = `Tie ir kvadrāti: ${o}·${o}, ${o + 1}·${o + 1}… nākamais ${4 + o}·${4 + o} = ${a}.`; w = [seq[3] + (seq[3] - seq[2]), a + 1]; }
+  else { const x = ri(1, 3), y = ri(1, 4); seq = [x, y]; for (let i = 2; i < 5; i++) seq.push(seq[i - 1] + seq[i - 2]); a = seq[3] + seq[4]; e = `Katrs nākamais ir divu iepriekšējo summa: ${seq[3]} + ${seq[4]} = ${a}.`; w = [seq[4] + (seq[4] - seq[3]), a + 1]; }
+  return { lg: true, q: `Kurš skaitlis nāk tālāk? ${seq.join(', ')}, …`, a: String(a), w: near(a, w).map(String), e };
+}
+
 // ================= Klase =================
 const KIDS = [
   { n: 'Markuss', skin: '#f2c9a0', hair: '#5a3a22', hs: 'short', shirt: '#3d8bff' },
@@ -77,6 +89,8 @@ const KIDS = [
   { n: 'Līva', skin: '#f6d3b3', hair: '#8a5a2b', hs: 'bun', shirt: '#20c4c4' },
   { n: 'Emīls', skin: '#f0c39a', hair: '#d9a441', hs: 'spiky', shirt: '#ff7a3d' },
   { n: 'Sofija', skin: '#8d5b3e', hair: '#1e1a1a', hs: 'puffs', shirt: '#e8c43a' },
+  { n: 'Jēkabs', skin: '#f2c9a0', hair: '#a0522d', hs: 'spiky', shirt: '#5b6cff' },
+  { n: 'Marta', skin: '#f6d3b3', hair: '#d9a441', hs: 'long', shirt: '#ff8fc8' },
 ];
 // joki: ko skolēns dara un ko pastāsta, ja viņu pieķer laikus
 const PRANKS = {
@@ -86,6 +100,9 @@ const PRANKS = {
   gum: { i: '🫧', fact: 'Cilvēka mutē dienā izdalās ap litru siekalu.' },
   drum: { i: '🥁', fact: 'Bungas ir viens no senākajiem mūzikas instrumentiem.' },
   sleep: { i: '💤', fact: 'Skolēniem naktī vajag 9–12 stundas miega.' },
+  spit: { i: '🥤', fact: 'Papīru izgudroja Ķīnā gandrīz pirms 2000 gadiem.' },
+  throw: { i: '📄', fact: 'Pirmais basketbola grozs bija augļu grozs – bumba palika iekšā!' },
+  note: { i: '📝', fact: 'Vārds „papīrs” cēlies no papirusa – uz tā rakstīja senie ēģiptieši.' },
 };
 const SORRY = ['Atvainojiet, skolotāj! 😅', 'Es tikai… nekas! 🙈', 'Labi, labi! 😇', 'Hmm, pieķēra… 😬', 'Vairs nebūs! 🙏'];
 // klases rotājumi (pērk par kopīgo naudu, redzami klasē)
@@ -98,89 +115,108 @@ const DECO = [
   { id: 'cat', i: '🐈', n: 'Klases kaķis', p: 500 },
 ];
 
-let save = { xp: 0, lessons: 0, perfect: 0, caught: 0, correct: 0, band: 1, ml: 1, miss: [], seen: [], deco: {}, tut: 0, subj: 'mix' };
-let kids = [], L = null, LT = 0, timers = [], fx = [], stuck = [], LY = { board: { x: 0, y: 0, w: 0, h: 0 } };
-function pickKids() { kids = shuffle(KIDS.slice()).slice(0, 4).map((k, i) => Object.assign({}, k, { st: 'idle', t: 0, ans: '', ph: Math.random() * 6, i })); layout(); }
+let save = { xp: 0, lessons: 0, perfect: 0, caught: 0, correct: 0, ml: 1, miss: [], seen: [], deco: {}, tut: 0 };
+let kids = [], L = null, LT = 0, timers = [], fx = [], stuck = [], splats = [], LY = { board: { x: 0, y: 0, w: 0, h: 0 } };
+function pickKids() { kids = shuffle(KIDS.slice()).map((k, i) => Object.assign({}, k, { st: 'idle', t: 0, ans: '', ph: Math.random() * 6, i })); layout(); }
 const later = (s, fn) => timers.push({ t: LT + s, fn });
 
-// izkārtojums: tāfele augšā, 4 soli – telefonā vertikāli 2×2, citur rindā
+// izkārtojums: tāfele augšā, 10 skolēni rindās (aizmugurē mazāki) – vertikāli 3+3+4, horizontāli 5+5
 function layout() {
-  W = innerWidth; H = innerHeight; const tb = $('top').getBoundingClientRect(), top = tb.bottom + 8, land = W > H;
-  const bh = land ? clamp(H * .27, 78, 180) : clamp(H * .23, 110, 230), bw = Math.min(W - 20, land ? Math.max(420, W * .6) : 680);
-  LY.board = { x: (W - bw) / 2, y: top, w: bw, h: bh };
-  const y0 = top + bh + 6, avail = H - y0 - 6, cols = land || W > 760 ? 4 : 2, rows = 4 / cols, cw = W / cols, ch = avail / rows;
-  LY.floor = y0 + ch * .3;
-  kids.forEach((k, i) => { const c = i % cols, r = Math.floor(i / cols), depth = rows > 1 && r === 0 ? .9 : 1;
-    const s = Math.min(cw / 4.3, ch / 6.9, 50) * depth; k.s = s; k.x = (c + .5) * cw; k.y = y0 + r * ch + (ch - 6.7 * s) / 2 + 5.2 * s; });
+  W = innerWidth; H = innerHeight; const land = W > H, sr = $('stat').getBoundingClientRect(), tr = $('task').getBoundingClientRect();
+  if (land && tr.left - sr.right - 16 >= 300) { const bh = clamp(H * .3, 84, 160); LY.board = { x: sr.right + 8, y: sr.top, w: tr.left - sr.right - 16, h: bh }; }
+  else { const top = Math.max(sr.bottom, tr.bottom) + 8, bh = land ? clamp(H * .27, 78, 180) : clamp(H * .2, 104, 210), bw = Math.min(W - 20, land ? Math.max(420, W * .6) : 680);
+    LY.board = { x: (W - bw) / 2, y: top, w: bw, h: bh }; }
+  const rows = land || W > 760 ? [5, 5] : [3, 3, 4], dep = rows.length === 3 ? [.84, .92, 1] : [.9, 1], n = rows.length;
+  const y0 = LY.board.y + LY.board.h + 4, avail = H - y0 - 4, maxN = Math.max(...rows);
+  const s = Math.min(avail / (5.4 * dep[0] + 4.4 * (n - 1) + 1.45), W / maxN / 3.5, 46);
+  const sp = clamp((avail / s - 5.4 * dep[0] - 1.45) / Math.max(1, n - 1), 4.4, 6.5), yF = y0 + 5.4 * dep[0] * s + sp * s * (n - 1);
+  let i = 0;
+  rows.forEach((cnt, r) => { const ry = yF - sp * s * (n - 1 - r), rs = s * dep[r], cw = W / cnt;
+    for (let c = 0; c < cnt; c++, i++) { const k = kids[i]; if (!k) continue; k.r = r; k.c = c; k.s = rs; k.x = (c + .5) * cw + (r % 2 ? -1 : 1) * (cnt < maxN ? 0 : rs * .15); k.y = ry; } });
+  LY.floor = yF - sp * s * (n - 1) - 1.4 * s * dep[0];
+  LY.order = kids.slice().sort((a, b) => a.y - b.y);
 }
 function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; layout(); }
 addEventListener('resize', resize);
 
 // ================= Stunda =================
-function buildQs(subj) {
-  if (subj === 'mat') return Array.from({ length: QN }, () => ({ mat: true }));
-  const pool = Q.filter(f => (subj === 'mix' || f.s === subj) && (save.band === 2 || f.g === 1 || save.lessons > 10));
+// grūtība aug ar skolotāja līmeni: faktu pakāpes (1–3), matemātikas minimums, draiskuļu skaits un ātrums
+const tLv = () => levelOf(save.xp).l;
+const maxTier = () => tLv() >= 7 ? 3 : tLv() >= 3 ? 2 : 1;
+const mathFloor = () => Math.min(7, 1 + Math.floor((tLv() - 1) / 2));
+const maxBusy = () => 1 + (tLv() >= 4) + (tLv() >= 8);
+const maxPerQ = () => Math.min(4, 2 + Math.floor((tLv() - 1) / 3));
+// stunda: 5 fakti (visi priekšmeti + loģikas mīklas), 2 matemātika, 1 skaitļu virkne
+function buildQs() {
+  const mt = maxTier(), pool = Q.filter(f => f.g <= mt);
   const miss = shuffle(pool.filter(f => save.miss.includes(f.id))).slice(0, 2);
   const fresh = shuffle(pool.filter(f => !save.seen.includes(f.id) && !miss.includes(f)));
-  if (save.band === 2) fresh.sort((a, b) => (b.g - a.g) + (Math.random() - .5) * 1.6);
+  if (mt > 1) fresh.sort((a, b) => (b.g - a.g) + (Math.random() - .5) * 1.6);
   const old = shuffle(pool.filter(f => save.seen.includes(f.id) && !miss.includes(f)));
-  const n = subj === 'mix' ? QN - 3 : QN, list = [...miss, ...fresh, ...old].slice(0, n);
-  if (subj === 'mix') list.push({ mat: true }, { mat: true }, { mat: true });
+  const list = [...miss, ...fresh, ...old].slice(0, QN - 3);
+  list.push({ mat: true }, { mat: true }, { lg: true });
   return shuffle(list);
 }
 const tutOn = () => !save.tut;
-const warnDur = () => Math.max(.75, 1.5 - save.lessons * .05) * (save.band === 2 ? .9 : 1);
-const prankGap = () => rnd(5.5, 10) * Math.max(.55, 1 - save.lessons * .03);
+const warnDur = () => Math.max(.65, 1.5 - (tLv() - 1) * .07);
+const prankGap = () => rnd(4.5, 9) * Math.max(.5, 1 - (tLv() - 1) * .05);
 
-function startLesson(subj) {
-  closeSheet(); audioInit(); save.subj = subj; timers = []; fx = []; stuck = []; pickKids();
-  L = { subj, qs: buildQs(subj), n: -1, ok: 0, mood: 70, caught: 0, missed: 0, st: 'wait', wrong: 0, qT: LT, np: Infinity, qp: 0, cur: null };
+function startLesson() {
+  closeSheet(); audioInit(); timers = []; fx = []; stuck = []; splats = []; pickKids();
+  L = { qs: buildQs(), n: -1, ok: 0, mood: 70, caught: 0, missed: 0, st: 'wait', wrong: 0, qT: LT, np: Infinity, qp: 0, cur: null };
   sfx('bell'); hud(); later(.9, nextQ);
 }
 function nextQ() {
   L.n++; stuck = []; if (L.n >= QN) { endLesson(); return; }
-  let q = L.qs[L.n]; if (q.mat) q = L.qs[L.n] = mathQ(Math.floor(save.ml));
+  let q = L.qs[L.n]; const ml = clamp(Math.floor(save.ml), mathFloor(), 8); if (q.mat) q = L.qs[L.n] = mathQ(ml); else if (q.lg) q = L.qs[L.n] = logicQ(ml);
   L.cur = q; L.st = 'q'; L.qT = LT; L.qp = 0;
   if (q.id) { save.seen = save.seen.filter(x => x !== q.id).concat(q.id).slice(-80); }
   const opts = shuffle([q.a, ...q.w.slice(0, 3)]);
-  kids.forEach((k, i) => { k.ans = opts[i]; k.st = 'hand'; k.t = LT + .5 + i * .14 + Math.random() * .25; k.pk = null; k.say = ''; });
+  const ans = pickAnswerers();
+  kids.forEach(k => { const i = ans.indexOf(k); k.pk = null; k.say = ''; k.ouch = 0;
+    if (i >= 0) { k.ans = opts[i]; k.st = 'hand'; k.t = LT + .5 + i * .14 + Math.random() * .25; } else { k.ans = ''; k.st = 'idle'; k.t = LT; } });
   // joki: pirmajā mācību stundā 1. jautājumā nav, 2. jautājumā viens lēns
   if (tutOn() && L.n === 0) { L.np = Infinity; banner('👆 Pieskaries skolēnam, kuram ir PAREIZĀ atbilde!'); }
   else if (tutOn() && L.n === 1) { L.np = LT + 2; }
-  else L.np = Math.random() < Math.min(.85, .5 + save.lessons * .03) ? LT + rnd(1.2, 3) : LT + rnd(4.5, 8);
+  else L.np = Math.random() < Math.min(.9, .5 + tLv() * .04) ? LT + rnd(1, 2.6) : LT + rnd(4, 7);
   sfx('chalk'); hud();
 }
+function pickAnswerers() {
+  for (let t = 0; t < 60; t++) { const c = shuffle(kids.slice()).slice(0, 4); if (c.every(a => c.every(b => a === b || a.r !== b.r || Math.abs(a.c - b.c) > 1))) return c; }
+  return shuffle(kids.slice()).slice(0, 4);
+}
 function startPlot(k) {
-  k.st = 'plot'; k.t = LT; k.pk = pick(Object.keys(PRANKS)); k.warn = warnDur(); L.qp++;
+  k.back = k.st; k.st = 'plot'; k.t = LT; k.pk = pick(Object.keys(PRANKS)); k.warn = warnDur(); L.qp++;
+  L.np = LT + prankGap() * (maxBusy() > 1 ? .35 : 1);
   if (tutOn() && !L.tutPrank) { L.tutPrank = 1; k.warn = 3.2; banner('❗ Kāds grib draiskoties – ātri pieskaries viņam!'); }
   sfx('sneak');
 }
 function catchKid(k) {
   const early = k.st === 'plot'; k.st = 'caught'; k.t = LT; k.say = pick(SORRY); L.caught++; mood(early ? 6 : 3); sfx('catch'); buzz(25);
   addFx(k.x, k.y - 4.6 * k.s, early ? '👀 Pieķerts laikus!' : '👀 Pieķerts!', '#ffd34d');
-  toast(`${PRANKS[k.pk].i} 💡 ${PRANKS[k.pk].fact}`); L.np = LT + prankGap();
+  toast(`${PRANKS[k.pk].i} 💡 ${PRANKS[k.pk].fact}`); L.np = Math.max(L.np, LT + prankGap() * .6);
   if (L.tutPrank === 1) { L.tutPrank = 2; banner('👏 Lieliski! Pieķer draiskuļus laikus – klasei būs labs noskaņojums.', 3500); }
 }
 function prankDone(k) {
-  k.st = 'hand'; k.t = LT; L.missed++; mood(-10); sfx('laugh'); buzz([30, 40, 30]);
+  k.st = k.back || 'idle'; k.t = LT; L.missed++; mood(-10); sfx('laugh'); buzz([30, 40, 30]);
   kids.forEach(o => { if (o !== k) o.lol = LT + 1.6; });
   addFx(W / 2, LY.board.y + LY.board.h + 20, '😂 Ha-ha-ha!', '#fff');
   if (k.pk === 'plane') stuck.push({ x: LY.board.x + LY.board.w * rnd(.2, .8), y: LY.board.y + LY.board.h * rnd(.3, .7), r: rnd(-.5, .5) });
   if (k.pk === 'gum') k.splat = LT + 3;
-  L.np = LT + prankGap();
+  L.np = Math.max(L.np, LT + prankGap() * .6);
   if (L.tutPrank === 1) { L.tutPrank = 2; banner('Nekas! Nākamreiz pieskaries, tiklīdz redzi ❗', 3500); }
 }
 function answer(k) {
   const q = L.cur, right = k.ans === q.a; banner('');
-  kids.forEach(o => { if (o.st === 'plot' || o.st === 'prank') { o.st = 'hand'; o.t = LT; } });
+  kids.forEach(o => { if (o.st === 'plot' || o.st === 'prank' || o.st === 'caught') { o.st = o.back || 'idle'; o.t = LT; o.say = ''; } });
   if (right) {
     k.st = 'happy'; k.t = LT; L.ok++; mood(4); sfx('good'); buzz(15); addFx(k.x, k.y - 4.6 * k.s, '✅ Pareizi!', '#7dffa8');
     kids.forEach(o => { if (o !== k) { o.st = 'idle'; o.t = LT; } });
-    if (q.mat) save.ml = Math.min(8.99, save.ml + .34); else save.miss = save.miss.filter(x => x !== q.id);
+    if (q.mat || q.lg) save.ml = Math.min(8.99, save.ml + .34); else save.miss = save.miss.filter(x => x !== q.id);
     L.st = 'wait'; later(1.2, nextQ);
   } else {
     k.st = 'sad'; k.t = LT; L.wrong++; mood(-2); sfx('bad'); buzz([20, 40, 20]);
-    if (q.mat) save.ml = Math.max(1, save.ml - .5); else if (!save.miss.includes(q.id)) save.miss = save.miss.concat(q.id).slice(-30);
+    if (q.mat || q.lg) save.ml = Math.max(1, save.ml - .5); else if (!save.miss.includes(q.id)) save.miss = save.miss.concat(q.id).slice(-30);
     L.st = 'explain'; later(.7, () => explain(k));
   }
   hud();
@@ -204,11 +240,11 @@ function endLesson() {
   later(.8, () => {
     sheet(`<div class="step">🔔 Zvans! Stunda beigusies</div><h2>${praise}</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
       <div class="parts"><div class="part">✅ Pareizas atbildes <b>${ok}/${QN}</b></div>${tot ? `<div class="part">👀 Pieķerti draiskuļi <b>${L.caught}/${tot}</b></div>` : ''}<div class="part">😊 Klases noskaņojums <b>${md}%</b></div></div>
-      <div class="big">+€${money} · +${xp} XP</div>${lv1 > lv0 ? `<div class="fact" style="text-align:center">🎉 Jauns līmenis – <b>${lv1}.</b>!</div>` : ''}
+      <div class="big">+€${money} · +${xp} XP</div>${lv1 > lv0 ? `<div class="fact" style="text-align:center">🎉 Jauns līmenis – <b>${lv1}.</b>! Jautājumi kļūs grūtāki, draiskuļi – viltīgāki.</div>` : ''}
       ${L.wrong ? `<div class="fact">📌 Jautājumus, kuros kļūdījies, atkārtosim nākamajās stundās – tā tie labāk paliek atmiņā.</div>` : ''}
-      <button class="main green" id="again">▶ Nākamā stunda (${SUBJ[L.subj].i} ${SUBJ[L.subj].n})</button>
-      <div class="row2"><button class="main ghostB" id="other">📚 Cits priekšmets</button><button class="main ghostB" id="shopB">🛍 Klases rotājumi</button></div>`);
-    $('again').onclick = () => startLesson(L.subj); $('other').onclick = lobby; $('shopB').onclick = () => shop(lobby);
+      <button class="main green" id="again">▶ Nākamā stunda</button>
+      <div class="row2"><button class="main ghostB" id="other">🏫 Uz skolu</button><button class="main ghostB" id="shopB">🛍 Klases rotājumi</button></div>`);
+    $('again').onclick = startLesson; $('other').onclick = lobby; $('shopB').onclick = () => shop(lobby);
   });
 }
 
@@ -217,14 +253,22 @@ function update(dt) {
   for (let i = 0; i < timers.length; i++) if (LT >= timers[i].t) { const f = timers[i].fn; timers.splice(i--, 1); f(); }
   fx = fx.filter(f => LT - f.t0 < f.d);
   if (!L || L.st !== 'q') return;
-  const busy = kids.some(k => k.st === 'plot' || k.st === 'prank');
-  if (!busy && LT > L.np && L.qp < 2) { const c = kids.filter(k => k.st === 'hand' && LT > k.t); if (c.length) startPlot(pick(c)); else L.np = LT + 1; }
+  splats = splats.filter(p => LT - p.t0 < 2);
+  const busy = kids.filter(k => k.st === 'plot' || k.st === 'prank').length, lim = L.tutPrank === 1 ? 1 : maxBusy();
+  if (busy < lim && LT > L.np && L.qp < maxPerQ()) { const c = kids.filter(k => (k.st === 'hand' || k.st === 'idle') && LT > k.t); if (c.length) startPlot(pick(c)); else L.np = LT + 1; }
   for (const k of kids) {
-    if (k.st === 'plot' && LT - k.t > k.warn) { k.st = 'prank'; k.t = LT; k.snd = 0; }
+    if (k.st === 'plot' && LT - k.t > k.warn) { k.st = 'prank'; k.t = LT; k.snd = 0; k.hits = 0;
+      if (k.pk === 'spit') k.tg = [0, 1, 2].map(() => ({ x: rnd(W * .15, W * .85), y: rnd(H * .2, H * .75) }));
+      if (k.pk === 'throw') k.tgt = pick(kids.filter(o => o !== k));
+      if (k.pk === 'note') k.tgt = kids.filter(o => o !== k && o.r === k.r).sort((a, b) => Math.abs(a.c - k.c) - Math.abs(b.c - k.c))[0] || pick(kids.filter(o => o !== k)); }
     else if (k.st === 'prank') { const tt = LT - k.t;
-      if (tt > k.snd) { k.snd = tt + ({ phone: .45, drum: .18, sleep: 1.1, frog: .55, plane: 9, gum: 9 }[k.pk]); sfx(k.pk); }
+      if (tt > k.snd) { k.snd = tt + ({ phone: .45, drum: .18, sleep: 1.1, frog: .55, plane: 9, gum: 9, spit: .87, throw: 9, note: 9 }[k.pk]); sfx(k.pk); }
+      // papīra bumbiņas lido uz skolotāju – trāpa „ekrānā”
+      if (k.pk === 'spit' && Math.floor(tt / .87) > k.hits && k.hits < 3) { const p = k.tg[k.hits++]; splats.push({ x: p.x, y: p.y, r: Math.min(W, H) * rnd(.045, .065), t0: LT, a: rnd(0, 6) }); sfx('splat'); buzz(15); }
+      if (k.pk === 'throw' && tt > 1.6 && !k.hits) { k.hits = 1; k.tgt.ouch = LT + 1.3; sfx('splat'); }
+      if (k.pk === 'note' && tt > 2 && !k.hits) { k.hits = 1; k.tgt.lol = LT + 1.4; k.lol = LT + 1.4; }
       if (tt > 2.6) prankDone(k); }
-    else if (k.st === 'caught' && LT - k.t > 1.8) { k.st = 'hand'; k.t = LT; k.say = ''; }
+    else if (k.st === 'caught' && LT - k.t > 1.8) { k.st = k.back || 'idle'; k.t = LT; k.say = ''; }
   }
 }
 
@@ -262,7 +306,7 @@ function boardText() {
   g.fillStyle = '#ffffffaa'; g.font = `700 ${clamp(b.h * .11, 11, 15)}px ${CHALK}`; g.textAlign = 'left'; g.textBaseline = 'top';
   if (!L || !L.cur) { g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `700 ${clamp(b.h * .24, 18, 40)}px ${CHALK}`;
     g.fillText(L ? 'Sākam stundu! ✏️' : 'Labdien, klase! 👋', b.x + b.w / 2, b.y + b.h / 2); return; }
-  g.fillText(`${SUBJ[L.subj].i} ${SUBJ[L.subj].n} · ${Math.min(L.n + 1, QN)}/${QN}`, b.x + pad, b.y + 9);
+  g.fillText(`${(L.cur.s && SUBJ[L.cur.s]) || (L.cur.lg ? '🧩 Loģika' : '🔢 Matemātika')} · ${Math.min(L.n + 1, QN)}/${QN}`, b.x + pad, b.y + 9);
   const top = b.y + 9 + clamp(b.h * .11, 11, 15) + 4, ih = b.h - (top - b.y) - 12;
   let f = clamp(b.h * .27, 16, 40), lines;
   for (; f > 12; f--) { g.font = `700 ${f}px ${CHALK}`; lines = wrap(L.cur.q, iw); if (lines.length * f * 1.18 <= ih) break; }
@@ -346,12 +390,21 @@ function face(k, hx, hy, s, st, tt, pk) {
   else if (st === 'prank' && pk === 'sleep') { circ(hx, my + .05 * s, .07 * s + Math.sin(LT * 3) * .03 * s); g.stroke(); }
   else if (!(st === 'prank' && pk === 'gum')) { g.arc(hx, my - .12 * s, .24 * s, Math.PI * .2, Math.PI * .8); g.stroke(); }
 }
-function prankFx(k, tt, hx, hy) {
-  const { x, y, s } = k, p = clamp(tt / 2.6, 0, 1);
+function prankFly(k, tt) {
+  const { x, y, s } = k, p = clamp(tt / 2.6, 0, 1), hx = x, hy = y - 2.55 * s;
   if (k.pk === 'plane') { const b = LY.board, tx = b.x + b.w * (.3 + (k.i % 3) * .2), ty = b.y + b.h * .5, sx = x + 1.3 * s, sy = y - 2.6 * s;
     const px = sx + (tx - sx) * p, py = sy + (ty - sy) * p - Math.sin(p * Math.PI) * s * 2.5; emoji('✈️', px, py, s * .9, Math.atan2(ty - sy, tx - sx) + .8 - p * .6); }
   else if (k.pk === 'frog') { const dir = k.x < W / 2 ? 1 : -1, px = x + dir * p * W * .45, py = y - .2 * s - Math.abs(Math.sin(p * Math.PI * 4)) * s * 1.4 + p * s * 1.2; emoji('🐸', px, py, s * .9); }
-  else if (k.pk === 'phone') { emoji('📱', x + .9 * s, y - .5 * s + Math.sin(LT * 30) * 2, s * .8); for (let i = 0; i < 3; i++) { const q = (tt * .9 + i / 3) % 1; g.globalAlpha = 1 - q; emoji(i % 2 ? '🎵' : '🎶', x + 1.2 * s + Math.sin(q * 6 + i) * s * .4, y - 1 * s - q * s * 2.4, s * .55); } g.globalAlpha = 1; }
+  else if (k.pk === 'spit') { const n = Math.floor(tt / .87), ph = (tt % .87) / .87; if (n < 3 && k.tg) { const t = k.tg[n], e = ph * ph;
+    paperBall(hx + .25 * s + (t.x - hx) * e, hy + 1.1 * s + (t.y - hy) * e, s * .14 + e * Math.min(W, H) * .05); } }
+  else if (k.pk === 'throw' && k.tgt) { const q = clamp(tt / 1.6, 0, 1); if (q < 1) { const t = k.tgt, sx = x + 1.2 * s, sy = y - 2.8 * s, ex = t.x, ey = t.y - 2.6 * t.s;
+    paperBall(sx + (ex - sx) * q, sy + (ey - sy) * q - Math.sin(q * Math.PI) * s * 3, s * .28); } }
+  else if (k.pk === 'note' && k.tgt) { const q = clamp(tt / 2, 0, 1), t = k.tgt; emoji('📝', x + (t.x - x) * q, y - .25 * s + (t.y - y) * q - Math.abs(Math.sin(q * Math.PI * 3)) * s * .5, s * .7, Math.sin(LT * 8) * .2); }
+}
+function prankFx(k, tt, hx, hy) {
+  const { x, y, s } = k, p = clamp(tt / 2.6, 0, 1);
+  if (k.pk === 'spit') { g.strokeStyle = '#fff'; g.lineWidth = Math.max(3, .16 * s); g.beginPath(); g.moveTo(hx, hy + .5 * s); g.lineTo(hx + .25 * s, hy + 1.1 * s); g.stroke(); g.strokeStyle = '#ff5a6a'; g.lineWidth = 1.5; g.stroke(); }
+  if (k.pk === 'phone') { emoji('📱', x + .9 * s, y - .5 * s + Math.sin(LT * 30) * 2, s * .8); for (let i = 0; i < 3; i++) { const q = (tt * .9 + i / 3) % 1; g.globalAlpha = 1 - q; emoji(i % 2 ? '🎵' : '🎶', x + 1.2 * s + Math.sin(q * 6 + i) * s * .4, y - 1 * s - q * s * 2.4, s * .55); } g.globalAlpha = 1; }
   else if (k.pk === 'gum') { const r = .15 * s + p * 1.0 * s; circ(hx, hy + .55 * s + r * .6, r); g.fillStyle = '#ff9ad5dd'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#d0569a'; g.stroke(); circ(hx - r * .35, hy + .55 * s + r * .3, r * .2); g.fillStyle = '#ffffffaa'; g.fill(); }
   else if (k.pk === 'drum') { emoji('🥁', x, y - .35 * s, s * 1.0); emoji('✏️', x - .7 * s, y - .9 * s - Math.abs(Math.sin(LT * 18)) * s * .4, s * .5, -.8); emoji('✏️', x + .7 * s, y - .9 * s - Math.abs(Math.cos(LT * 18)) * s * .4, s * .5, .8); }
   else if (k.pk === 'sleep') { for (let i = 0; i < 3; i++) { const q = (tt * .5 + i / 3) % 1; g.globalAlpha = 1 - q; g.fillStyle = '#3d4a8a'; g.font = `900 ${s * (.4 + q * .4)}px system-ui`; g.textAlign = 'center'; g.fillText('z', hx + s * (.9 + q * .9), hy - s * (.6 + q * 1.6)); } g.globalAlpha = 1; }
@@ -362,6 +415,8 @@ function drawBubble(k) {
   if (st === 'plot') { const by = y - 4.3 * s + Math.sin(LT * 14) * s * .12, r = .55 * s + 6; circ(x, by, r); fs('#ff3b4e', 3);
     g.fillStyle = '#fff'; g.font = `900 ${r * 1.4}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('!', x, by + 1);
     if (k.warn > 1.8) { g.lineWidth = 4; g.strokeStyle = '#ffd34d'; g.beginPath(); g.arc(x, by, r + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - tt / k.warn)); g.stroke(); } return; }
+  if (k.ouch > LT) { const f0 = clamp(s * .6, 13, 20); g.font = `900 ${f0}px system-ui,sans-serif`; const t0 = 'Ei! 😠', w0 = g.measureText(t0).width + 14, bx = clamp(x + 1.6 * s, w0 / 2 + 4, W - w0 / 2 - 4), by0 = y - 3.2 * s;
+    rr(bx - w0 / 2, by0 - f0 * .8, w0, f0 * 1.6, 10); fs('#ffe0e4', 2); g.fillStyle = '#1d1a22'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t0, bx, by0); }
   let txt = '', bg = '#fff', col = '#1d1a22';
   if (st === 'caught') { txt = k.say; bg = '#fff6cf'; }
   else if ((st === 'hand' && tt > .15) || st === 'happy' || st === 'sad') { txt = k.ans; if (st === 'happy') { bg = '#d6ffe3'; txt = '✅ ' + txt; } if (st === 'sad') { bg = '#ffe0e4'; txt = '❌ ' + txt; } }
@@ -381,11 +436,20 @@ function addFx(x, y, txt, col) { fx.push({ x, y, txt, col, t0: LT, d: 1.3 }); }
 function drawFx() { for (const f of fx) { const p = (LT - f.t0) / f.d; g.globalAlpha = 1 - p * p; g.font = `900 ${clamp(W * .045, 18, 28)}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const hw = g.measureText(f.txt).width / 2 + 6, fx0 = clamp(f.x, hw, W - hw);
   g.lineWidth = 5; g.strokeStyle = '#2a2230'; g.strokeText(f.txt, fx0, f.y - p * 40); g.fillStyle = f.col; g.fillText(f.txt, fx0, f.y - p * 40); } g.globalAlpha = 1; }
+function paperBall(x, y, r) { const gr = g.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#d9d4c5');
+  g.beginPath(); for (let i = 0; i <= 9; i++) { const a = i / 9 * Math.PI * 2, rr2 = r * (i % 2 ? .9 : 1.04); i ? g.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2) : g.moveTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); }
+  g.closePath(); fs(gr, Math.max(1.2, r * .1)); g.lineWidth = Math.max(1, r * .07); g.strokeStyle = '#a8a190';
+  g.beginPath(); g.arc(x - r * .2, y - r * .1, r * .45, .3, 1.9); g.moveTo(x + r * .5, y - r * .1); g.arc(x + r * .25, y + r * .25, r * .35, -.6, 1.2); g.stroke(); }
+// papīra bumbiņas, kas trāpījušas „skolotājam” (ekrāna stiklā)
+function drawSplats() { for (const p of splats) { const a = clamp((2 - (LT - p.t0)) / .6, 0, 1) * .85, q = clamp((LT - p.t0) / .12, 0, 1); g.globalAlpha = a;
+  g.save(); g.translate(p.x, p.y + (LT - p.t0) * 6); g.rotate(p.a); g.scale(q * 1.1, q * .9); paperBall(0, 0, p.r); g.restore(); } g.globalAlpha = 1; }
 function draw() {
   g.setTransform(DPR, 0, 0, DPR, 0, 0); drawRoom();
-  for (const k of kids) drawKid(k);
-  for (const k of kids) drawBubble(k);
-  drawFx();
+  const order = LY.order || kids;
+  for (const k of order) drawKid(k);
+  for (const k of order) if (k.st === 'prank') prankFly(k, LT - k.t);
+  for (const k of order) drawBubble(k);
+  drawFx(); drawSplats();
 }
 
 // ================= Vadība =================
@@ -396,7 +460,7 @@ cv.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); if (!
   // vispirms tie, kas draiskojas (pieķert ir svarīgāk nekā atbildēt)
   const hit = k => k.hit && x >= k.hit.x0 && x <= k.hit.x1 && y >= k.hit.y0 && y <= k.hit.y1;
   const pr = kids.find(k => (k.st === 'plot' || k.st === 'prank') && hit(k)); if (pr) { catchKid(pr); return; }
-  const k = kids.slice().reverse().find(k => hit(k)); if (!k) return;
+  const k = (LY.order || kids).slice().reverse().find(k => k.st === 'hand' && hit(k)); if (!k) return;
   if (k.st === 'hand' && LT - k.t > .15) answer(k); });
 
 // ================= Logi =================
@@ -408,27 +472,25 @@ const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e)
 let hudKey = '';
 function hud() {
   const lv = levelOf(save.xp), md = L ? Math.round(L.mood) : 70;
-  const key = [lv.l, lv.cur, wallet, L && L.n, md, L && L.subj].join('|'); if (key === hudKey) return; hudKey = key;
+  const key = [lv.l, lv.cur, wallet, L && L.n, md, L && L.st].join('|'); if (key === hudKey) return; hudKey = key;
   $('sLv').textContent = `🍎 ${lv.l}. līm.`; $('sXp').style.width = (lv.cur / lv.need * 100) + '%';
   $('sMoney').innerHTML = `<b style="color:${wallet < 0 ? '#ff5a6a' : '#ffd34d'};font-size:14px;display:inline">💰 €${wallet}</b>`;
-  $('tTxt').textContent = L && L.st !== 'end' ? `${SUBJ[L.subj].i} ${SUBJ[L.subj].n} · ${Math.max(1, Math.min(L.n + 1, QN))}/${QN}` : '🏫 Skola';
+  $('tTxt').textContent = L && L.st !== 'end' ? `📝 Jautājums ${Math.max(1, Math.min(L.n + 1, QN))}/${QN}` : '🏫 Skola';
   $('mIco').textContent = md >= 75 ? '😄' : md >= 50 ? '🙂' : md >= 25 ? '😐' : '😵‍💫';
   $('mFill').style.width = md + '%'; $('mFill').style.background = md >= 60 ? '#2ecc71' : md >= 35 ? '#ffb020' : '#ff5a6a';
 }
+const TIERS = ['', 'viegli', 'vidēji', 'grūti'];
 function lobby() {
   if (L) L.st = 'end'; banner('');
-  const subjB = Object.keys(SUBJ).map(id => `<button data-s="${id}" class="${save.subj === id ? 'on' : ''}"><i>${SUBJ[id].i}</i>${SUBJ[id].n}</button>`).join('');
+  const lv = tLv();
   sheet(`<div class="step">Tailers World · Skola</div><h2>🏫 Skola</h2>
-    <p>Tu vadi stundu! Uz tāfeles ir jautājums, skolēni paceļ rokas ar atbildēm. Pieskaries tam skolēnam, kuram ir <b>pareizā</b> atbilde.</p>
-    <div class="fact">❗ Daži skolēni grib draiskoties. Kad virs galvas redzi <b>❗</b>, ātri pieskaries viņam!<br>😊 Pieķer draiskuļus – klasei būs labs noskaņojums un tu nopelnīsi vairāk.</div>
-    <div class="step">Priekšmets</div><div class="subj">${subjB}</div>
-    <div class="step">Klase</div><div class="seg" id="band"><button data-b="1" class="${save.band === 1 ? 'on' : ''}">1.–3. klase</button><button data-b="2" class="${save.band === 2 ? 'on' : ''}">4.–6. klase</button></div>
+    <p>Tu vadi stundu! Uz tāfeles ir jautājums – no matemātikas, loģikas, dabas, valodām vai par Latviju. Skolēni paceļ rokas – pieskaries tam, kuram ir <b>pareizā</b> atbilde.</p>
+    <div class="fact">❗ Klasē ir 10 skolēni, un daži grib draiskoties – spļauj papīra bumbiņas, met lidmašīnas, nodod zīmītes. Kad virs galvas redzi <b>❗</b>, ātri pieskaries!<br>😊 Pieķer draiskuļus – klasei būs labs noskaņojums un tu nopelnīsi vairāk.</div>
+    <div class="parts"><div class="part">🍎 Tavs līmenis <b>${lv}.</b></div><div class="part">📈 Jautājumi <b>${TIERS[maxTier()]}</b></div><div class="part">😈 Draiskuļi reizē <b>līdz ${maxBusy()}</b></div></div>
+    <p style="color:#9fb0ff;font-size:13.5px;text-align:center">Jo augstāks līmenis, jo grūtāki jautājumi un viltīgāki draiskuļi.</p>
     <button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klases rotājumi</button>`);
-  document.querySelectorAll('.subj button').forEach(b => b.onclick = () => { save.subj = b.dataset.s; document.querySelectorAll('.subj button').forEach(o => o.classList.toggle('on', o === b)); sfx('tick'); });
-  bandWire(); $('go').onclick = () => startLesson(save.subj); $('shopB').onclick = () => shop(lobby);
+  $('go').onclick = startLesson; $('shopB').onclick = () => shop(lobby);
 }
-function bandWire() { document.querySelectorAll('#band button').forEach(b => b.onclick = () => { setBand(+b.dataset.b); document.querySelectorAll('#band button').forEach(o => o.classList.toggle('on', o === b)); sfx('tick'); }); }
-function setBand(b) { if (b === save.band) return; save.band = b; save.ml = b === 2 ? Math.max(save.ml, 4) : Math.min(save.ml, 3); persist(); }
 function shop(back) {
   sheet(`<div class="step">Par kopīgo naudu</div><h2>🛍 Klases rotājumi</h2><p>Tev ir <b style="color:#ffd34d">€${wallet}</b>. Rotājumi paliek tavā klasē.</p>
     <div class="shop">${DECO.map(d => `<button data-d="${d.id}" class="${save.deco[d.id] ? 'own' : wallet < d.p ? 'no' : ''}"><i>${d.i}</i>${d.n}<em>${save.deco[d.id] ? '✔ Ir klasē' : '€' + d.p}</em></button>`).join('')}</div>
@@ -442,11 +504,10 @@ $('gear').onclick = e => { e.stopPropagation(); audioInit(); const wasOpen = $('
   if (wasOpen) { toast('⚙ Iestatījumi – kad aizver šo logu'); return; }
   sheet(`<h2>⚙ Iestatījumi</h2><div class="setBox"><div class="step">📻 Radio un dziesmas</div><div id="radioC">${window.TWRadio ? TWRadio.controlsHTML() : ''}</div></div>
     <div class="setBox"><label class="setRow">🔔 Efekti (zvans, joki) <input id="fxV" type="range" min="0" max="100" value="${Math.round(FXV * 100)}"></label></div>
-    <div class="setBox"><div class="step">Klase</div><div class="seg" id="band"><button data-b="1" class="${save.band === 1 ? 'on' : ''}">1.–3. klase</button><button data-b="2" class="${save.band === 2 ? 'on' : ''}">4.–6. klase</button></div></div>
     <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p><button class="main" id="setOk">✔ Gatavs</button>`);
   if (window.TWRadio) TWRadio.wire($('radioC'));
   $('fxV').oninput = () => { FXV = $('fxV').value / 100; try { localStorage.setItem('skFx', FXV); } catch (e) {} sfx('tick'); };
-  bandWire(); $('setOk').onclick = () => { closeSheet(); if (!L || L.st === 'end') lobby(); }; };
+  $('setOk').onclick = () => { closeSheet(); if (!L || L.st === 'end') lobby(); }; };
 
 // ================= Skaņa =================
 let FXV = 1; try { FXV = +(localStorage.getItem('skFx') ?? 1); } catch (e) {}
@@ -471,7 +532,11 @@ function sfx(k) { if (!AC) return;
   else if (k === 'gum') tone(300, 900, 2.4, 'sine', .04);
   else if (k === 'drum') tone(150, 70, .1, 'triangle', .16);
   else if (k === 'sleep') tone(95, 75, .9, 'sawtooth', .03);
-  else if (k === 'pop') tone(900, 200, .12, 'sine', .15); }
+  else if (k === 'pop') tone(900, 200, .12, 'sine', .15);
+  else if (k === 'spit') tone(1200, 300, .12, 'sine', .08);
+  else if (k === 'throw') tone(400, 900, .3, 'sine', .06);
+  else if (k === 'note') { tone(2000, 1600, .05, 'sine', .04); tone(1800, 1500, .05, 'sine', .04, .1); }
+  else if (k === 'splat') tone(180, 60, .14, 'triangle', .14); }
 
 // ================= Saglabāšana, nauda, medaļas =================
 const ONLINE = location.protocol === 'https:'; let UID = null, NAME = '', NICK = '', wallet = 0;
@@ -494,7 +559,7 @@ if (ONLINE && window.firebase && window.TW_FIREBASE) {
     if (window.TW) await TW.ready;
     // spēle vēl nav atvērta visiem – pagaidām tikai admini/moderatori var testēt
     if (window.TW && !TW.isStaff(UID)) { resize(); pickKids(); requestAnimationFrame(frame); sheet(`<h2>🏫 Skola</h2><p>Drīzumā! Spēle vēl top. 🔒</p><a class="main" style="display:block;text-align:center;text-decoration:none" href="../index.html">← Uz sākumlapu</a>`); return; }
-    if (window.TW) TW.heartbeat(UID, () => ({ game: 'Skola', where: L && L.st !== 'end' ? `Stundā: ${SUBJ[L.subj].n}` : `Līm. ${levelOf(save.xp).l}`, name: NAME, nick: NICK }));
+    if (window.TW) TW.heartbeat(UID, () => ({ game: 'Skola', where: L && L.st !== 'end' ? `Stundā (${L.n + 1}/${QN})` : `Līm. ${levelOf(save.xp).l}`, name: NAME, nick: NICK }));
     db.ref('kicks/' + UID).on('value', s => { const k = s.val(); if (k && k.until > TW.now()) { alert('Tevi uz laiku izmeta no spēles. Spēlē draudzīgi! 🙂'); location.href = '../index.html'; } }, () => {});
     if (window.TWA && TWA.load) TWA.load(UID).catch(() => {});
     start();

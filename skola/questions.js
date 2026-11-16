@@ -1,14 +1,9 @@
 // Skola – jautājumu banka. Matemātika tiek ģenerēta (game.js mathQ), šeit – fakti.
-// Rinda: [priekšmets, grūtība (1 = 1.–3. klase, 2 = 4.–6. klase), jautājums, pareizā atbilde, 'nepareizā|nepareizā|nepareizā', paskaidrojums]
+// Rinda: [priekšmets, pakāpe (1 = viegli, 2 = vidēji no 3. līmeņa, 3 = grūti no 7. līmeņa), jautājums, pareizā atbilde, 'nepareizā|nepareizā|nepareizā', paskaidrojums]
 // Jaunus jautājumus pievieno saraksta BEIGĀS (id = priekšmets + kārtas numurs, pēc tā atceras kļūdas).
 // Atbildes īsas (līdz ~20 zīmēm) – tās ir burbulī virs skolēna.
-window.SUBJ = {
-  mat: { i: '🔢', n: 'Matemātika' },
-  lv: { i: '🇱🇻', n: 'Latvija' },
-  daba: { i: '🌿', n: 'Daba' },
-  val: { i: '🔤', n: 'Valodas' },
-  mix: { i: '🎲', n: 'Jaukti' },
-};
+// priekšmeta nosaukums tāfeles stūrī (stundā jautājumi sajaukti – viena skola, kā IQ spēle)
+window.SUBJ = { lv: '🇱🇻 Latvija', daba: '🌿 Daba', val: '🔤 Valodas', log: '🧩 Loģika' };
 window.FACTS = [
   // ---- Latvija ----
   ['lv', 1, 'Kāda ir Latvijas galvaspilsēta?', 'Rīga', 'Daugavpils|Liepāja|Jelgava', 'Rīga ir Latvijas galvaspilsēta un lielākā pilsēta.'],
@@ -141,4 +136,49 @@ window.FACTS = [
   ['val', 2, 'Kā angliski pateikt „labrīt”?', 'Good morning', 'Good night|Goodbye|Good luck', 'Good night – ar labu nakti.'],
   ['val', 1, 'Ko latviski nozīmē „bird”?', 'Putns', 'Bite|Zivs|Lācis', 'Bird – putns, fish – zivs.'],
   ['val', 1, 'Ko latviski nozīmē „yellow”?', 'Dzeltens', 'Zils|Melns|Rozā', 'Yellow – dzeltens.'],
+  // ---- Loģika (IQ mīklas) ----
+  ['log', 1, 'Kurš ir lieks?', 'Burkāns', 'Ābols|Banāns|Bumbieris', 'Burkāns ir dārzenis, pārējie – augļi.'],
+  ['log', 1, 'Kurš ir lieks?', 'Galds', 'Suns|Kaķis|Zirgs', 'Galds nav dzīvnieks.'],
+  ['log', 1, 'Kurš ir lieks?', 'Laiva', 'Lidmašīna|Helikopters|Raķete', 'Laiva peld, pārējie lido.'],
+  ['log', 1, 'Kas ir smagāks – kilograms spalvu vai kilograms akmeņu?', 'Vienādi', 'Akmeņi|Spalvas|Nevar zināt', 'Abi sver tieši 1 kg!'],
+  ['log', 1, 'Kas nāk pēc pirmdienas, otrdienas, trešdienas…?', 'Ceturtdiena', 'Piektdiena|Svētdiena|Pirmdiena', 'Nedēļas dienas pēc kārtas.'],
+  ['log', 2, 'Kurš ir lieks?', 'Zirneklis', 'Bite|Skudra|Mārīte', 'Zirneklis nav kukainis – tam ir 8 kājas.'],
+  ['log', 2, 'Kurš ir lieks?', 'Valis', 'Haizivs|Līdaka|Lasis', 'Valis ir zīdītājs, pārējās ir zivis.'],
+  ['log', 2, 'Kurš ir lieks?', 'Trīsstūris', 'Kvadrāts|Taisnstūris|Rombs', 'Trīsstūrim ir 3 stūri, pārējiem – 4.'],
+  ['log', 2, 'Visi kaķi ir dzīvnieki. Muris ir kaķis. Tātad Muris ir…', 'Dzīvnieks', 'Suns|Putns|Galds', 'Ja Muris ir kaķis un visi kaķi ir dzīvnieki, tad Muris ir dzīvnieks.'],
+  ['log', 2, 'Annai ir 2 brāļi. Katram brālim ir viena māsa. Cik bērnu ir ģimenē?', '3', '4|2|5', 'Abiem brāļiem māsa ir tā pati Anna: 2 brāļi + Anna = 3.'],
+  ['log', 2, 'Pulkstenis rāda 3:00. Cik tas rādīs pēc 10 stundām?', '1:00', '11:00|10:00|2:00', '3 + 10 = 13, bet uz parastā pulksteņa ciparnīcas tas ir 1:00.'],
+  ['log', 3, 'Kurš skaitlis ir lieks?', '9', '3|5|7', '3, 5 un 7 ir pirmskaitļi, bet 9 = 3 · 3.'],
+  ['log', 3, 'Ja vakar bija svētdiena, kas būs parīt?', 'Trešdiena', 'Otrdiena|Pirmdiena|Ceturtdiena', 'Šodien ir pirmdiena, rīt – otrdiena, parīt – trešdiena.'],
+  ['log', 3, 'Gliemezis kāpj 3 m augstā stabā: dienā uzrāpjas 2 m, naktī noslīd 1 m. Pēc cik dienām tas būs augšā?', '2', '3|1|4', 'Pēc 1. dienas un nakts tas ir 1 m augstumā, 2. dienā +2 m = 3 m – augšā!'],
+  ['log', 3, 'Kurš vārds ir lieks?', 'Ātri', 'Skriet|Lēkt|Peldēt', '„Ātri” ir apstākļa vārds, pārējie – darbības vārdi.'],
+  // ---- Grūti (3. pakāpe) ----
+  ['lv', 3, 'Kurš bija pirmais Latvijas Valsts prezidents?', 'Jānis Čakste', 'Kārlis Ulmanis|Guntis Ulmanis|Valdis Zatlers', 'Jānis Čakste bija prezidents no 1922. gada.'],
+  ['lv', 3, 'Kura bija pirmā sieviete – Latvijas prezidente?', 'Vaira Vīķe-Freiberga', 'Aspazija|Ingrīda Ūdre|Laimdota Straujuma', 'Vaira Vīķe-Freiberga bija prezidente no 1999. līdz 2007. gadam.'],
+  ['lv', 3, 'Kurā gadā notika Baltijas ceļš?', '1989', '1991|1918|2004', '1989. gada 23. augustā cilvēki sadevās rokās no Tallinas līdz Viļņai.'],
+  ['lv', 3, 'Kurā gadā Rīgā bija barikādes?', '1991', '1989|1918|1940', '1991. gada janvārī cilvēki sargāja svarīgas ēkas no uzbrukuma.'],
+  ['lv', 3, 'Kā sauc Latvijas parlamentu?', 'Saeima', 'Dome|Senāts|Padome', 'Saeimu ievēl reizi 4 gados.'],
+  ['lv', 3, 'Cik deputātu ir Saeimā?', '100', '50|120|200', 'Saeimā ir 100 deputātu.'],
+  ['lv', 3, 'Kurš uzrakstīja „Mērnieku laikus”?', 'Brāļi Kaudzītes', 'Rainis|Blaumanis|Pumpurs', 'Reinis un Matīss Kaudzītes – pirmais latviešu romāns.'],
+  ['lv', 3, 'Kurš uzrakstīja lugu „Skroderdienas Silmačos”?', 'Rūdolfs Blaumanis', 'Rainis|Aspazija|Krišjānis Barons', 'To joprojām bieži spēlē Jāņu laikā.'],
+  ['lv', 3, 'Kurā Rīgas ēkā ir slavenās lielās ērģeles?', 'Doma baznīcā', 'Operā|Pils muzejā|Pēterbaznīcā', '1884. gadā tās bija lielākās ērģeles pasaulē.'],
+  ['lv', 3, 'Kurā gadā Latvija kļuva par ANO dalībvalsti?', '1991', '2004|1918|1990', 'Latviju uzņēma ANO 1991. gada septembrī.'],
+  ['daba', 3, 'Kas ir H₂O?', 'Ūdens', 'Sāls|Skābeklis|Cukurs', 'Divi ūdeņraža atomi un viens skābekļa atoms.'],
+  ['daba', 3, 'Kāda ir ogļskābās gāzes formula?', 'CO₂', 'O₂|H₂O|NaCl', 'Viens oglekļa un divi skābekļa atomi.'],
+  ['daba', 3, 'Kurš orgāns attīra asinis un veido urīnu?', 'Nieres', 'Sirds|Plaušas|Kuņģis', 'Cilvēkam ir divas nieres.'],
+  ['daba', 3, 'Cik ilgā laikā Saules gaisma nonāk līdz Zemei?', 'Ap 8 minūtēm', '1 sekundē|1 dienā|1 gadā', 'Gaisma lido ap 300 000 km sekundē, bet līdz Saulei ir 150 miljoni km.'],
+  ['daba', 3, 'Kā sauc procesu, kurā augi gaismā ražo barības vielas?', 'Fotosintēze', 'Elpošana|Iztvaikošana|Gremošana', 'Fotosintēzē augi izdala arī skābekli.'],
+  ['daba', 3, 'Kurš ir cietākais dabiskais materiāls?', 'Dimants', 'Granīts|Dzelzs|Stikls', 'Dimants ir no oglekļa – tāpat kā zīmuļa grafīts!'],
+  ['daba', 3, 'Kura planēta griežas it kā guļus, uz sāniem?', 'Urāns', 'Marss|Venēra|Jupiters', 'Urāna ass ir sasvērta gandrīz par 98°.'],
+  ['daba', 3, 'Kurš zinātnieks atklāja gravitācijas likumu?', 'Īzaks Ņūtons', 'Alberts Einšteins|Galileo Galilejs|Čārlzs Darvins', 'Stāsta, ka viņu iedvesmoja krītošs ābols.'],
+  ['daba', 3, 'Kā sauc mūsu galaktiku?', 'Piena Ceļš', 'Andromeda|Saules ceļš|Lielais Lācis', 'Tajā ir simtiem miljardu zvaigžņu.'],
+  ['daba', 3, 'Kurš ir lielākais orgāns cilvēka ķermeņa iekšpusē?', 'Aknas', 'Sirds|Nieres|Kuņģis', 'Aknas atrodas labajā pusē zem ribām.'],
+  ['val', 3, 'Kurā locījumā ir vārds „mājā”?', 'Lokatīvā', 'Datīvā|Ģenitīvā|Akuzatīvā', 'Lokatīvs atbild uz jautājumu „kur?”.'],
+  ['val', 3, 'Kā sauc vārdu ar pretēju nozīmi?', 'Antonīms', 'Sinonīms|Homonīms|Lietvārds', 'Liels – mazs ir antonīmi.'],
+  ['val', 3, 'Kā sauc vārdu ar līdzīgu nozīmi?', 'Sinonīms', 'Antonīms|Homonīms|Saiklis', 'Ātri – žigli ir sinonīmi.'],
+  ['val', 3, 'Kā pagātnē būs „es iet”?', 'Es gāju', 'Es eju|Es iešu|Es ietu', 'Tagad – eju, pagātnē – gāju, nākotnē – iešu.'],
+  ['val', 3, 'Kā angliski ir „vakar”?', 'Yesterday', 'Today|Tomorrow|Monday', 'Yesterday – vakar, tomorrow – rīt.'],
+  ['val', 3, 'Kāda ir „to go” pagātnes forma?', 'Went', 'Goed|Going|Goes', 'I go – es eju, I went – es gāju.'],
+  ['val', 3, 'Kurš vārds trūkst: „I ___ a student.”', 'am', 'is|are|be', 'I am, you are, he is.'],
+  ['val', 3, 'Kurā vārdā ir divskanis?', 'Maize', 'Galds|Puķe|Zīle', 'Divskaņi: ai, au, ei, ie, ui, o.'],
 ];

@@ -103,15 +103,15 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Kešatmiņa: mainot style.css/game.js/cases.js, palielini `?v=` atra-palidziba/index.html.
 
 ## Skola (`/skola/`)
-- Tu vadi stundu: 8 jautājumi uz tāfeles, 4 skolēni paceļ rokas ar atbilžu burbuļiem – pieskaries tam, kuram pareizā. Nepareizi → „Mācību brīdis” (pareizā atbilde + paskaidrojums, poga „Saprotu →”), bez soda. Telefonā vertikāli soli 2×2, citur rindā.
-- **Draiskuļi** (`PRANKS`: lidmašīna, varde, telefons, košļene, bungas, snauda): virs galvas ❗ brīdinājums (`warnDur`), tad joks 2,6 s. Pieskaries laikus → „Pieķerts”, jautrs fakts (toast), noskaņojums +6/+3; palaid garām → klase smejas, noskaņojums −10. Pirmajā stundā mācības ar dzelteno baneri (1. jautājumā joku nav, 2. – lēns). Atvērts logs = pauze (`LT` neiet).
-- **Klases noskaņojums** 0–100 (sākas 70) – josla augšā.
-- Priekšmeti (`SUBJ`): mat, lv, daba, val, mix (5 fakti + 3 matemātika). Klase 1.–3. / 4.–6. (`save.band`, lobijā un ⚙).
-- **Matemātika ģenerēta** (`mathQ`, līmenis `save.ml` 1–8, pielāgojas: pareizi +0,34, nepareizi −0,5). **Fakti** – `questions.js` (`FACTS`), jaunus pievieno saraksta BEIGĀS (id pēc kārtas priekšmetā). Kļūdas atkārto nākamajās stundās (`save.miss`), nesen redzētos atliek (`save.seen`).
-- Atlīdzība: €3 + €2 par pareizo + €1 par pieķerto (+€5, ja noskaņojums ≥80; +€5 par 8/8); XP 10 par pareizo + 5 par pieķerto (+20 par 8/8); zvaigznes 7+/5+/citādi 1.
-- 🛍 Klases rotājumi (`DECO`, kopīgā nauda, `save.deco`) redzami klasē.
-- Saglabāšana `skola/saves/{uid}`, medaļas grupa `skola` (skLessons, skPerfect, skCaught, skCorrect, skLevel).
-- Pagaidām **tikai adminiem/moderatoriem** (citiem „Drīzumā” – slēgums game.js; sākumlapā aizslēgta kartīte ar 🛠 `skTest`). Kešatmiņa: mainot failus, palielini `?v=` skola/index.html.
+- **Viena skola, kā IQ spēle** – priekšmetus un klasi neizvēlas. Stundā 8 jautājumi: 5 fakti (Latvija, daba, valodas, loģikas mīklas – `questions.js`), 2 matemātika (`mathQ`), 1 skaitļu virkne „kas nāk tālāk?” (`logicQ`).
+- **10 skolēni** rindās (vertikāli 3+3+4, horizontāli 5+5, aizmugurē mazāki; horizontāli tāfele starp augšējiem lodziņiem). Katram jautājumam 4 paceļ rokas ar atbilžu burbuļiem (`pickAnswerers` – ne blakus vienā rindā), pārējie sēž. Pieskaries tam, kuram pareizā. Nepareizi → „Mācību brīdis” (pareizā atbilde + paskaidrojums), bez soda.
+- **Draiskuļi** (`PRANKS`: lidmašīna uz tāfeli, varde, telefons, košļene, bungas, snauda, **spļauj papīra bumbiņas uz skolotāju** – trāpa ekrānā (`splats`), **met bumbiņu citam** („Ei! 😠”), **zīmīte kaimiņam**): virs galvas ❗ (`warnDur`), tad joks 2,6 s. Ja draiskojas tas, kam pareizā atbilde, burbulis pazūd, līdz viņu pieķer. Pieskaries laikus → jautrs fakts, noskaņojums +6/+3; palaid garām → −10.
+- **Grūtība aug ar līmeni** (`tLv`): faktu pakāpe `maxTier` (1 – viegli, no 3. līm. – vidēji, no 7. – grūti), matemātikas minimums `mathFloor`, draiskuļi reizē `maxBusy` (1/2/3 no 4./8. līm.), joki stundā `maxPerQ`, īsāks brīdinājums. Matemātika un virknes arī pielāgojas (`save.ml` 1–8). Lobijā redzams līmenis, grūtība un draiskuļu skaits.
+- Fakti – `questions.js` (`FACTS`: [priekšmets, pakāpe, jautājums, atbilde, 'nepareizās', paskaidrojums]); jaunus pievieno saraksta BEIGĀS (id pēc kārtas priekšmetā). Kļūdas atkārto (`save.miss`), nesen redzētos atliek (`save.seen`).
+- Pirmajā stundā mācības ar dzelteno baneri (1. jautājumā joku nav, 2. – lēns). Atvērts logs = pauze (`LT` neiet).
+- Atlīdzība: €3 + €2 par pareizo + €1 par pieķerto (+€5, ja noskaņojums ≥80; +€5 par 8/8); XP 10 par pareizo + 5 par pieķerto (+20 par 8/8).
+- 🛍 Klases rotājumi (`DECO`, kopīgā nauda, `save.deco`). Saglabāšana `skola/saves/{uid}`, medaļas grupa `skola`.
+- Pagaidām **tikai adminiem/moderatoriem** (slēgums game.js; sākumlapā aizslēgta kartīte ar 🛠 `skTest`). Kešatmiņa: mainot failus, palielini `?v=` skola/index.html.
 
 ## Plānots
 - "Atbalsti mani" saite sākumlapā.
