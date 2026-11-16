@@ -287,8 +287,8 @@
 <script>
 // Spēļu saraksts – jaunu spēli pievieno šeit
 const GAMES=[
-  {title:'Graffiti RPG', desc:'Skrien pa pilsētu, zīmē grafiti, krāj naudu, pērc krāsas un mašīnas – un bēdz no policijas!', cover:'grafiti/cover.svg', url:'grafiti/index.html', players:'speletaji.html?spele=grafiti'},
-  {title:'🚑 Ātrā palīdzība 112', desc:'Brauc ar ātro palīdzību (vai lido ar helikopteru!) pa pilsētu, noskaidro, kas noticis, palīdzi pacientiem un mācies pirmo palīdzību.', cover:'atra-palidziba/cover.svg', url:'atra-palidziba/index.html'},
+  {title:'Graffiti RPG', desc:'Skrien pa pilsētu, zīmē grafiti, krāj naudu, pērc krāsas un mašīnas – un bēdz no policijas!', cover:'grafiti/cover.webp', url:'grafiti/index.html', players:'speletaji.html?spele=grafiti'},
+  {title:'🚑 Ātrā palīdzība 112', desc:'Brauc ar ātro palīdzību (vai lido ar helikopteru!) pa pilsētu, noskaidro, kas noticis, palīdzi pacientiem un mācies pirmo palīdzību.', cover:'atra-palidziba/cover.webp', url:'atra-palidziba/index.html'},
 ];
 // Atbalsta saite (piem., Buy Me a Coffee) – kad būs, ieliec šeit
 const SUPPORT_URL='';
@@ -303,10 +303,10 @@ GAMES.forEach((g,i)=>{
 });
 // nākamā spēle – redzama ar bildi, bet aizslēgta; admini/moderatori var testēt
 const soon=document.createElement('div'); soon.className='card soon';
-soon.innerHTML=`<div class="thumb" style="position:relative"><img class="thumb" src="skola/cover.svg" alt="Skola" style="filter:grayscale(.55) brightness(.7)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px">🔒</span></div><div class="body"><p class="title">🏫 Skola</p><p class="desc">Drīzumā! Vadi stundu, atrodi pareizo atbildi un pieķer draiskuļus, pirms viņi izjoko klasi.</p><div class="btns"><a class="btn play" id="skTest" href="skola/index.html" style="display:none">🛠 Testēt (admins)</a></div></div>`;
+soon.innerHTML=`<div class="thumb" style="position:relative"><img class="thumb" src="skola/cover.webp" alt="Skola" style="filter:grayscale(.55) brightness(.7)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px">🔒</span></div><div class="body"><p class="title">🏫 Skola</p><p class="desc">Drīzumā! Vadi stundu, atrodi pareizo atbildi un pieķer draiskuļus, pirms viņi izjoko klasi.</p><div class="btns"><a class="btn play" id="skTest" href="skola/index.html" style="display:none">🛠 Testēt (admins)</a></div></div>`;
 grid.appendChild(soon);
 const soon2=document.createElement('div'); soon2.className='card soon';
-soon2.innerHTML=`<div class="thumb" style="position:relative"><img class="thumb" src="rampa/cover.svg" alt="Mega rampa" style="filter:grayscale(.55) brightness(.7)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px">🔒</span></div><div class="body"><p class="title">🛫 Mega rampa</p><p class="desc">Drīzumā! Nobrauc no milzu rampas, lido pāri pilsētai ar lidmašīnu, skūteri vai mašīnu un uzlabo to darbnīcā.</p><div class="btns"><a class="btn play" id="rpTest" href="rampa/index.html" style="display:none">🛠 Testēt (admins)</a></div></div>`;
+soon2.innerHTML=`<div class="thumb" style="position:relative"><img class="thumb" src="rampa/cover.webp" alt="Mega rampa" style="filter:grayscale(.55) brightness(.7)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px">🔒</span></div><div class="body"><p class="title">🛫 Mega rampa</p><p class="desc">Drīzumā! Nobrauc no milzu rampas, lido pāri pilsētai ar lidmašīnu, skūteri vai mašīnu un uzlabo to darbnīcā.</p><div class="btns"><a class="btn play" id="rpTest" href="rampa/index.html" style="display:none">🛠 Testēt (admins)</a></div></div>`;
 grid.appendChild(soon2);
 if(SUPPORT_URL){ const b=$('supportBtn'); b.href=SUPPORT_URL; b.target='_blank'; b.rel='noopener'; b.textContent='💛 Atbalstīt'; b.removeAttribute('aria-disabled'); }
 
