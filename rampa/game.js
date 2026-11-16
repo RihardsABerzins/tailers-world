@@ -758,7 +758,9 @@ $('gear').onclick = e => { e.stopPropagation(); audioInit(); if ($('ov').classLi
     <div class="setBox"><label class="setRow">🔔 Efekti (vējš, avārijas) <input id="fxV" type="range" min="0" max="100" value="${Math.round(FXV * 100)}"></label></div>
     <div class="setBox"><div class="step">🛫 Lidojums</div><div class="setRow" style="margin:6px 0">🧭 Palīgs izlīdzina</div><div class="seg" id="sHelp"><button data-x="1" class="${OPT.help ? 'on' : ''}">Ieslēgts</button><button data-x="0" class="${OPT.help ? '' : 'on'}">Izslēgts</button></div>
       <div class="setRow" style="margin:10px 0 6px">🌬 Gaisa strīpas</div><div class="seg" id="sStr"><button data-x="1" class="${OPT.streaks ? 'on' : ''}">Rādīt</button><button data-x="0" class="${OPT.streaks ? '' : 'on'}">Nerādīt</button></div></div>
+    <button class="main ghostB" id="howTo" style="margin-bottom:8px">❓ Kā spēlēt</button>
     <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p><button class="main" id="setOk">✔ Gatavs</button>`);
+  $('howTo').onclick = () => { closeSheet(); intro(true); };
   if (window.TWRadio) TWRadio.wire($('radioC'));
   $('fxV').oninput = () => { FXV = $('fxV').value / 100; try { localStorage.setItem('rpFx', FXV); } catch (x) {} sfx('tick'); };
   [['sHelp', 'help'], ['sStr', 'streaks']].forEach(([id, k]) => $(id).querySelectorAll('button').forEach(b => b.onclick = () => { OPT[k] = b.dataset.x === '1'; saveOpt(); $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }));
@@ -805,8 +807,12 @@ function medals() { if (!UID || !window.TWA) return; const S = save.st, b = save
     .then(n => n.forEach((m, i) => setTimeout(() => toast(`🏅 Jauna medaļa!<br><span style="font-size:28px">${m.i}</span> ${TWA.title ? TWA.title(m) : m.t}`), 3600 * i + 2500))).catch(() => {}); }
 function fixSave() { const d = { plane: 0, scoot: 0, car: 0 }; save.best = Object.assign(d, save.best || {}); save.st = Object.assign({ landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, save.st || {});
   save.own = save.own || {}; if (!save.own.plane) save.own.plane = { wheel: 0, wing: 0, eng: 0, long: 0 }; if (!VEH[save.veh] || !save.own[save.veh]) save.veh = 'plane'; save.ramp = clamp(save.ramp || 0, 0, RAMPS.length - 1); }
+// instrukcija pirms pirmā lidojuma: īsti kadri no spēles (rampa/intro/1..5.webp)
+const INTRO = [{ img: 'intro/1.webp', t: 'Velc sviru – aiziet!' }, { img: 'intro/2.webp', t: 'Kreisā puse – augšup, labā – lejup' }, { img: 'intro/3.webp', t: 'Turi un velc ⬅➡ – stūrē' },
+  { img: 'intro/4.webp', t: '🚀 Katapulta – izšaujies!' }, { img: 'intro/5.webp', t: 'Pērc uzlabojumus – lido tālāk!' }];
+const intro = force => window.TW && TW.intro ? TW.intro('rampa', INTRO, force) : Promise.resolve();
 function start() { loadModels(start2); }
-function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); warmUp(); hud(); requestAnimationFrame(frame);
+function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); warmUp(); hud(); requestAnimationFrame(frame); intro();
  }
 if (!ONLINE) { try { const s = JSON.parse(localStorage.getItem('rpSave')); if (s) save = Object.assign(save, s); wallet = +(localStorage.getItem('rpWalletDev') || 0); } catch (e) {} }
 if (ONLINE && window.firebase && window.TW_FIREBASE) {
