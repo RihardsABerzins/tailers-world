@@ -305,7 +305,7 @@ document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('bu
 
 // ================= Tēli =================
 function drawPerson(g,x,y,s,o){
-  if(SPR.ok) return drawSprite(g,x,y,s,o);
+  if(SPR.ok&&(o.bg!=null||sprReady(o.ch!=null?(typeof o.ch==='number'?o.ch:sprCh(o.ch)):0))) return drawSprite(g,x,y,s,o);
   const face=o.face||'down', flip=o.flip||1, step=o.step||0, side=face==='side';
   const hood=o.hood||'#e53935', skin=o.skin||'#f2c9a0', cap=o.cap||'#1b1b1f', pants=o.pants||'#2b3a67', shoe='#f5f5f5';
   const sw=Math.sin(step)*4.5, bob=o.still?Math.sin(performance.now()/380)*.7:-Math.abs(Math.cos(step))*1.6;
@@ -346,40 +346,42 @@ function drawPerson(g,x,y,s,o){
   g.restore();
 }
 // ---- Kenney Mini Characters + Car Kit (CC0) kā 2D sprites (ieceptas no 3D, sk. sprites/CREDITS.txt) ----
-// chars.webp: rinda = tēls, 15 kadri (0–7 iet sānis, 8 stāv sānis, 9 lec, 10 sēž, 11 priekša, 12–13 mugura ar baloniņu, 14 tupstas)
-// chars_m.webp: R jaka, G bikses, B mati (tonēšanai); chars_k.webp: lakats (balts, tonē ar maskas krāsu)
-const SPR={ok:false,fw:128,fh:172,cw:384,ch:240,rows:new Map(),
+// sprites/hd/<tēls>.webp: 15 kadri 256×344 (0–7 iet sānis, 8 stāv sānis, 9 lec, 10 sēž, 11 priekša, 12–13 mugura ar baloniņu, 14 tupstas)
+// sprites/hd/<tēls>_m.webp: augšā maska (R jaka, G bikses, B mati), apakšā lakats (balts, tonē ar maskas krāsu). Tēlus ielādē tikai vajadzīgos.
+// Kadri lielāki par ekrāna izmēru – zīmē samazinot (ass arī DPR 2). Vecie sprites/chars*.webp (128×172) paliek Ātrajai palīdzībai.
+const SPR={ok:false,fw:256,fh:344,pw:144,ph:258,cw:576,ch:360,rows:new Map(),img:{},
   chars:[['male-a','#3da679','#5f74ca','#3e3e44'],['male-b','#e76047','#5f74ca','#d07b56'],['male-c','#5f74ca','#3e3e44','#d07b56'],['male-d','#3e3e44','#3e3e44','#d07b56'],['male-e','#dcdce9','#3e3e44','#995a41'],['male-f','#3da679','#dd9f79','#3e3e44'],['male-g','#9391c1','#d07b56','#66638b'],
     ['female-a','#8158cf','#5f74ca','#3e3e44'],['female-b','#e7b96f','#8158cf','#dd9f79'],['female-c','#5f74ca','#66638b','#66638b'],['female-d','#66638b','#66638b','#dd9f79'],['female-e','#dcdce9','#3e3e44','#3e3e44'],['female-f','#3e3e44','#5f74ca','#995a41']],
   cars:['sedan','police','taxi','van','hatchback-sports','sedan-sports','race-future','suv','truck','delivery','garbage-truck']};
-const SPR_COP=16; // people.webp rinda: 0–15 gājēji, 16 policists
-// fona gājēji – Quaternius Posed Background Characters (CC0): 6 kadri (0 solis, 1 stāv sānis, 2 otrs solis, 3 priekša, 4 skatās augšup, 5 rokas sānos)
-function drawPeople(g,x,y,s,o){ const k=s*58/154.8, fw=96*k, fh=172*k, face=o.face||'down', row=o.bg|0;
+const SPR_COP=16; // people.webp: 0–15 gājēji, 16 policists (pa 2 vienā rindā)
+const sprImg=n=>new Promise((ok,no)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=no; i.src='sprites/hd/'+n+'?v=1'; });
+// fona gājēji – Quaternius Posed Background Characters (CC0): 6 kadri 144×258 (0 solis, 1 stāv sānis, 2 otrs solis, 3 priekša, 4 skatās augšup, 5 rokas sānos)
+function drawPeople(g,x,y,s,o){ const P=SPR.pw, Q=SPR.ph, k=s*58/(.9*Q), fw=P*k, fh=Q*k, face=o.face||'down', row=o.bg|0;
   let f=1; if(face==='side'){ if(!o.still) f=[0,1,2,1][Math.floor(((o.step||0)/(Math.PI*2))*4)%4&3]; } else f=o.watch>0?4:o.called?5:3;
   if(!o.noShadow){ g.fillStyle='rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(x,y+1*s,10*s,3.5*s,0,0,7); g.fill(); }
-  g.save(); g.translate(x,y); if(face==='side'&&(o.flip||1)<0) g.scale(-1,1); g.drawImage(SPR.people,f*96,row*172,96,172,-fw/2,-166.8*k,fw,fh); g.restore(); }
-(function loadSprites(){ const im=n=>new Promise((ok,no)=>{ const i=new Image(); i.onload=()=>ok(i); i.onerror=no; i.src='sprites/'+n+'?v=4'; });
-  Promise.all(['chars.webp','chars_m.webp','chars_k.webp','cars.webp','people.webp'].map(im)).then(([b,m,k,c,pp])=>{
-    const px=i=>{ const cv_=document.createElement('canvas'); cv_.width=i.width; cv_.height=i.height; const g=cv_.getContext('2d',{willReadFrequently:true}); g.drawImage(i,0,0); return g.getImageData(0,0,i.width,i.height); };
-    SPR.base=px(b); SPR.mask=px(m); SPR.band=k; SPR.carImg=c; SPR.people=pp; SPR.ok=true; }).catch(()=>{}); })();
+  g.save(); g.imageSmoothingQuality='high'; g.translate(x,y); if(face==='side'&&(o.flip||1)<0) g.scale(-1,1); g.drawImage(SPR.people,((row&1)*6+f)*P,(row>>1)*Q,P,Q,-fw/2,-.97*Q*k,fw,fh); g.restore(); }
+(function loadSprites(){ Promise.all(['cars.webp','people.webp','thumbs.webp'].map(sprImg)).then(([c,pp,th])=>{ SPR.carImg=c; SPR.people=pp; SPR.thumbs=th; SPR.ok=true; }).catch(()=>{}); })();
 const sprCh=id=>{ const i=SPR.chars.findIndex(c=>c[0]===id); return i<0?0:i; };
-// tonēta tēla rinda (kešota pēc izskata): baltie laukumi × krāsa, lakats virsū
-function sprRow(ci,shirt,pants,hair,mask){ const C=SPR.chars[ci], key=[ci,shirt,pants,hair,mask].join('|'); let r=SPR.rows.get(key); if(r) return r;
-  const W=SPR.fw*15, H=SPR.fh, y0=ci*H, src=SPR.base.data, mk=SPR.mask.data, sw=SPR.base.width, out=new ImageData(W,H), p=out.data;
+// tēla attēli – ielādē pēc pieprasījuma; kamēr nav, zīmē veco tēlu
+function sprReady(ci){ const id=SPR.chars[ci][0], e=SPR.img[id]; if(e) return e.ok; SPR.img[id]={ok:false}; Promise.all([sprImg(id+'.webp'),sprImg(id+'_m.webp')]).then(([b,m])=>{ SPR.img[id]={ok:true,b,m}; }).catch(()=>{}); return false; }
+// tonēta tēla rinda (kešota pēc izskata, maz rindu – katra ~5 MB): baltie laukumi × krāsa, lakats virsū
+function sprRow(ci,shirt,pants,hair,mask){ const C=SPR.chars[ci], key=[ci,shirt,pants,hair,mask].join('|'); let r=SPR.rows.get(key); if(r){ SPR.rows.delete(key); SPR.rows.set(key,r); return r; }
+  const E=SPR.img[C[0]], W=SPR.fw*15, H=SPR.fh; r=document.createElement('canvas'); r.width=W; r.height=H; const g=r.getContext('2d',{willReadFrequently:true});
+  g.drawImage(E.m,0,0,W,H,0,0,W,H); const mk=g.getImageData(0,0,W,H).data; g.clearRect(0,0,W,H); g.drawImage(E.b,0,0); const out=g.getImageData(0,0,W,H), p=out.data;
   const hx=h=>{ h=!h||h==='orig'?null:h; return h?[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255):null; }, T=[hx(shirt)||hx(C[1]),hx(pants)||hx(C[2]),hx(hair)||hx(C[3])];
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const i=((y0+y)*sw+x)*4, o=(y*W+x)*4, a=src[i+3]; if(!a) continue; const ma=mk[i+3]/255; let t0=1,t1=1,t2=1;
+  for(let i=0;i<p.length;i+=4){ if(!p[i+3]) continue; const ma=mk[i+3]/255; if(!ma) continue; let t0=1,t1=1,t2=1;
     for(let k=0;k<3;k++){ const w=mk[i+k]/255*ma; if(w>0){ const c=T[k]; t0=t0*(1-w)+c[0]*w; t1=t1*(1-w)+c[1]*w; t2=t2*(1-w)+c[2]*w; } }
-    p[o]=src[i]*t0; p[o+1]=src[i+1]*t1; p[o+2]=src[i+2]*t2; p[o+3]=a; }
-  r=document.createElement('canvas'); r.width=W; r.height=H; const g=r.getContext('2d'); g.putImageData(out,0,0);
-  if(mask&&mask!=='none'){ const k=document.createElement('canvas'); k.width=W; k.height=H; const kg=k.getContext('2d'); kg.drawImage(SPR.band,0,y0,W,H,0,0,W,H); kg.globalCompositeOperation='multiply'; kg.fillStyle=mask; kg.fillRect(0,0,W,H); kg.globalCompositeOperation='destination-in'; kg.drawImage(SPR.band,0,y0,W,H,0,0,W,H); g.drawImage(k,0,0); }
-  if(SPR.rows.size>24) SPR.rows.delete(SPR.rows.keys().next().value); SPR.rows.set(key,r); return r; }
+    p[i]*=t0; p[i+1]*=t1; p[i+2]*=t2; }
+  g.putImageData(out,0,0);
+  if(mask&&mask!=='none'){ const k=document.createElement('canvas'); k.width=W; k.height=H; const kg=k.getContext('2d'); kg.drawImage(E.m,0,H,W,H,0,0,W,H); kg.globalCompositeOperation='multiply'; kg.fillStyle=mask; kg.fillRect(0,0,W,H); kg.globalCompositeOperation='destination-in'; kg.drawImage(E.m,0,H,W,H,0,0,W,H); g.drawImage(k,0,0); }
+  if(SPR.rows.size>=6) SPR.rows.delete(SPR.rows.keys().next().value); SPR.rows.set(key,r); return r; }
 function drawSprite(g,x,y,s,o){
   if(o.bg!=null) return drawPeople(g,x,y,s,o);
   const ci=o.ch!=null?(typeof o.ch==='number'?o.ch:sprCh(o.ch)):0, row=sprRow(ci,o.hood,o.pants,o.cap,o.mask), face=o.face||'down', side=face==='side';
   let f=8; if(face==='down') f=11; else if(face==='up') f=o.spray?12+((performance.now()/140|0)%2):12; else if(o.ride) f=8; else if(o.jump) f=9; else if(o.crouch) f=14; else if(!o.still) f=(Math.floor(((o.step||0)/(Math.PI*2))*8)%8+8)%8;
   const k=s*46/(.729*SPR.fh), fy=-.9457*SPR.fh*k, fw=SPR.fw*k, fh=SPR.fh*k, bob=o.still&&face!=='up'?Math.sin(performance.now()/380)*.6*s:0;
   if(!o.noShadow){ g.fillStyle='rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(x,y+1*s,12*s,4*s,0,0,7); g.fill(); }
-  g.save(); g.translate(x,y+bob); if(side&&(o.flip||1)<0) g.scale(-1,1);
+  g.save(); g.imageSmoothingQuality='high'; g.translate(x,y+bob); if(side&&(o.flip||1)<0) g.scale(-1,1);
   if(o.spray&&side){ // zīmēšanas stūrī: stāv sānis, roka ar baloniņu uz mērķi
     g.drawImage(row,8*SPR.fw,0,SPR.fw,SPR.fh,-fw/2,fy,fw,fh);
     const sx0=3*s, sy0=-22*s; let hx=12*s, hy=-40*s; if(o.target){ const dx_=o.target.x-x-sx0, dy_=o.target.y-y-sy0, d=Math.hypot(dx_,dy_)||1, L=Math.min(d,16*s); hx=sx0+dx_/d*L; hy=sy0+dy_/d*L; }
@@ -392,8 +394,8 @@ function drawSprite(g,x,y,s,o){
 // mašīna no sāniem; L – garums ekrānā, y – riteņu pieskāriens
 const CAR_MODEL={hatch:'hatchback-sports',sport:'sedan-sports',super:'race-future'};
 function drawCarSprite(g,x,y,dir,L,o){ const ci=Math.max(0,SPR.cars.indexOf(o.model)), w=L/.962, h=w*SPR.ch/SPR.cw;
-  g.save(); g.translate(x,y); g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(0,2,L*.52,6,0,0,7); g.fill(); g.scale(dir,1);
-  g.drawImage(SPR.carImg,0,ci*SPR.ch,SPR.cw,SPR.ch,-w/2,-h*.96,w,h);
+  g.save(); g.imageSmoothingQuality='high'; g.translate(x,y); g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(0,2,L*.52,6,0,0,7); g.fill(); g.scale(dir,1);
+  g.drawImage(SPR.carImg,(ci&1)*SPR.cw,(ci>>1)*SPR.ch,SPR.cw,SPR.ch,-w/2,-h*.96,w,h);
   if(o.lights!==false){ g.globalCompositeOperation='lighter'; g.fillStyle='#fff1b555'; g.shadowColor='#ffe28a'; g.shadowBlur=18; g.fillRect(L*.44,-L*.17,L*.05,L*.05); g.fillStyle='#ff303055'; g.shadowColor='#f00'; g.fillRect(-L*.5,-L*.17,L*.03,L*.05); }
   if(o.siren!=null){ const on=Math.sin(o.siren)>0; g.globalCompositeOperation='lighter'; g.shadowBlur=22; g.shadowColor=g.fillStyle=on?'#ff1744':'#2979ff'; g.beginPath(); g.arc(on?-L*.04:L*.04,-h*.66,L*.05,0,7); g.fill(); }
   g.restore(); }
@@ -1565,13 +1567,13 @@ function renderBarber(){ const L=lookOf();
     if(v==='auto'){ bg=`conic-gradient(#e53935,#fdd835,#43a047,#1e88e5,#8e24aa,#e53935)`; inner='🎨'; }
     else if(v==='none'){ bg='#2a2a33'; inner='🙂'; }
     else if(v==='orig'){ bg='#2a2a33'; inner='↺'; }
-    else if(k==='ch'){ bg='#2a2a33'; inner=`<canvas class="lkc" data-ch="${v}" width="40" height="40"></canvas>`; }
+    else if(k==='ch'){ bg='#2a2a33'; inner=`<canvas class="lkc" data-ch="${v}" width="96" height="96"></canvas>`; }
     return `<button class="lk${sel?' sel':''}" data-k="${k}" data-v="${v}" style="background:${bg}">${inner}</button>`; };
   shopEl.innerHTML=`<h2>💈 Barber</h2><div class="bb"><canvas id="lookPrev" width="240" height="300"></canvas><div class="bbr">${LOOK_ROWS.map(([k,n])=>`<div class="lkRow"><small>${n}</small><div>${LOOK_OPTS[k].map(v=>sw(k,v)).join('')}</div></div>`).join('')}</div></div>
     <button id="lookRnd" class="sec">🎲 Random</button> <button id="shopClose">✔ Done<span class="kh"> (E / Esc)</span></button>`;
   const c=document.getElementById('lookPrev'), g=c.getContext('2d'); g.fillStyle='#1d1b29'; g.fillRect(0,0,240,300); g.fillStyle='#2b2d38'; g.fillRect(0,250,240,50);
   drawPerson(g,120,270,SPR.ok?3.6:4.6,Object.assign({},playerOutfit(),{face:'down',still:true}));
-  if(SPR.ok) shopEl.querySelectorAll('.lkc').forEach(c=>{ const r=sprRow(sprCh(c.dataset.ch),'orig','orig','orig','none'); c.getContext('2d').drawImage(r,11*SPR.fw+19,28,90,90,0,0,40,40); });
+  if(SPR.ok) shopEl.querySelectorAll('.lkc').forEach(c=>{ const g_=c.getContext('2d'); g_.imageSmoothingQuality='high'; g_.drawImage(SPR.thumbs,sprCh(c.dataset.ch)*120,0,120,120,0,0,96,96); });
   const pushLook=()=>{ if(NET.on&&NET.db) NET.db.ref('users/'+NET.uid+'/look').set(save.look).catch(()=>{}); };
   shopEl.querySelectorAll('.lk').forEach(b=>b.onclick=()=>{ save.look=Object.assign(lookOf(),{[b.dataset.k]:b.dataset.v}); persist(); pushLook(); renderBarber(); });
   document.getElementById('lookRnd').onclick=()=>{ const r=a=>a[(Math.random()*a.length)|0]; save.look=Object.assign(lookOf(),{ch:r(LOOK_OPTS.ch),hood:r(LOOK_OPTS.hood),cap:r(LOOK_OPTS.cap),mask:r(LOOK_OPTS.mask),pants:r(LOOK_OPTS.pants)}); persist(); pushLook(); renderBarber(); };
