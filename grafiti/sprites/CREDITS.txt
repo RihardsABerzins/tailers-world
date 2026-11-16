@@ -1,3 +1,4 @@
 Tēli: Kenney Mini Characters (CC0) – https://kenney.nl/assets/mini-characters
 Mašīnas: Kenney Car Kit (CC0) – https://kenney.nl/assets/car-kit
+Fona gājēji un policists: Quaternius Posed Background Characters (CC0) – https://quaternius.com (licence License-posed-humans.txt)
 Sprites ieceptas no 3D modeļiem (three.js, ortogrāfiska kamera), lakats – pašu kaste pie galvas kaula.
