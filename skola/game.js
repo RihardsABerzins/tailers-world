@@ -91,6 +91,12 @@ const KIDS = [
   { n: 'Sofija', skin: '#8d5b3e', hair: '#1e1a1a', hs: 'puffs', shirt: '#e8c43a' },
   { n: 'Jēkabs', skin: '#f2c9a0', hair: '#a0522d', hs: 'spiky', shirt: '#5b6cff' },
   { n: 'Marta', skin: '#f6d3b3', hair: '#d9a441', hs: 'long', shirt: '#ff8fc8' },
+  { n: 'Roberts', skin: '#e9b48a', hair: '#3a2a20', hs: 'short', shirt: '#2ecc71' },
+  { n: 'Alise', skin: '#f2c9a0', hair: '#c2552b', hs: 'pony', shirt: '#3d8bff' },
+  { n: 'Daniels', skin: '#8d5b3e', hair: '#1e1a1a', hs: 'curly', shirt: '#ff5a6a' },
+  { n: 'Katrīna', skin: '#f6d3b3', hair: '#5a3a22', hs: 'bun', shirt: '#ffb020' },
+  { n: 'Gustavs', skin: '#f0c39a', hair: '#e0b04a', hs: 'buzz', shirt: '#a66bff' },
+  { n: 'Estere', skin: '#c98f63', hair: '#2b2024', hs: 'puffs', shirt: '#20c4c4' },
 ];
 // joki: ko skolēns dara un ko pastāsta, ja viņu pieķer laikus
 const PRANKS = {
@@ -144,15 +150,17 @@ function layout() {
   LY.room = { hy, fy, wx0, wx1: W - wx0, top: Math.max(-40, b.y - b.h * .35) };
   LY.td = { y: H - dh, h: dh }; LY.hudB = Math.max(sr.bottom, tr.bottom); LY.hudL = sr.right; LY.hudR = tr.left;
   $('banner').style.bottom = $('toast').style.bottom = `calc(${Math.round(dh + 8)}px + env(safe-area-inset-bottom))`;
-  const rows = [4, 3, 3], U = [[-1.5, -.5, .5, 1.5], [-1, 0, 1], [-1, 0, 1]], fr = [.3, .63, 1];
+  // 4×4 soli ar ejām starp tiem; pirmā rinda atstatus no skolotāja galda
+  const rows = [4, 4, 4, 4], U = [-1.5, -.5, .5, 1.5], fr = [.22, .47, .73, 1];
   const hv = hy - (fy - hy) * 1.3; // tēliem maigāka perspektīva nekā telpai
-  const s = Math.min(46, (H - dh - fy) / 6.5, W / 2 / 5.95), yf = H - dh + .3 * s, X = Math.min(W / 2 - 2.05 * s, s * 6.5);
+  const s = Math.min(40, (H - dh - fy) / 8.2, (W / 2 - 4) / (1.5 * 5.4 + 2.05)), yf = H - dh - 1.9 * s, X = Math.min((W / 2 - 2.05 * s) / 1.5, s * 7);
   let i = 0;
   rows.forEach((cnt, r) => { const y = fy + (yf - fy) * fr[r], k = (y - hv) / (yf - hv);
-    for (let c = 0; c < cnt; c++, i++) { const kd = kids[i]; if (!kd) continue; kd.r = r; kd.c = c; kd.s = s * k; kd.x = W / 2 + U[r][c] * X * k; kd.y = y; } });
+    for (let c = 0; c < cnt; c++, i++) { const kd = kids[i]; if (!kd) continue; kd.r = r; kd.c = c; kd.s = s * k; kd.x = W / 2 + U[c] * X * k; kd.y = y; } });
   LY.u0 = s * (fy - hv) / (yf - hv); // mērogs pie aizmugurējās sienas
   LY.order = kids.slice().sort((a, b) => a.y - b.y);
   LY.mug = { x: W - clamp(W * .14, 50, 120), y: H - dh * .5, r: dh * .3 };
+  LY.folder = { x: clamp(W * .08, 14, 70), y: H - dh * .82, w: dh * 1.1, h: dh * .66 };
 }
 function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; layout(); }
 addEventListener('resize', resize);
@@ -160,8 +168,11 @@ addEventListener('resize', resize);
 // ================= Stunda =================
 // grūtība aug ar skolotāja līmeni: faktu pakāpes (1–3), matemātikas minimums, draiskuļu skaits un ātrums
 const tLv = () => levelOf(save.xp).l;
-const maxTier = () => tLv() >= 7 ? 3 : tLv() >= 3 ? 2 : 1;
-const mathFloor = () => Math.min(7, 1 + Math.floor((tLv() - 1) / 2));
+// jautājumu grūtība = klase (1.–9.): aug ar līmeni, bet žurnāla mapītē var izvēlēties zemāku
+const autoGrade = () => clamp(1 + Math.floor((tLv() - 1) / 2), 1, 9);
+const grade = () => save.grade ? Math.min(save.grade, autoGrade()) : autoGrade();
+const maxTier = () => grade() >= 5 ? 3 : grade() >= 2 ? 2 : 1;
+const mathFloor = () => Math.min(7, grade());
 const maxBusy = () => 1 + (tLv() >= 4) + (tLv() >= 8);
 const maxPerQ = () => Math.min(4, 2 + Math.floor((tLv() - 1) / 3));
 // stunda: 5 fakti (visi priekšmeti + loģikas mīklas), 2 matemātika, 1 skaitļu virkne
@@ -177,7 +188,7 @@ function buildQs() {
 }
 const tutOn = () => !save.tut;
 // laiks vienam jautājumam: garākam tekstam vairāk, augstākā līmenī mazāk
-const qDur = q => clamp(16 + q.q.length * .12 - (tLv() - 1) * .6, 10, 30) * (tutOn() ? 1.5 : 1);
+const qDur = q => clamp(16 + q.q.length * .12 - (grade() - 1) * 1.1, 10, 30) * (tutOn() ? 1.5 : 1);
 // skolotāja enerģija: krīt stundas laikā, kafija +40, pusdienas – pilna
 let energy = 100, mugAt = -99;
 const mugFull = () => LT - mugAt > 35;
@@ -213,7 +224,7 @@ function startLesson() {
 }
 function nextQ() {
   L.n++; stuck = []; if (L.n >= QN) { endLesson(); return; }
-  let q = L.qs[L.n]; const ml = clamp(Math.floor(save.ml), mathFloor(), 8); if (q.mat) q = L.qs[L.n] = mathQ(ml); else if (q.lg) q = L.qs[L.n] = logicQ(ml);
+  let q = L.qs[L.n]; const ml = clamp(Math.floor(save.ml), mathFloor(), Math.min(8, grade() + 2)); if (q.mat) q = L.qs[L.n] = mathQ(ml); else if (q.lg) q = L.qs[L.n] = logicQ(ml);
   L.cur = q; L.st = 'q'; L.qT = LT; L.qp = 0; L.qd = qDur(q);
   if (q.id) { save.seen = save.seen.filter(x => x !== q.id).concat(q.id).slice(-80); }
   const opts = shuffle([q.a, ...q.w.slice(0, 3)]);
@@ -304,6 +315,20 @@ function endLesson() {
   });
 }
 
+// 📁 klases žurnāls: līdz kurai klasei aizgājis; var izvēlēties zemāku, ja par grūtu
+const GRADE_TXT = ['', 'saskaitīšana līdz 10, vienkārši fakti', 'saskaitīšana un atņemšana līdz 20', 'līdz 100, vidēji grūti fakti', 'reizrēķins', 'reizrēķins un dalīšana, grūtāki fakti', 'teksta uzdevumi', 'daļas, procenti, darbību secība', 'lielāki skaitļi, decimāldaļas', 'visgrūtākais'];
+function gradeSheet() {
+  const ag = autoGrade(), cur = grade(), inL = L && L.st !== 'end';
+  const back = () => { closeSheet(); if (!inL) lobby(); };
+  sheet(`<div class="step">📁 Klases žurnāls</div><h2>🎓 ${cur}. klase</h2>
+    <p>Tu esi aizgājis līdz <b style="color:#ffd34d">${ag}. klasei</b>. Ja jautājumi par grūtu, izvēlies zemāku klasi – jaunus līmeņus atvērsi, spēlējot.</p>
+    <div class="shop" style="grid-template-columns:repeat(3,1fr)">${Array.from({ length: 9 }, (_, i) => i + 1).map(n => `<button data-g="${n}" class="${n === cur ? 'own' : n > ag ? 'no' : ''}"><i>${n > ag ? '🔒' : n === cur ? '✔' : '🎓'}</i>${n}. klase<em style="font-size:11px;color:#cfd6ff">${GRADE_TXT[n]}</em></button>`).join('')}</div>
+    <button class="main ghostB" id="gAuto">🔄 Automātiski (${ag}. klase)</button><button class="main" id="gOk">✔ Gatavs</button>`, back);
+  document.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { const n = +b.dataset.g; if (n > ag) { toast(`🔒 ${n}. klase atvērsies, kad pacelsies līmenī`); sfx('bad'); return; }
+    save.grade = n === ag ? 0 : n; persist(); sfx('tick'); gradeSheet(); });
+  $('gAuto').onclick = () => { save.grade = 0; persist(); sfx('tick'); gradeSheet(); };
+  $('gOk').onclick = back;
+}
 function lunchBreak() {
   const F = [['🍲', 'Zupa'], ['🥔', 'Kartupeļi ar kotleti'], ['🥞', 'Pankūkas'], ['🥗', 'Salāti']];
   sheet(`<div class="step">🕙 10:10 – 10:40</div><h2>🍽 Pusdienu pauze</h2><p>Skolotājiem arī jāēd! Ko ēdīsi šodien?</p>
@@ -475,10 +500,12 @@ function teacherDesk() {
   let gr = g.createLinearGradient(0, y, 0, H); gr.addColorStop(0, '#7a4a28'); gr.addColorStop(1, '#5a341b'); g.fillStyle = gr; g.fillRect(0, y, W, h);
   g.fillStyle = '#9a6238'; g.fillRect(0, y, W, 5); g.strokeStyle = '#00000022'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(0, y + h * i / 4); g.bezierCurveTo(W * .3, y + h * i / 4 + 4, W * .6, y + h * i / 4 - 4, W, y + h * i / 4); g.stroke(); }
   // žurnāls un grāmatas
-  const u = h / 4; g.save(); g.translate(W * .08 + u * 2, y + h * .5); g.rotate(-.08); rr(-u * 2, -u * 1.2, u * 4, u * 2.4, 3); fs('#2d5684', 2); g.fillStyle = '#fff'; g.fillRect(-u * 1.6, -u * .9, u * 3.2, u * .35); g.restore();
-  for (let i = 0; i < 3; i++) { rr(W * .08 + u * 5, y + h * .62 - i * u * .55, u * 3.2 - i * u * .3, u * .55, 2); fs(['#ff6b6b', '#ffd34d', '#4cd97b'][i], 1.6); }
+  const u = h / 4, F = LY.folder; g.save(); g.translate(F.x + F.w / 2, F.y + F.h / 2); g.rotate(-.06);
+  rr(-F.w / 2, -F.h / 2 - u * .3, F.w * .4, u * .5, 3); fs('#e0a830', 1.6); rr(-F.w / 2, -F.h / 2, F.w, F.h, 4); fs('#f2c14e', 2);
+  g.fillStyle = '#2a2230'; g.font = `900 ${Math.max(11, F.h * .3)}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(`🎓 ${grade()}. kl.`, 0, u * .1); g.restore();
+  for (let i = 0; i < 3; i++) { rr(F.x + F.w + u * 1.2, y + h * .62 - i * u * .55, u * 3.2 - i * u * .3, u * .55, 2); fs(['#ff6b6b', '#ffd34d', '#4cd97b'][i], 1.6); }
   // ābols
-  const ax = W * .5 - u * 4; circ(ax, y + h * .5, u * .9); fs('#e8343f', 2); g.strokeStyle = '#5a3a22'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, y + h * .5 - u * .8); g.lineTo(ax + u * .15, y + h * .5 - u * 1.3); g.stroke();
+  const ax = m.x - m.r * 3.2; circ(ax, y + h * .5, u * .9); fs('#e8343f', 2); g.strokeStyle = '#5a3a22'; g.lineWidth = 2; g.beginPath(); g.moveTo(ax, y + h * .5 - u * .8); g.lineTo(ax + u * .15, y + h * .5 - u * 1.3); g.stroke();
   g.beginPath(); g.ellipse(ax + u * .45, y + h * .5 - u * 1.15, u * .35, u * .15, -.5, 0, 7); fs('#4cd97b', 1.2);
   // kafijas krūze
   const full = mugFull(), r = m.r; g.save(); if (L && L.st === 'q' && full && energy < 35) { const k = 1 + Math.sin(LT * 8) * .06; g.translate(m.x, m.y); g.scale(k, k); g.translate(-m.x, -m.y); }
@@ -614,7 +641,7 @@ function drawBubble(k) {
   else if ((st === 'hand' && tt > .15) || st === 'happy' || st === 'sad') { txt = k.ans; if (st === 'happy') { bg = '#d6ffe3'; txt = '✅ ' + txt; } if (st === 'sad') { bg = '#ffe0e4'; txt = '❌ ' + txt; } }
   if (!txt || (L && L.st === 'end')) return;
   const f = clamp(s * .58, 13, 22); g.font = `800 ${f}px system-ui,sans-serif`;
-  let lines = wrap(txt, 3.7 * s); if (lines.length > 2) { g.font = `800 ${f * .82}px system-ui,sans-serif`; lines = wrap(txt, 3.9 * s); }
+  const mw = Math.max(3.7 * s, 86); let lines = wrap(txt, mw); if (lines.length > 2) { g.font = `800 ${f * .82}px system-ui,sans-serif`; lines = wrap(txt, mw * 1.05); }
   const lh = f * 1.12, bw = Math.max(...lines.map(l => g.measureText(l).width)) + 18, bh = lines.length * lh + 12;
   const cx = clamp(x - .15 * s, bw / 2 + 4, W - bw / 2 - 4), by = y - 3.95 * s - bh, pop = st === 'hand' ? clamp((tt - .15) / .15, 0, 1) : 1;
   g.save(); g.translate(cx, by + bh); g.scale(pop, pop); g.translate(-cx, -(by + bh));
@@ -651,7 +678,9 @@ function draw() {
 // ================= Vadība =================
 let last = 0;
 function frame(now) { requestAnimationFrame(frame); const dt = clamp((now - last) / 1000, 0, .05); last = now; if (!$('ov').classList.contains('on')) { LT += dt; update(dt); } $('timer').classList.toggle('on', !!L && L.st === 'q' && !$('ov').classList.contains('on')); draw(); updateAudio(); }
-cv.addEventListener('pointerdown', e => { e.preventDefault(); audioInit(); if (!L || L.st !== 'q') return;
+cv.addEventListener('pointerdown', e => { e.preventDefault(); audioInit();
+  { const F = LY.folder; if (F && e.clientX > F.x - 10 && e.clientX < F.x + F.w + 10 && e.clientY > F.y - 14 && e.clientY < F.y + F.h + 10 && !$('ov').classList.contains('on')) { gradeSheet(); return; } }
+  if (!L || L.st !== 'q') return;
   const x = e.clientX, y = e.clientY, m = LY.mug;
   if (Math.hypot(x - m.x, y - m.y) < m.r * 1.8) { drinkCoffee(); return; }
   const wk = kids.find(k => k.st === 'wc' && k.wcBtn && y >= k.wcBtn.y0 && y <= k.wcBtn.y1 && x >= k.wcBtn.yes[0] && x <= k.wcBtn.no[1]); if (wk) { wcDecide(wk, x < wk.wcBtn.no[0]); return; }
@@ -691,8 +720,8 @@ function lobby() {
   sheet(`<div class="step">Tailers World · Skola</div><h2>🏫 Skola</h2>
     <p>Tu vadi stundu! Uz tāfeles ir jautājums – no matemātikas, loģikas, dabas, valodām vai par Latviju. Skolēni paceļ rokas – pieskaries tam, kuram ir <b>pareizā</b> atbilde.</p>
     <div class="fact">❗ Klasē ir 10 skolēni, un daži grib draiskoties – spļauj papīra bumbiņas, met lidmašīnas, nodod zīmītes. Kad virs galvas redzi <b>❗</b>, ātri pieskaries!<br>😊 Pieķer draiskuļus – klasei būs labs noskaņojums un tu nopelnīsi vairāk.</div>
-    <div class="parts"><div class="part">🍎 Tavs līmenis <b>${lv}.</b></div><div class="part">📈 Jautājumi <b>${TIERS[maxTier()]}</b></div><div class="part">😈 Draiskuļi reizē <b>līdz ${maxBusy()}</b></div></div>
-    <p style="color:#9fb0ff;font-size:13.5px;text-align:center">Jo augstāks līmenis, jo grūtāki jautājumi un viltīgāki draiskuļi.</p>
+    <div class="parts"><div class="part">🍎 Tavs līmenis <b>${lv}.</b></div><div class="part">🎓 Jautājumi <b>${grade()}. klasei${save.grade ? ' (izvēlēta)' : ''}</b></div><div class="part">😈 Draiskuļi reizē <b>līdz ${maxBusy()}</b></div></div>
+    <p style="color:#9fb0ff;font-size:13.5px;text-align:center">Jo augstāks līmenis, jo grūtāki jautājumi un viltīgāki draiskuļi. Ja par grūtu – pieskaries 📁 mapītei uz galda.</p>
     <button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klase un tāfele</button>`);
   $('go').onclick = startLesson; $('shopB').onclick = () => shop(lobby);
 }
