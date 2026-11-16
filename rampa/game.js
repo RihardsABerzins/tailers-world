@@ -604,14 +604,15 @@ function updatePilot(dt) { if (!PIL || PIL.landed) return; const P = PIL, o = P.
 function finish(kind) {
   if (state === 'end') return;
   const landed = kind === 'land', ej = ejected, dist = Math.max(0, Math.round(ej && PIL ? PIL.o.position.z : endInfo ? endInfo.dist : sim.maxZ)), vid = save.veh, old = save.best[vid] || 0, rec = dist > old && dist >= 5;
-  const parts = [['🎢 Par lēcienu', '€5'], ['📏 Attālums', '€' + Math.round(dist / 5)]]; let money = 5 + Math.round(dist / 5);
-  if (landed) { const b = Math.round(dist / 20) + 3; money += b; parts.push(['🛬 Nolaidies', '+€' + b]); }
+  const parts = [['🎢 Par lēcienu', '€10'], ['📏 Attālums', '€' + Math.round(dist / 4)]]; let money = 10 + Math.round(dist / 4);
+  if (landed) { const b = Math.round(dist / 15) + 5; money += b; parts.push(['🛬 Nolaidies', '+€' + b]); }
   if (ej) { money += 3; parts.push(['🚀 Katapulta', '+€3']); }
   if (sim.flips) { money += sim.flips * 2; parts.push([`🤸 Salto ×${sim.flips}`, '+€' + sim.flips * 2]); }
   if (sim.roofs) { money += sim.roofs * 2; parts.push([`🏠 Jumti ×${sim.roofs}`, '+€' + sim.roofs * 2]); }
   if (rec) { const b = 5 + Math.round((dist - old) / 10); money += b; parts.push(['🏆 Jauns rekords', '+€' + b]); }
   if (!save.first) { save.first = 1; money += 25; parts.push(['🎁 Pirmais lēciens', '+€25']); }
   const xp = Math.round(dist / 10) + (landed ? 5 : 0) + 2, lv0 = levelOf(save.xp).l;
+  save.last = save.last || {}; const prevD = save.last[vid], more = prevD != null ? dist - prevD : 0; save.last[vid] = dist;
   save.xp += xp; save.flights++; if (rec) save.best[vid] = dist;
   const S = save.st; if (landed) S[{ plane: 'landP', scoot: 'landS', car: 'landC' }[vid]]++; else S.crash++; S.flips += sim.flips; S.roofs += sim.roofs; S.birds = (S.birds || 0) + birdsHit;
   walletAdd(money); persist(); medals(); hud(); placeBest();
@@ -620,7 +621,8 @@ function finish(kind) {
   state = 'end'; $('eject').classList.remove('on'); document.body.classList.remove('run'); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); inp.turbo = false;
   const rid = ++runId; setTimeout(() => { if (state !== 'end' || rid !== runId) return;
     sheet(`<h2 style="text-align:center">${landed ? '🛬' : ej ? '🚀🧍' : '💥'} ${VEH[vid].i}</h2>
-      <div class="big">${dist} m</div>${rec ? '<p style="text-align:center;font-weight:900;color:#ffd34d">🏆 Rekords!</p>' : `<p style="text-align:center;color:#c9d2ff">🏆 ${Math.round(old)} m</p>`}
+      <div class="big">${dist} m</div>${rec ? `<p style="text-align:center;font-weight:900;color:#ffd34d">🏆 Rekords!${old >= 5 ? ` +${Math.round(dist - old)} m` : ''}</p>` : `<p style="text-align:center;color:#c9d2ff">🏆 ${Math.round(old)} m</p>`}
+      ${more > 0 && !rec ? `<p style="text-align:center;font-weight:900;color:#7dffa8">⬆ +${more} m vairāk nekā iepriekš</p>` : ''}
       <div class="res"><div class="part"><span>💰</span><b>+€${money}</b></div><div class="part"><span>⭐</span><b>+${xp}</b></div></div>
       ${lv1 > lv0 ? `<p style="text-align:center;font-weight:900;color:#7dffa8">⬆ ${lv1}. līmenis!</p>` : ''}
       <div class="row2"><button class="main ghostB" id="toShop">🔧</button><button class="main green" id="again">🔁 Vēlreiz</button></div>`);
@@ -630,6 +632,13 @@ function finish(kind) {
 }
 
 // ================= Darbnīca =================
+// darbnīcā: cik tālāk aizlidotu ar nākamo līmeni (simulācija bez mājām, ar palīgu un turbo; kešatmiņā)
+const GAINW = indexWorld({ obs: [], landing: WORLD.landing }), GAINC = new Map(), RPROF = [];
+function simDist(vid, sel, ramp) { const key = vid + JSON.stringify(sel) + ramp; if (GAINC.has(key)) return GAINC.get(key);
+  const s = new Sim(stats(vid, sel), RPROF[ramp] || (RPROF[ramp] = rampProfile(RAMPS[ramp].h)), GAINW), ip = { pitch: 0, roll: 0, turbo: true, help: true };
+  for (let i = 0; i < 120 * 150 && s.mode !== 'crash' && s.mode !== 'done'; i++) { s.step(ip); s.ev.length = 0; } GAINC.set(key, s.maxZ); return s.maxZ; }
+function gainTxt(vid, sel, k) { const d0 = simDist(vid, sel, save.ramp), d1 = k === 'ramp' ? simDist(vid, sel, save.ramp + 1) : simDist(vid, Object.assign({}, sel, { [k]: (own(vid)[k] || 0) + 1 }), save.ramp), g = Math.round((d1 / Math.max(1, d0) - 1) * 100);
+  return g >= 1 ? `<em class="gain">⬆ +${g} % tālāk</em>` : ''; }
 function rampSpeed(st) { const s = new Sim(st, RAMP, WORLD); for (let i = 0; i < 120 * 40 && s.mode === 'ramp'; i++) s.step({ pitch: 0 }); return s.mode === 'ramp' ? s.v : (s.ev[0] || [0, s.v])[1]; }
 function openShop() {
   camSnap = true;
@@ -643,10 +652,10 @@ function renderShop() {
   for (const [k, S] of Object.entries(V.slots)) { const lv = sel[k], have = o[k] || 0, nx = S.lv[have + 1];
     h += `<div class="slot"><i>${S.lv[lv].i || S.i}</i><div><b>${S.n} <span class="lvn">${lv}/${RP.NL}</span></b><small>${S.lv[lv].n}</small>
       <div class="lvs"><button data-k="${k}" data-l="${lv - 1}" ${lv > 0 ? '' : 'disabled'}>◀</button><div class="lvbar"><i style="width:${have / RP.NL * 100}%"></i><u style="width:${lv / RP.NL * 100}%"></u></div><button data-k="${k}" data-l="${lv + 1}" ${lv < have ? '' : 'disabled'}>▶</button></div></div>
-      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">+1<br>€${nx.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
+      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">+1<br>€${nx.p}${gainTxt(vid, sel, k)}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
   const r = RAMPS[save.ramp], rn = RAMPS[save.ramp + 1];
   h += `<div class="slot"><i>🏗️</i><div><b>Rampa <span class="lvn">${save.ramp}/${RP.NL}</span></b><small>${r.h} m</small><div class="lvs"><div class="lvbar"><i style="width:${save.ramp / RP.NL * 100}%"></i><u style="width:${save.ramp / RP.NL * 100}%"></u></div></div></div>
-    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">+1<br>€${rn.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>
+    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">+1<br>€${rn.p}${gainTxt(vid, sel, 'ramp')}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>
     <p style="margin:6px 0 0;font-size:13px;color:#c9d2ff">🏆 <b style="color:#ffd34d">${Math.round(save.best[vid] || 0)} m</b></p>
     <button id="go">🚀 Aiziet!</button>`;
   sh.innerHTML = h; wireShop();

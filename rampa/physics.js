@@ -10,12 +10,14 @@
   // ---- rampas (kopīgas visiem braucamrīkiem) ----
   // ---- uzlabojumi: katrai pozīcijai 35 līmeņi (0 = sākums). Efekts aug pakāpeniski, cena ~×1,15 katrā līmenī ----
   const NL = 35, TIER = L => Math.min(4, Math.floor((L - 1) / 7)), price = (base, L) => Math.round(base * Math.pow(1.15, L - 1) / 5) * 5 || 5;
-  const lin = (a, b, L) => a + (b - a) * (L - 1) / (NL - 1), expo = (a, b, L) => a * Math.pow(b / a, (L - 1) / (NL - 1));
+  // efekts aug strauji pirmajos līmeņos (EASE < 1) – katrs pirkums jūtams; vēlāk lēnāk
+  const EASE = .5, ef = L => Math.pow((L - 1) / (NL - 1), EASE);
+  const lin = (a, b, L) => a + (b - a) * ef(L), expo = (a, b, L) => a * Math.pow(b / a, ef(L));
   // ic – ikonas: [0. līmenim, 5 pakāpēm] – darbnīcā rāda to, kas tiešām uzlikts
   function slot(i, n, zero, tiers, base, f, ic) { ic = ic || []; const lv = [Object.assign({ n: zero, i: ic[0] || i }, f(0))];
     for (let L = 1; L <= NL; L++) lv.push(Object.assign({ n: tiers[TIER(L)] + ' ' + ((L - 1) % 7 + 1), p: price(base, L), tier: TIER(L), i: ic[TIER(L) + 1] || i }, f(L)));
     return { i, n, lv }; }
-  const RAMPS = []; for (let L = 0; L <= NL; L++) { const h = Math.round(55 + 165 * Math.pow(L / NL, 1.1)); RAMPS.push({ h, n: h + ' m', p: L ? price(40, L) : 0 }); }
+  const RAMPS = []; for (let L = 0; L <= NL; L++) { const h = Math.round(55 + 165 * Math.pow(L / NL, .6)); RAMPS.push({ h, n: h + ' m', p: L ? price(25, L) : 0 }); }
   const LIP = 18, EXIT = 30 * D2R, SLOPE = 42 * D2R, R1 = 10, R2 = 48, FLAT = 3;
   // rampas profils: plakans starts → izliekums → taisns slīpums → liels izliekums → atlēciena mala z=0, y=LIP, leņķis EXIT
   function rampProfile(H) {
@@ -38,16 +40,16 @@
   const VEH = {
     plane: { i: '✈️', n: 'Lidmašīna', p: 0, m: 80, cda: .3, crashV: 8,
       slots: {
-        body: slot('🥔', 'Šasija', 'Kartupelis', ['Kartona kaste', 'Saplākšņa', 'Alumīnija', 'Sacīkšu', 'Reaktīvā'], 20, L => L ? { cda: lin(.44, .15, L), m: lin(28, 55, L), crashV: lin(6.5, 11, L) } : { cda: .5, m: 20, crashV: 6 }, ['🥔', '📦', '🪵', '🔩', '🏎️', '🛩️']),
-        wheel: slot('🛞', 'Riteņi', 'Nav', ['Ratiņu', 'Velo', 'Skrituļu', 'Sacīkšu', 'Gultņu'], 15, L => ({ mu: L ? expo(.06, .012, L) : .07, roll: .1 }), ['🚫', '🛒', '🚲', '🛼', '🏁', '⚙️']),
-        wing: slot('🪽', 'Spārni', 'Nav', ['Kartona', 'Saplākšņa', 'Pūķa', 'Deltaplāna', 'Planiera'], 25, L => L ? { S: lin(7, 12.5, L), ar: lin(5, 18, L), cd0: lin(.035, .014, L), m: lin(8, 19, L) } : { S: 0 }, ['🚫', '📦', '🪵', '🪁', '🦅', '🪽']),
-        eng: slot('🔥', 'Dzinējs', 'Nav', ['Ventilators', 'Propelleris', 'Raķete', 'Lielā raķete', 'Reaktīvais'], 70, L => L ? { T: lin(220, 1300, L), f: lin(3, 9, L), m: lin(4, 22, L) } : {}, ['🚫', '🌀', '✈️', '🚀', '🎆', '🔥']),
+        body: slot('🥔', 'Šasija', 'Kartupelis', ['Kartona kaste', 'Saplākšņa', 'Alumīnija', 'Sacīkšu', 'Reaktīvā'], 15, L => L ? { cda: lin(.38, .14, L), m: lin(28, 55, L), crashV: lin(7, 11.5, L) } : { cda: .5, m: 20, crashV: 6 }, ['🥔', '📦', '🪵', '🔩', '🏎️', '🛩️']),
+        wheel: slot('🛞', 'Riteņi', 'Nav', ['Ratiņu', 'Velo', 'Skrituļu', 'Sacīkšu', 'Gultņu'], 12, L => ({ mu: L ? expo(.045, .01, L) : .07, roll: .1 }), ['🚫', '🛒', '🚲', '🛼', '🏁', '⚙️']),
+        wing: slot('🪽', 'Spārni', 'Nav', ['Kartona', 'Saplākšņa', 'Pūķa', 'Deltaplāna', 'Planiera'], 10, L => L ? { S: lin(7.5, 13, L), ar: lin(5.5, 18, L), cd0: lin(.032, .014, L), m: lin(8, 19, L) } : { S: 0 }, ['🚫', '📦', '🪵', '🪁', '🦅', '🪽']),
+        eng: slot('🔥', 'Dzinējs', 'Nav', ['Ventilators', 'Propelleris', 'Raķete', 'Lielā raķete', 'Reaktīvais'], 50, L => L ? { T: lin(220, 1300, L), f: lin(3, 9, L), m: lin(4, 22, L) } : {}, ['🚫', '🌀', '✈️', '🚀', '🎆', '🔥']),
       } },
     scoot: { i: '🛴', n: 'Skūteris', p: 150, m: 70, cda: .3, crashV: 15, flips: true,
       slots: {
-        wheel: slot('🛞', 'Riteņi', 'Parastie', ['Gumijas', 'Sporta', 'Sacīkšu', 'Keramikas', 'Super'], 25, L => ({ mu: L ? expo(.05, .006, L) : .06, roll: .05 }), ['⚫', '🛞', '🏃', '🏁', '💎', '⭐']),
-        aero: slot('🪖', 'Aerodinamika', 'Stāvus', ['Pieliecies', 'Ķivere', 'Tērps', 'Aero tērps', 'Raķete'], 30, L => ({ cda: L ? lin(.27, .13, L) : .3 }), ['🧍', '🙇', '⛑️', '🥋', '🏎️', '🚀']),
-        eng: slot('🚀', 'Raķešu soma', 'Nav', ['Mazā', 'Raķete', 'Dubultā', 'Turbo', 'Super'], 150, L => L ? { T: lin(200, 650, L), f: lin(2, 5, L), m: lin(3, 8, L) } : {}, ['🚫', '🎇', '🚀', '🚀', '💥', '🌟']),
+        wheel: slot('🛞', 'Riteņi', 'Parastie', ['Gumijas', 'Sporta', 'Sacīkšu', 'Keramikas', 'Super'], 15, L => ({ mu: L ? expo(.025, .002, L) : .06, roll: .05 }), ['⚫', '🛞', '🏃', '🏁', '💎', '⭐']),
+        aero: slot('🪖', 'Aerodinamika', 'Stāvus', ['Pieliecies', 'Ķivere', 'Tērps', 'Aero tērps', 'Raķete'], 18, L => ({ cda: L ? lin(.2, .05, L) : .3 }), ['🧍', '🙇', '⛑️', '🥋', '🏎️', '🚀']),
+        eng: slot('🚀', 'Raķešu soma', 'Nav', ['Mazā', 'Raķete', 'Dubultā', 'Turbo', 'Super'], 70, L => L ? { T: lin(200, 650, L), f: lin(2, 5, L), m: lin(3, 8, L) } : {}, ['🚫', '🎇', '🚀', '🚀', '💥', '🌟']),
       } },
     car: { i: '🚗', n: 'Mašīna', p: 500, m: 1100, cda: .8, crashV: 30, bounce: true, flips: true,
       slots: {
