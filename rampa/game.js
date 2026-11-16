@@ -44,15 +44,16 @@ const CITY = genCity(), WORLD = CITY.world;
 
 // ================= three.js aina =================
 const renderer = new T3.WebGLRenderer({ canvas: $('cv'), antialias: (devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.outputEncoding = T3.sRGBEncoding;
-const scene = new T3.Scene(); scene.background = new T3.Color(0x9fd3ff); scene.fog = new T3.Fog(0xbfe3ff, 260, 1500);
-const camera = new T3.PerspectiveCamera(62, 1, .3, 1800);
+renderer.setPixelRatio(Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 2, devicePixelRatio || 1)); renderer.outputEncoding = T3.sRGBEncoding;
+const scene = new T3.Scene(); scene.background = new T3.Color(0x9fd3ff); scene.fog = new T3.Fog(0xbfe3ff, 240, 1250);
+const camera = new T3.PerspectiveCamera(62, 1, .3, 1350);
 scene.add(new T3.HemisphereLight(0xeaf6ff, 0x6a7d5a, .95)); const sun = new T3.DirectionalLight(0xfff4e0, .75); sun.position.set(-.6, 1, -.4); scene.add(sun);
 const tex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new T3.CanvasTexture(c); if (rep) { t.wrapS = t.wrapT = T3.RepeatWrapping; } t.anisotropy = 4; return t; };
 const MATS = {}; const mat = (c, o) => { const k = c + JSON.stringify(o || {}); return MATS[k] || (MATS[k] = new T3.MeshLambertMaterial(Object.assign({ color: c }, o || {}))); };
 const m4 = new T3.Matrix4(), q0 = new T3.Quaternion(), v3 = new T3.Vector3(), col = new T3.Color();
 
-function buildCity() {
+function buildCity() { const n0 = scene.children.length; buildCity0(); chunkCity(scene.children.slice(n0)); }
+function buildCity0() {
   // zeme: ielas + ietves (tekstūra viena kvartāla izmērā)
   const gt = tex(256, 256, (g, w) => { const s = w / BLK, r = RD / 2 * s; g.fillStyle = '#4c515c'; g.fillRect(0, 0, w, w); g.fillStyle = '#cfc8bb'; g.fillRect(r, r, w - 2 * r, w - 2 * r);
     g.fillStyle = '#bdb6a8'; g.fillRect(r + 5, r + 5, w - 2 * r - 10, w - 2 * r - 10); g.fillStyle = '#f2f2f2';
@@ -94,17 +95,17 @@ function buildCity() {
   P.forEach((p, i) => { pI.setMatrixAt(i, m4.compose(v3.set((p.x0 + p.x1) / 2, .15, (p.z0 + p.z1) / 2), q0, new T3.Vector3(p.x1 - p.x0, 1, p.z1 - p.z0)));
     for (let n = 0; n < 9; n++) trees.push([p.x0 + 3 + R() * (p.x1 - p.x0 - 6), p.z0 + 3 + R() * (p.z1 - p.z0 - 6), 2.5 + R() * 2.5, R()]); });
   scene.add(pI);
-  const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 1), mat(0xffffff), trees.length);
+  const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 0), mat(0xffffff), trees.length);
   trees.forEach(([x, z, r, t], i) => { tr.setMatrixAt(i, m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1))); cr.setMatrixAt(i, m4.compose(v3.set(x, 3 + r * .8, z), q0, new T3.Vector3(r, r * 1.2, r))); cr.setColorAt(i, col.set(t < .5 ? 0x4a9a3c : 0x5d8f2f)); });
   scene.add(tr); scene.add(cr);
   // mašīnas ielās
-  const RC = mulberry(5), cars = []; for (let i = 0; i < 600; i++) { const along = RC() < .5, lane = RC() < .5 ? -3.5 : 3.5; let x, z, ry;
-    if (along) { x = (Math.floor(RC() * 20) - 10) * BLK + BLK / 2 + lane; z = -500 + RC() * (CITY_Z + 500); ry = 0; } else { x = (RC() - .5) * 1400; z = Math.floor(RC() * NZ) * BLK + lane; ry = Math.PI / 2; }
+  const RC = mulberry(5), cars = []; for (let i = 0; i < 220; i++) { const along = RC() < .5, lane = RC() < .5 ? -3.5 : 3.5; let x, z, ry;
+    if (along) { x = (Math.floor(RC() * 8) - 4) * BLK + BLK / 2 + lane; z = -300 + RC() * 2600; ry = 0; } else { x = (RC() - .5) * 560; z = Math.floor(RC() * 36) * BLK + lane; ry = Math.PI / 2; }
     cars.push([x, z, ry, pick([0xe53935, 0x1e88e5, 0xfdd835, 0xffffff, 0x37474f, 0x43a047, 0xfb8c00])]); }
   // stāvošās mašīnas – tas pats Blendera modelis, kas spēlētāja mašīnai (instancēts)
   const gB = geoOf('CBody', 'paint') || new T3.BoxGeometry(1.8, .9, 4.2).translate(0, .75, 0), gC = geoOf('CCabin', 'glass') || new T3.BoxGeometry(1.6, .6, 2.2).translate(0, 1.5, -.2), gD = geoOf('CBody', 'dark');
   const cb = new T3.InstancedMesh(gB, mat(0xffffff), cars.length), cc = new T3.InstancedMesh(gC, mat(0x3a4a5c), cars.length), cd = gD && new T3.InstancedMesh(gD, mat(0x222222), cars.length);
-  const cw = new T3.InstancedMesh(new T3.CylinderGeometry(.36, .36, .3, 10).rotateZ(Math.PI / 2).translate(0, .36, 0), mat(0x1d1d1d), cars.length * 4);
+  const cw = new T3.InstancedMesh(new T3.CylinderGeometry(.36, .36, .3, 6).rotateZ(Math.PI / 2).translate(0, .36, 0), mat(0x1d1d1d), cars.length * 4);
   const qy = new T3.Quaternion(), wv = new T3.Vector3(); cars.forEach(([x, z, ry, c], i) => { qy.setFromAxisAngle(new T3.Vector3(0, 1, 0), ry); m4.compose(v3.set(x, 0, z), qy, new T3.Vector3(1, 1, 1)); cb.setMatrixAt(i, m4); cc.setMatrixAt(i, m4); if (cd) cd.setMatrixAt(i, m4); cb.setColorAt(i, col.set(c));
     [[-.86, -1.3], [.86, -1.3], [-.86, 1.3], [.86, 1.3]].forEach(([wx, wz], k) => { wv.set(wx, 0, wz).applyQuaternion(qy); cw.setMatrixAt(i * 4 + k, m4.compose(v3.set(x + wv.x, 0, z + wv.z), qy, new T3.Vector3(1, 1, 1))); }); });
   scene.add(cb); scene.add(cc); scene.add(cw); if (cd) scene.add(cd);
@@ -117,6 +118,15 @@ function buildCity() {
     const pole = new T3.Mesh(POLE, mat(0x8a8f99)); pole.position.set(-35, 6.5, z); scene.add(pole); }
 }
 const POLE = new T3.CylinderGeometry(.15, .15, 13, 5);
+// pilsētas instancētos objektus sadala 350 m gabalos pa z un zīmē tikai tuvos gabalus (telefonā mazāk trijstūru → neraustās)
+const CHUNKS = [], CH = 350;
+function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh) continue; const groups = new Map(), mt = new T3.Matrix4(), c = new T3.Color();
+  for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, mt); const k = Math.floor(mt.elements[14] / CH); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); }
+  if (groups.size < 2) continue; scene.remove(m);
+  groups.forEach((ids, k) => { const s = new T3.InstancedMesh(m.geometry, m.material, ids.length); s.frustumCulled = false;
+    ids.forEach((i, j) => { m.getMatrixAt(i, mt); s.setMatrixAt(j, mt); if (m.instanceColor) { m.getColorAt(i, c); s.setColorAt(j, c); } });
+    scene.add(s); CHUNKS.push({ s, z0: k * CH - 80, z1: (k + 1) * CH + 80 }); }); } }
+function cullChunks() { const z = camera.position.z, fz = Math.cos(camera.rotation.y) >= 0 ? 1 : -1; for (const c of CHUNKS) c.s.visible = c.z1 > z - 220 && c.z0 < z + 1300; }
 function label(text, fg, bg, size) { const t = tex(256, 88, (g, w, h) => { g.fillStyle = bg; const r = 26; g.beginPath(); g.moveTo(r, 4); g.arcTo(w - 4, 4, w - 4, h - 4, r); g.arcTo(w - 4, h - 4, 4, h - 4, r); g.arcTo(4, h - 4, 4, 4, r); g.arcTo(4, 4, w - 4, 4, r); g.fill();
   g.fillStyle = fg; g.font = `900 ${size * 2}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 2); });
   return new T3.Sprite(new T3.SpriteMaterial({ map: t, depthWrite: false, fog: false })); }
@@ -290,7 +300,7 @@ function updateStreaks(V, dt, sp, alpha, cl, on) {
   const zf = F.az + 2.5 + V.len * .25 + Math.min(3, sp * .05), zb = -(F.az + 2.5 + Math.min(5, sp * .1)), h = (zf - zb) / (K - 1);
   STRK.grp.updateMatrixWorld(); tc.copy(camera.position); STRK.grp.worldToLocal(tc);
   const P = [], wd = .055 + Math.min(.06, sp * .0014);
-  for (let i = 0; i < N; i++) { const s = STRK.seeds[i]; let x = s.x + Math.sin(t * .9 + s.ph * 9) * .06, y = s.y + Math.cos(t * .7 + s.ph * 7) * .06, z = zf; let L = s.ph * 6;
+  for (let i = 0; i < N; i++) { const s = STRK.seeds[i]; let x = s.x + Math.sin(t * .6 + s.ph * 9) * .03, y = s.y + Math.cos(t * .5 + s.ph * 7) * .03, z = zf; let L = s.ph * 6;
     for (let k = 0; k < K; k++) { const f = flowAt(F, x, y, z, t, cl, ftmp), b = (i * K + k);
       P[k * 3] = x; P[k * 3 + 1] = y; P[k * 3 + 2] = z;
       // krāsa
@@ -390,17 +400,15 @@ function birdHit(b, front) { const engine = front && ST.T && !sim.engDead; sim.b
   if (engine) { toast('🐦💥 Putns dzinējā! Dzinējs apstājās'); sfx('sputter'); $('turbo').classList.remove('on'); inp.turbo = false; } else toast('🐦 Bonk! Putns!'); }
 
 // ---- izpletnis ----
-function makeChute() { const g = new T3.Group(), cols = [0xff5a5a, 0xffffff, 0xffd34d, 0x3d8bff];
-  for (let i = 0; i < 8; i++) { const seg = new T3.Mesh(new T3.SphereGeometry(2.2, 4, 6, i * Math.PI / 4, Math.PI / 4, 0, Math.PI / 2.4), new T3.MeshLambertMaterial({ color: cols[i % 4], side: T3.DoubleSide })); seg.scale.y = .55; g.add(seg); }
-  const lm = new T3.LineBasicMaterial({ color: 0x333333 }); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, lg = new T3.BufferGeometry().setFromPoints([new T3.Vector3(Math.cos(a) * 1.8, .45, Math.sin(a) * 1.8), new T3.Vector3(0, -3.2, 0)]); g.add(new T3.Line(lg, lm)); }
-  return g; }
-let PIL = null; // { o, v, chute, t, landed }
+let PIL = null; // izšautais pilots { o, v, t, landed }
 
 // ================= Spēles stāvoklis =================
 let state = 'boot', sim = null, VEHM = null, ST = null, prev = null, acc = 0, crashT = 0, runT = 0, endInfo = null, inp = { pitch: 0, roll: 0, turbo: false }, lastT = performance.now(), shopT = 0, camShake = 0;
 const shadow = new T3.Mesh(new T3.CircleGeometry(1, 20).rotateX(-Math.PI / 2), new T3.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .28, depthWrite: false })); scene.add(shadow);
 const own = vid => save.own[vid];
-const selOf = vid => Object.assign({ wheel: 0, wing: 0, eng: 0, aero: 0, long: 0 }, own(vid) || {});
+// nopirktais līmenis o[k]; lietotais o['u_' + k] (var pārslēgt uz jebkuru jau nopirktu); spārni vienmēr garie
+const selOf = vid => { const o = own(vid) || {}, s = { wheel: 0, wing: 0, eng: 0, aero: 0, long: 1 };
+  for (const k of Object.keys(VEH[vid].slots)) s[k] = Math.min(o[k] || 0, o['u_' + k] ?? (o[k] || 0)); return s; };
 let BEST = null; // rekorda bāka
 function placeBest() { if (BEST) { scene.remove(BEST); BEST = null; } const b = save.best[save.veh] || 0; if (b < 20) return; BEST = new T3.Group();
   const beam = new T3.Mesh(new T3.CylinderGeometry(.35, .35, 140, 8, 1, true), new T3.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: .2, depthWrite: false, fog: false })); beam.position.y = 70; BEST.add(beam);
@@ -408,7 +416,7 @@ function placeBest() { if (BEST) { scene.remove(BEST); BEST = null; } const b = 
 
 function setVehicle() {
   if (VEHM) { scene.remove(VEHM.g); }
-  disposeDebris(); if (PIL) { scene.remove(PIL.o); if (PIL.chute) scene.remove(PIL.chute); PIL = null; }
+  disposeDebris(); if (PIL) { scene.remove(PIL.o); PIL = null; }
   const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle2(vid, sel, ST); scene.add(VEHM.g); VEHM.g.add(STRK.grp);
   const p = RAMP.pts[0]; VEHM.g.position.set(0, p.y, p.z); VEHM.g.rotation.set(0, 0, 0); placeBest();
 }
@@ -422,22 +430,21 @@ addEventListener('resize', () => { resize(); });
 function go() {
   if (state !== 'shop' && state !== 'end') return;
   audioInit(); closeSheet(); $('shop').classList.remove('on'); setVehicle(); clearFX();
-  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0 }; camPsi = 0; resetBirds(); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
+  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0 }; camPsi = 0; camSnap = true; resetBirds(); ejected = false; $('eject').classList.remove('on'); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
   gateA = 0; leverK = 0; setLever(0); $('lever').classList.add('on'); $('dist').classList.add('on'); $('dM').textContent = '0 m'; $('dSub').textContent = VEH[save.veh].i + ' ' + VEH[save.veh].n;
-  if (save.flights < 3) banner('⬇ Novelc sviru lejā, lai atvērtu barjeru!', 3.5);
 }
 // svira: velc rokturi lejā līdz galam → barjera atveras un brauciens sākas
 function setLever(k) { leverK = k; $('knob').style.transform = `translateY(${k * 128}px)`; $('lever').style.setProperty('--k', k); }
 function release() { if (state !== 'ready') return; state = 'run'; setLever(1); $('lever').classList.remove('on'); sfx('clunk'); setTimeout(() => sfx('go'), 150);
   $('turbo').classList.toggle('on', !!ST.T); hints(save.flights < 3); if (navigator.vibrate) navigator.vibrate(30);
-  if (save.flights === 0) banner(ST.S ? '🕹 Velc pirkstu: ⬆ deguns augšup, ⬇ lejup, ⬅➡ stūrē' : '🕹 Velc pirkstu ⬆⬇, lai grieztos', 4.5); }
+ }
 { const kn = $('knob'); let drag = null;
   kn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); if (state !== 'ready') return; drag = { y: e.clientY, k: leverK }; try { kn.setPointerCapture(e.pointerId); } catch (x) {} sfx('tick'); });
   kn.addEventListener('pointermove', e => { if (!drag || state !== 'ready') return; const k = clamp(drag.k + (e.clientY - drag.y) / 128, 0, 1); setLever(k); if (k > .92) { drag = null; release(); } });
   const up = () => { if (!drag) return; drag = null; if (state === 'ready') { const k0 = leverK, t0 = performance.now(); const back = () => { const f = Math.min(1, (performance.now() - t0) / 200); if (state === 'ready') { setLever(k0 * (1 - f)); if (f < 1) requestAnimationFrame(back); } }; back(); } };
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => kn.addEventListener(ev, up)); }
 function hints(on) { const el = $('hintJ'); el.classList.toggle('on', on);
-  el.innerHTML = ST && ST.S ? '🕹<small>Velc pirkstu: ⬆ deguns augšup · ⬇ lejup · ⬅➡ stūrē</small>' : '🕹<small>Velc pirkstu ⬆⬇ – griezies, ⬆ salto atpakaļ</small>'; }
+  el.innerHTML = '🕹<small>⬆ ⬇ ⬅ ➡</small>'; }
 function handleEvents() {
   for (const e of sim.ev) { const k = e[0];
     if (k === 'launch') { sfx('whoosh'); if (save.flights < 3) setTimeout(() => hints(false), 6000); }
@@ -447,35 +454,34 @@ function handleEvents() {
     else if (k === 'touch') { puff(VEHM.g.position, 'dust', 4); sfx('bump'); }
     else if (k === 'bonk') { sfx('bump'); camShake = .3; }
     else if (k === 'crash') startCrash(e[1], e[2]);
-    else if (k === 'done') finish('land'); }
+    else if (k === 'done') { if (!ejected) finish(e[1] === 'land' ? 'land' : 'stop'); } }
   sim.ev.length = 0;
 }
 function startCrash(kind, v) {
-  state = 'crash'; crashT = 0; camShake = 1; joyReset(); $('turbo').classList.remove('on'); hints(false); inp.turbo = false; const p = VEHM.g.position.clone(), vel = new T3.Vector3(Math.sin(sim.psi) * sim.vz, sim.vy, Math.cos(sim.psi) * sim.vz), wall = kind === 'wall', b = wall ? sim.wall : surfAt(WORLD, sim.x, sim.z).b;
-  // tēls izlec ar izpletni
-  const pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); const fw = wall ? -.08 : .35; PIL = { o: pil, v: new T3.Vector3(vel.x * fw + rnd(-1, 1), 13 + Math.min(8, Math.abs(sim.vz) * .1), wall ? -2 : Math.max(2, vel.z * fw)), t: 0, chute: null, landed: false, spin: rnd(-4, 4) };
+  state = 'crash'; crashT = 0; camShake = 1; joyReset(); $('eject').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); inp.turbo = false; const p = VEHM.g.position.clone(), vel = new T3.Vector3(Math.sin(sim.psi) * sim.vz, sim.vy, Math.cos(sim.psi) * sim.vz), wall = kind === 'wall', b = wall ? sim.wall : surfAt(WORLD, sim.x, sim.z).b;
   breakApart(VEHM, vel, wall); updateStreaks(VEHM, 0, 0, 0, 0, false);
   sparks(p.clone().add(new T3.Vector3(0, .5, 0)), 60, sim.vz); puff(p, 'dust', 10); puff(p, 'smoke', 4);
   if (b && !b.landing) { const y = wall ? clamp(p.y + 1, 2, b.h - 1) : b.h; if (wall) { bits(new T3.Vector3(p.x, y, p.z), 34, 'glass', -sim.vz); decal(b, y, p.x, p.z); } if (!wall || p.y > b.h - 5) bits(new T3.Vector3(p.x, b.h, p.z + (wall ? 1 : 0)), 26, 'tile', sim.vz); }
   sfx('crash'); if (b && !b.landing) setTimeout(() => sfx('glass'), 120);
-  endInfo = { kind: 'crash', dist: Math.max(0, sim.maxZ) };
+  if (!ejected) endInfo = { kind: 'crash', dist: Math.max(0, sim.maxZ) };
 }
-function updatePilot(dt) { if (!PIL) return; const P = PIL; P.t += dt; const o = P.o;
-  if (!P.landed) {
-    if (P.t > .6 && !P.chute) { P.chute = makeChute(); P.chute.scale.setScalar(.05); scene.add(P.chute); setPose(o, 'chute'); sfx('chute'); }
-    if (P.chute) { const k = Math.min(1, (P.t - .6) / .5); P.chute.scale.setScalar(.05 + .95 * k); P.v.y += (-3.2 - P.v.y) * Math.min(1, dt * 2.2 * k + dt * .2); P.v.z += (2 - P.v.z) * dt * .8; P.v.x *= 1 - dt; o.rotation.set(0, 0, Math.sin(P.t * 1.6) * .12); }
-    else { P.v.y -= GR * dt; o.rotation.x += P.spin * dt; }
-    o.position.addScaledVector(P.v, dt); const fl = floorAt(o.position.x, o.position.z);
-    if (P.chute) P.chute.position.set(o.position.x, o.position.y + 1.5 + 3.4, o.position.z);
-    if (o.position.y <= fl) { o.position.y = fl; P.landed = true; P.lt = P.t; o.rotation.set(0, Math.PI, 0); setPose(o, 'wave'); puff(o.position, 'dust', 3); sfx('bump'); }
-  } else { if (P.chute) { const k = Math.min(1, (P.t - P.lt) / 1.2); P.chute.scale.set(1 + k * .3, Math.max(.05, 1 - k), 1 + k * .3); P.chute.position.y = o.position.y + Math.max(.2, (1 - k) * 4.9); P.chute.position.z = o.position.z + 1 + k * 1.5; }
-    const u = o.userData; u.arms.forEach(a => { if (a.position.x > 0) a.rotation.z = -2.6 + Math.sin(P.t * 9) * .4; }); }
-}
+// 🪂 katapulta: pilots izšaujas kā lode uz priekšu, pēc brīža sāk krist ātrāk un tad atver izpletni; braucamrīks lido tālāk viens
+let ejected = false;
+function eject() { if (state !== 'run' || ejected || !sim || sim.mode !== 'air') return; ejected = true; joyReset(); inp.turbo = false; $('turbo').classList.remove('on'); $('eject').classList.remove('on'); hints(false);
+  const hx = Math.sin(sim.psi), hz = Math.cos(sim.psi), pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); pil.rotation.set(-1.2, sim.psi, 0);
+  PIL = { o: pil, v: new T3.Vector3(hx * (sim.vz + 12), sim.vy + 5, hz * (sim.vz + 12)), t: 0, landed: false, eject: true };
+  puff(pil.position, 'white', 3); sparks(pil.position.clone(), 14, sim.vz); sfx('eject'); camShake = .5; if (navigator.vibrate) navigator.vibrate(40);  }
+function updatePilot(dt) { if (!PIL || PIL.landed) return; const P = PIL, o = P.o; P.t += dt;
+  // izšautais pilots lido kā lode un krīt; pieskaroties zemei/jumtam – lidojums beidzas
+  P.v.y -= GR * 1.35 * dt; o.rotation.order = 'YXZ'; o.rotation.set(Math.atan2(Math.hypot(P.v.x, P.v.z), P.v.y), Math.atan2(P.v.x, P.v.z), 0);
+  o.position.addScaledVector(P.v, dt); const fl = floorAt(o.position.x, o.position.z);
+  if (o.position.y <= fl) { o.position.y = fl; P.landed = true; o.rotation.set(0, Math.PI, 0); setPose(o, 'wave'); puff(o.position, 'dust', 4); sfx('bump'); camShake = .4; } }
 function finish(kind) {
   if (state === 'end') return;
-  const landed = kind === 'land', dist = Math.max(0, Math.round(endInfo ? endInfo.dist : sim.maxZ)), vid = save.veh, old = save.best[vid] || 0, rec = dist > old && dist >= 5;
-  const parts = [['📏 Attālums', '€' + Math.round(dist / 5)]]; let money = Math.round(dist / 5);
+  const landed = kind === 'land', ej = ejected, dist = Math.max(0, Math.round(ej && PIL ? PIL.o.position.z : endInfo ? endInfo.dist : sim.maxZ)), vid = save.veh, old = save.best[vid] || 0, rec = dist > old && dist >= 5;
+  const parts = [['🎢 Par lēcienu', '€5'], ['📏 Attālums', '€' + Math.round(dist / 5)]]; let money = 5 + Math.round(dist / 5);
   if (landed) { const b = Math.round(dist / 20) + 3; money += b; parts.push(['🛬 Nolaidies', '+€' + b]); }
+  if (ej) { money += 3; parts.push(['🚀 Katapulta', '+€3']); }
   if (sim.flips) { money += sim.flips * 2; parts.push([`🤸 Salto ×${sim.flips}`, '+€' + sim.flips * 2]); }
   if (sim.roofs) { money += sim.roofs * 2; parts.push([`🏠 Jumti ×${sim.roofs}`, '+€' + sim.roofs * 2]); }
   if (rec) { const b = 5 + Math.round((dist - old) / 10); money += b; parts.push(['🏆 Jauns rekords', '+€' + b]); }
@@ -486,70 +492,67 @@ function finish(kind) {
   walletAdd(money); persist(); medals(); hud(); placeBest();
   const lv1 = levelOf(save.xp).l;
   endInfo = { dist, money, xp, rec, landed };
-  state = 'end'; document.body.classList.remove('run'); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); inp.turbo = false;
+  state = 'end'; $('eject').classList.remove('on'); document.body.classList.remove('run'); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); inp.turbo = false;
   setTimeout(() => {
-    sheet(`<div class="step">${VEH[vid].i} ${VEH[vid].n}</div><h2>${landed ? '🛬 Nolaidies!' : '🪂 Avārija – bet tēls izlēca!'}</h2>
-      <div class="big">${dist} m</div>${rec ? '<p style="text-align:center;font-weight:900;color:#ffd34d">🏆 Jauns rekords!</p>' : `<p style="text-align:center;color:#c9d2ff">Rekords: ${Math.round(old)} m</p>`}
-      <div class="parts">${parts.map(([a, b]) => `<div class="part"><span>${a}</span><b>${b}</b></div>`).join('')}<div class="part"><span>💰 Kopā</span><b>€${money}</b></div><div class="part"><span>⭐ XP</span><b>+${xp}</b></div></div>
+    sheet(`<h2 style="text-align:center">${landed ? '🛬' : ej ? '🚀🧍' : '💥'} ${VEH[vid].i}</h2>
+      <div class="big">${dist} m</div>${rec ? '<p style="text-align:center;font-weight:900;color:#ffd34d">🏆 Rekords!</p>' : `<p style="text-align:center;color:#c9d2ff">🏆 ${Math.round(old)} m</p>`}
+      <div class="res"><div class="part"><span>💰</span><b>+€${money}</b></div><div class="part"><span>⭐</span><b>+${xp}</b></div></div>
       ${lv1 > lv0 ? `<p style="text-align:center;font-weight:900;color:#7dffa8">⬆ ${lv1}. līmenis!</p>` : ''}
-      <div class="row2"><button class="main ghostB" id="toShop">🔧 Darbnīca</button><button class="main green" id="again">🔁 Vēlreiz</button></div>`);
+      <div class="row2"><button class="main ghostB" id="toShop">🔧</button><button class="main green" id="again">🔁 Vēlreiz</button></div>`);
     $('again').onclick = () => go(); $('toShop').onclick = () => { closeSheet(); openShop(); };
     sfx(rec ? 'win' : 'coin');
-  }, landed ? 900 : 300);
+  }, landed ? 450 : 250);
 }
 
 // ================= Darbnīca =================
 function rampSpeed(st) { const s = new Sim(st, RAMP, WORLD); for (let i = 0; i < 120 * 40 && s.mode === 'ramp'; i++) s.step({ pitch: 0 }); return s.mode === 'ramp' ? s.v : (s.ev[0] || [0, s.v])[1]; }
 function openShop() {
-  state = 'shop'; $('lever').classList.remove('on'); document.body.classList.remove('run'); closeSheet(); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); clearFX(); setVehicle(); renderShop(); $('shop').classList.add('on'); viewOffset();
+  camSnap = true;
+  state = 'shop'; ejected = false; $('eject').classList.remove('on'); $('lever').classList.remove('on'); document.body.classList.remove('run'); closeSheet(); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); clearFX(); setVehicle(); renderShop(); $('shop').classList.add('on'); viewOffset();
 }
 function renderShop() {
   const vid = save.veh, V = VEH[vid], o = own(vid), sh = $('shop');
   let h = `<h3>🔧 Darbnīca <small>💰 €${wallet}</small></h3><div class="vtabs">${Object.keys(VEH).map(k => `<button data-v="${k}" class="${k === vid ? 'on' : ''}"><i>${VEH[k].i}</i>${VEH[k].n}${own(k) ? '' : `<em>🔒 €${VEH[k].p}</em>`}</button>`).join('')}</div>`;
-  if (!o) { h += `<div class="vlock"><div style="font-size:54px">${V.i}</div><p>${V.d}</p><button class="buy ${wallet < V.p ? 'no' : ''}" id="buyV" style="width:100%;min-height:54px;font-size:17px">Nopirkt par €${V.p}</button></div>`; sh.innerHTML = h; wireShop(); return; }
-  const sel = selOf(vid), st = ST;
-  for (const [k, S] of Object.entries(V.slots)) { const lv = sel[k] || 0, cur = S.lv[lv], nx = S.lv[lv + 1];
-    h += `<div class="slot"><i>${S.i}</i><div><b>${S.n}</b><small>${cur.n}</small><div class="pips">${S.lv.map((_, i) => `<u class="${i <= lv ? 'on' : ''}"></u>`).join('')}</div>
-      ${k === 'wing' && lv > 0 ? `<div class="lr"><button data-long="0" class="${sel.long ? '' : 'on'}">Īsie – veikli</button><button data-long="1" class="${sel.long ? 'on' : ''}">Garie – tālu</button></div>` : ''}</div>
-      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">${esc(nx.n.split(' ')[0])}<br>€${nx.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
+  if (!o) { h += `<div class="vlock"><div style="font-size:54px">${V.i}</div><button class="buy ${wallet < V.p ? 'no' : ''}" id="buyV" style="width:100%;min-height:54px;font-size:17px">Nopirkt €${V.p}</button></div>`; sh.innerHTML = h; wireShop(); return; }
+  const sel = selOf(vid);
+  for (const [k, S] of Object.entries(V.slots)) { const lv = sel[k], have = o[k] || 0, nx = S.lv[have + 1];
+    h += `<div class="slot"><i>${S.i}</i><div><b>${S.n}</b><small>${S.lv[lv].n}</small><div class="lvs">${S.lv.map((_, i) => `<button data-k="${k}" data-l="${i}" class="${i === lv ? 'on' : ''} ${i <= have ? 'own' : ''}" ${i > have ? 'disabled' : ''}>${i || '–'}</button>`).join('')}</div></div>
+      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">€${nx.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
   const r = RAMPS[save.ramp], rn = RAMPS[save.ramp + 1];
-  h += `<div class="slot"><i>🏗️</i><div><b>Rampa (visiem)</b><small>${r.n} – ${r.h} m</small><div class="pips">${RAMPS.map((_, i) => `<u class="${i <= save.ramp ? 'on' : ''}"></u>`).join('')}</div></div>
-    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">${rn.h} m<br>€${rn.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`;
-  const vs = rampSpeed(st);
-  h += `<div class="bars"><span>🏁 Ātrums rampā ${Math.round(vs * 3.6)} km/h</span><div><i style="width:${clamp(vs / 60, .05, 1) * 100}%"></i></div>
-    ${st.S ? `<span>🪽 Planēšana 1:${st.LD.toFixed(0)}</span><div><i style="width:${clamp(st.LD / 16, .05, 1) * 100}%"></i></div>` : `<span>🪽 Neplanē</span><div><i style="width:3%"></i></div>`}
-    <span>⚖️ Svars ${Math.round(st.m)} kg</span><div><i style="width:${clamp(st.m / 1200, .05, 1) * 100}%"></i></div>
-    ${st.T ? `<span>🔥 Turbo ${st.fuel} s</span><div><i style="width:${clamp(st.T * st.fuel / st.m / 70, .05, 1) * 100}%"></i></div>` : ''}</div>
-    <p style="margin:6px 0 0;font-size:13px;color:#c9d2ff">🏆 Rekords: <b style="color:#ffd34d">${Math.round(save.best[vid] || 0)} m</b> · Lēcieni: ${save.flights}</p>
+  h += `<div class="slot"><i>🏗️</i><div><b>Rampa</b><small>${r.h} m</small><div class="pips">${RAMPS.map((_, i) => `<u class="${i <= save.ramp ? 'on' : ''}"></u>`).join('')}</div></div>
+    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">€${rn.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>
+    <p style="margin:6px 0 0;font-size:13px;color:#c9d2ff">🏆 <b style="color:#ffd34d">${Math.round(save.best[vid] || 0)} m</b></p>
     <button id="go">🚀 Aiziet!</button>`;
   sh.innerHTML = h; wireShop();
 }
 function wireShop() { const sh = $('shop');
   sh.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { save.veh = b.dataset.v; persist(); setVehicle(); renderShop(); sfx('tick'); });
-  const bv = $('buyV'); if (bv) bv.onclick = () => { const V = VEH[save.veh]; if (wallet < V.p) { toast(`💰 Vēl jānopelna €${V.p - wallet}`); sfx('bad'); return; } walletAdd(-V.p); save.own[save.veh] = { wheel: 0, aero: 0, eng: 0 }; persist(); setVehicle(); renderShop(); sfx('win'); toast(`${V.i} ${V.n} ir tavā darbnīcā!`); };
-  sh.querySelectorAll('[data-long]').forEach(b => b.onclick = () => { own(save.veh).long = +b.dataset.long; persist(); setVehicle(); renderShop(); sfx('tick'); });
+  const bv = $('buyV'); if (bv) bv.onclick = () => { const V = VEH[save.veh]; if (wallet < V.p) { toast(`💰 Vēl €${V.p - wallet}`); sfx('bad'); return; } walletAdd(-V.p); save.own[save.veh] = { wheel: 0, aero: 0, eng: 0 }; persist(); setVehicle(); renderShop(); sfx('win'); };
+  sh.querySelectorAll('[data-l]').forEach(b => b.onclick = () => { own(save.veh)['u_' + b.dataset.k] = +b.dataset.l; persist(); setVehicle(); renderShop(); sfx('tick'); });
   sh.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy;
-    if (k === 'ramp') { const rn = RAMPS[save.ramp + 1]; if (wallet < rn.p) { toast(`💰 Vēl jānopelna €${rn.p - wallet}`); sfx('bad'); return; } walletAdd(-rn.p); save.ramp++; persist(); buildRamp(RAMPS[save.ramp].h); setVehicle(); renderShop(); sfx('win'); toast(`🏗️ ${rn.n} – ${rn.h} m!`); return; }
-    const o = own(save.veh), S = VEH[save.veh].slots[k], nx = S.lv[(o[k] || 0) + 1]; if (wallet < nx.p) { toast(`💰 Vēl jānopelna €${nx.p - wallet}`); sfx('bad'); return; }
-    walletAdd(-nx.p); o[k] = (o[k] || 0) + 1; if (k === 'wing' && o[k] === 1) o.long = 1; persist(); setVehicle(); renderShop(); sfx('win'); toast(`${S.i} ${nx.n}!`); });
+    if (k === 'ramp') { const rn = RAMPS[save.ramp + 1]; if (wallet < rn.p) { toast(`💰 Vēl €${rn.p - wallet}`); sfx('bad'); return; } walletAdd(-rn.p); save.ramp++; persist(); buildRamp(RAMPS[save.ramp].h); setVehicle(); renderShop(); sfx('win'); return; }
+    const o = own(save.veh), S = VEH[save.veh].slots[k], nx = S.lv[(o[k] || 0) + 1]; if (wallet < nx.p) { toast(`💰 Vēl €${nx.p - wallet}`); sfx('bad'); return; }
+    walletAdd(-nx.p); o[k] = (o[k] || 0) + 1; o['u_' + k] = o[k]; persist(); setVehicle(); renderShop(); sfx('win'); });
   const g = $('go'); if (g) g.onclick = () => go(); }
 
 // ================= Kamera un kadrs =================
-const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3(); let camPsi = 0;
+const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3(), camOff = new T3.Vector3(); let camPsi = 0, camSnap = true;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = clamp((now - lastT) / 1000, 0, .25); lastT = now; if (document.hidden) return;
   const paused = $('ov').classList.contains('on') && state === 'run';
   if (state === 'run' && !paused) {
-    acc += dt; runT += dt; const ip = { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
-    while (acc >= DT && state === 'run') { prev.z = sim.z; prev.y = sim.y; prev.x = sim.x; prev.phi = sim.phi; prev.psi = sim.psi; prev.bank = sim.bank; sim.step(ip); acc -= DT; handleEvents(); }
+    acc += dt; runT += dt; const ip = ejected ? { pitch: 0, roll: 0, turbo: false, help: true } : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
+    if (ejected) { updatePilot(dt); if (PIL && PIL.landed) { finish('eject'); } }
+    $('eject').classList.toggle('on', state === 'run' && !ejected && sim.mode === 'air' && sim.air > .4);
+    while (acc >= DT && state === 'run' && sim.mode !== 'done') { prev.z = sim.z; prev.y = sim.y; prev.x = sim.x; prev.phi = sim.phi; prev.psi = sim.psi; prev.bank = sim.bank; sim.step(ip); acc -= DT; handleEvents(); }
     const a = state === 'run' ? acc / DT : 1, L2 = (k) => prev[k] + (sim[k] - prev[k]) * a, z = L2('z'), y = L2('y'), x = L2('x'), ph = prev.phi + wrap(sim.phi - prev.phi) * a;
     VEHM.g.position.set(x, y, z); VEHM.g.rotation.set(-ph, L2('psi'), -L2('bank'));
     if (state === 'run') updateBirds(dt);
     if (state === 'run') { const sp = sim.speed; if (VEHM.spin) VEHM.spin.rotation.z += dt * (sim.thr ? 60 : 8 + sp * .5);
       VEHM.flameM.forEach(f => { f.visible = sim.thr; if (sim.thr) f.scale.setScalar(.8 + Math.random() * .5); });
       updateStreaks(VEHM, dt, sp, sim.mode === 'air' ? sim.alpha : 0, sim.mode === 'air' ? sim.cl : 0, OPT.streaks);
-      $('dM').textContent = Math.max(0, Math.round(sim.maxZ)) + ' m'; $('dSub').textContent = `⬆ ${Math.max(0, Math.round(sim.y - surfAt(WORLD, sim.x, sim.z).h))} m · ${Math.round(sp * 3.6)} km/h`;
+      $('dM').textContent = Math.max(0, Math.round(ejected && PIL ? PIL.o.position.z : sim.maxZ)) + ' m'; $('dSub').textContent = `⬆ ${Math.max(0, Math.round(sim.y - surfAt(WORLD, sim.x, sim.z).h))} m · ${Math.round(sp * 3.6)} km/h`;
       if (ST.T) $('turbo').style.setProperty('--f', (sim.fuel / ST.fuel * 100) + '%');
       if (!sim.stall) $('warn').classList.remove('on');
       wind(sp); engine(sim.thr);
@@ -560,7 +563,7 @@ function frame(now) {
   if (GATE) { gateA += ((state === 'shop' || state === 'ready' ? 0 : 1) - gateA) * Math.min(1, dt * 6); GATE.userData.bar.rotation.z = gateA * 1.45 + (state === 'ready' ? leverK * .06 : 0); }
   if (state === 'crash' || state === 'end') { crashT += dt; updateDebris(dt); updatePilot(dt); wind(0); engine(false);
     if (state === 'crash' && crashT < 3 && Math.random() < dt * 8 && DEB[0]) puff(DEB[0].o.position, 'smoke', 1);
-    if (state === 'crash' && ((PIL && PIL.landed && PIL.t - PIL.lt > 1.2) || crashT > 12)) finish('crash'); }
+    if (state === 'crash' && (ejected ? (PIL && PIL.landed) || crashT > 8 : crashT > .9)) finish('crash'); }
   updateFX(dt);
   // ēna
   const vp = state === 'shop' || state === 'run' ? VEHM.g.position : PIL ? PIL.o.position : VEHM.g.position, sh = state === 'run' && sim && sim.mode !== 'ramp' ? surfAt(WORLD, vp.x, vp.z).h : -9;
@@ -568,16 +571,19 @@ function frame(now) {
   // kamera
   const port = W < H;
   if (state === 'shop') { const p = VEHM.g.position, a = Math.sin(shopT * .25) * .6 + .75, r = VEHM.len * 1.3 + 4;
-    camT.set(p.x + Math.sin(a) * r, p.y + 2.2 + r * .15, p.z + Math.cos(a) * r); camL.set(p.x, p.y + .9, p.z); camera.position.lerp(camT, 1 - Math.exp(-dt * 3)); }
-  else if (state === 'run' || state === 'ready') { const p = VEHM.g.position, sp = state === 'ready' ? 0 : sim.speed, back = (port ? 6.5 : 5.2) + VEHM.len * .95 + sp * .045, up = 1.7 + VEHM.len * .32 + sp * .018;
-    const onR = state === 'ready' || sim.mode === 'ramp' || p.z < 0; camPsi += wrap(sim.psi - camPsi) * Math.min(1, dt * 2.5); const hx = Math.sin(camPsi), hz = Math.cos(camPsi);
+    camT.set(p.x + Math.sin(a) * r, p.y + 2.2 + r * .15, p.z + Math.cos(a) * r); camL.set(p.x, p.y + .9, p.z); if (camSnap) { camera.position.copy(camT); camSnap = false; } else camera.position.lerp(camT, 1 - Math.exp(-dt * 3)); }
+  else if (state === 'run' || state === 'ready') { const p = ejected && PIL ? PIL.o.position : VEHM.g.position, sp = state === 'ready' ? 0 : ejected && PIL ? Math.min(25, PIL.v.length()) : sim.speed, back = (port ? 6.5 : 5.2) + VEHM.len * .95 + sp * .045, up = 1.7 + VEHM.len * .32 + sp * .018;
+    const onR = !ejected && (state === 'ready' || sim.mode === 'ramp' || p.z < 0); camPsi += wrap(sim.psi - camPsi) * Math.min(1, dt * 2.5); const hx = Math.sin(camPsi), hz = Math.cos(camPsi);
     let cy = p.y + up, cz = p.z - back * hz, cx = p.x - back * hx;
     if (onR) { const rs0 = (sim.mode === 'ramp' ? sim.s : RAMP.len) - back, rp = rampAt(RAMP, Math.max(0, rs0)); cy = Math.max(cy, rp.y + up + 1); cz = rp.z + Math.min(0, rs0); cx = p.x; }
-    camT.set(cx, cy, cz); const la = 10 + sp * .25; camL.set(p.x + hx * la, p.y + 1, p.z + hz * la);
-    camera.position.lerp(camT, 1 - Math.exp(-dt * (onR ? 6 : 4))); }
+    if (state === 'ready') { cy = p.y + 2.2 + VEHM.len * .15; cz = p.z - (3.5 + VEHM.len * .9); cx = p.x; }
+    // kamera piesieta braucamrīkam (bez atpalikšanas ātrumā → neraustās); gludi mainās tikai nobīde
+    camOff.lerp(tmp.set(cx - p.x, cy - p.y, cz - p.z), camSnap ? 1 : 1 - Math.exp(-dt * 3)); camSnap = false; camera.position.copy(p).add(camOff);
+    const la = 10 + sp * .25; camL.set(p.x + hx * la, p.y + 1 + (state === 'ready' ? -2.5 : 0), p.z + hz * la); }
   else { const tgt = PIL && crashT > 1.4 ? PIL.o.position : DEB[0] ? DEB[0].o.position : VEHM.g.position;
     camT.set(tgt.x + 8 + Math.min(6, crashT), tgt.y + 5 + Math.min(4, crashT), tgt.z - 14); camL.copy(tgt); camL.y += 1.5; camera.position.lerp(camT, 1 - Math.exp(-dt * 2)); }
   camera.lookAt(camL);
+  cullChunks();
   if (camShake > 0) { camShake = Math.max(0, camShake - dt * 1.6); camera.position.x += rnd(-.3, .3) * camShake; camera.position.y += rnd(-.3, .3) * camShake; }
   renderer.render(scene, camera);
 }
@@ -599,6 +605,8 @@ tb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(
 addEventListener('keydown', e => { if (e.repeat) return; if (e.key === 'ArrowUp' || e.key === 'w') kUp = 1; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 1; else if (e.key === 'ArrowLeft' || e.key === 'a') kL = 1; else if (e.key === 'ArrowRight' || e.key === 'd') kR = 1; else if (e.key === ' ') { inp.turbo = true; e.preventDefault(); if (state === 'ready') release(); } else if (e.key === 'Enter' && (state === 'shop' || state === 'end')) go(); else if (e.key === 'Enter' && state === 'ready') release(); recalcInput(); });
 addEventListener('keyup', e => { if (e.key === 'ArrowUp' || e.key === 'w') kUp = 0; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 0; else if (e.key === 'ArrowLeft' || e.key === 'a') kL = 0; else if (e.key === 'ArrowRight' || e.key === 'd') kR = 0; else if (e.key === ' ') inp.turbo = false; recalcInput(); });
 addEventListener('contextmenu', e => e.preventDefault());
+$('quit').addEventListener('click', e => { e.stopPropagation(); if (state === 'ready' || state === 'run' || state === 'crash') { inp.turbo = false; joyReset(); openShop(); } });
+$('eject').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); eject(); });
 
 // ================= UI palīgi =================
 function sheet(html) { $('sheet').innerHTML = html; $('ov').classList.add('on'); }
@@ -650,7 +658,8 @@ function sfx(k) { if (!AC) return;
   else if (k === 'glass') for (let i = 0; i < 7; i++) tone(2400 + Math.random() * 2400, 1800 + Math.random() * 1200, .12, 'triangle', .05, i * .045 + Math.random() * .03);
   else if (k === 'bird') { tone(1500, 900, .12, 'triangle', .07); tone(1400, 800, .14, 'triangle', .06, .14); noise(.12, .2, 2500); }
   else if (k === 'sputter') for (let i = 0; i < 6; i++) { tone(90, 60, .08, 'sawtooth', .08, i * .13); noise(.08, .2, 600, i * .13); }
-  else if (k === 'chute') { noise(.25, .3, 1200); tone(220, 180, .2, 'sine', .08, .05); } }
+  else if (k === 'eject') { noise(.35, .4, 2500); tone(300, 900, .25, 'square', .06); }
+ }
 
 // ================= Saglabāšana, nauda, medaļas =================
 const ONLINE = location.protocol === 'https:'; let UID = null, NAME = '', NICK = '', wallet = 0;
@@ -663,8 +672,8 @@ function medals() { if (!UID || !window.TWA) return; const S = save.st, b = save
 function fixSave() { const d = { plane: 0, scoot: 0, car: 0 }; save.best = Object.assign(d, save.best || {}); save.st = Object.assign({ landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, save.st || {});
   save.own = save.own || {}; if (!save.own.plane) save.own.plane = { wheel: 0, wing: 0, eng: 0, long: 0 }; if (!VEH[save.veh] || !save.own[save.veh]) save.veh = 'plane'; save.ramp = clamp(save.ramp || 0, 0, RAMPS.length - 1); }
 function start() { loadModels(start2); }
-function start2() { fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); hud(); requestAnimationFrame(frame);
-  if (!save.flights) setTimeout(() => banner('Uzlabo braucamrīku un spied 🚀 Aiziet!', 4), 600); }
+function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); hud(); requestAnimationFrame(frame);
+ }
 if (!ONLINE) { try { const s = JSON.parse(localStorage.getItem('rpSave')); if (s) save = Object.assign(save, s); wallet = +(localStorage.getItem('rpWalletDev') || 0); } catch (e) {} }
 if (ONLINE && window.firebase && window.TW_FIREBASE) {
   firebase.auth().onAuthStateChanged(async u => {

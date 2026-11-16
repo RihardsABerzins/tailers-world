@@ -39,7 +39,7 @@
   tiers('ap', 'apLevel', 'aplv', [[5, '🩹', 'Mediķis', 'Medic'], [10, '🏅', 'Pieredzējis mediķis', 'Senior medic'], [20, '👑', 'Brigādes vadītājs', 'Crew chief']],
     n => `Sasniedzi ${n}. līmeni ātrajā palīdzībā`, n => `Reached level ${n} in the ambulance game`);
 
-  // ---- Skola (ctx: skLessons, skPerfect, skCaught, skCorrect, skLevel) ----
+  // ---- Skola (ctx: skLessons, skPerfect, skCaught, skCorrect, skLevel, skWc, skDays, skGrade, skCoffee, skDeco) ----
   tiers('skola', 'skLessons', 'skl', [[1, '🏫', 'Pirmā stunda', 'First lesson'], [10, '📚', '10 stundas', '10 lessons'], [50, '🎓', '50 stundas', '50 lessons'], [100, '🍎', 'Gada skolotājs', 'Teacher of the year']],
     n => n === 1 ? 'Novadīji pirmo stundu' : `Novadīji ${n} stundas`, n => `Taught ${n} lesson${n > 1 ? 's' : ''}`);
   tiers('skola', 'skPerfect', 'skp', [[1, '💯', 'Visi pareizi', 'All correct'], [10, '🌟', '10 izcilas stundas', '10 perfect lessons']],
@@ -48,6 +48,16 @@
     n => `Pieķēri ${n} draiskuļus`, n => `Caught ${n} pranksters`);
   tiers('skola', 'skCorrect', 'skr', [[100, '✏️', '100 pareizas atbildes', '100 right answers'], [500, '📖', '500 pareizas atbildes', '500 right answers']],
     n => `Kopā ${n} pareizas atbildes stundās`, n => `${n} right answers in lessons`);
+  tiers('skola', 'skWc', 'skwc', [[5, '🚽', 'Godīgs tiesnesis', 'Fair judge'], [25, '🔍', 'Šmaucēju atmaskotājs', 'Fibber finder'], [100, '⚖️', 'Taisnīgais skolotājs', 'Just teacher']],
+    n => `${n} pareizi lēmumi par tualeti`, n => `${n} right bathroom calls`);
+  tiers('skola', 'skDays', 'skd', [[1, '🏠', 'Pirmā skolas diena', 'First school day'], [10, '📅', '10 skolas dienas', '10 school days'], [50, '🗓️', '50 skolas dienas', '50 school days']],
+    n => n === 1 ? 'Novadīji visu skolas dienu (4 stundas)' : `Novadīji ${n} pilnas skolas dienas`, n => `Taught ${n} full school day${n > 1 ? 's' : ''}`);
+  tiers('skola', 'skGrade', 'skg', [[3, '🧮', '3. klase', 'Grade 3'], [6, '🔬', '6. klase', 'Grade 6'], [9, '🧠', '9. klase', 'Grade 9']],
+    n => `Jautājumi aizgāja līdz ${n}. klasei`, n => `Questions reached grade ${n}`);
+  tiers('skola', 'skCoffee', 'skcf', [[10, '☕', 'Kafijas cienītājs', 'Coffee fan'], [50, '🫖', 'Skolotāju istabas leģenda', 'Staff room legend']],
+    n => `Izdzēri ${n} kafijas krūzes`, n => `Drank ${n} cups of coffee`);
+  tiers('skola', 'skDeco', 'skdc', [[3, '🪴', 'Mājīga klase', 'Cozy classroom'], [9, '🏆', 'Skaistākā klase', 'Best classroom']],
+    n => n === 3 ? 'Klasē 3 rotājumi vai tāfeles' : 'Visi rotājumi un visas tāfeles', n => `${n} classroom items`);
   tiers('skola', 'skLevel', 'sklv', [[5, '📏', 'Skolotājs', 'Teacher'], [10, '🧑‍🏫', 'Vecākais skolotājs', 'Senior teacher'], [20, '🏛️', 'Direktors', 'Principal']],
     n => `Sasniedzi ${n}. līmeni skolā`, n => `Reached level ${n} in the school game`);
 
@@ -68,8 +78,8 @@
     n => `Aizlidoji ${n} m ar mašīnu`, n => `Flew ${n} m with the car`);
   tiers('rampa', 'rpRoof', 'rpr', [[1, '🏠', 'Pa jumtiem', 'Over the roofs'], [10, '🏘️', '10 jumtu lēcieni', '10 roof bounces']],
     n => n === 1 ? 'Atlēci no mājas jumta' : `Kopā ${n} lēcieni pa jumtiem`, n => `Bounced off ${n} roof${n > 1 ? 's' : ''}`);
-  tiers('rampa', 'rpCrash', 'rpx', [[1, '🪂', 'Izpletnis', 'Parachute'], [10, '💥', 'Kaskadieris', 'Stunt double'], [50, '🎬', 'Kino kaskadieris', 'Movie stuntman']],
-    n => n === 1 ? 'Pēc avārijas izlēci ar izpletni' : `${n} avārijas – katrā izlēci ar izpletni`, n => `${n} crashes – bailed out every time`);
+  tiers('rampa', 'rpCrash', 'rpx', [[1, '💥', 'Bums!', 'Boom!'], [10, '🎬', 'Kaskadieris', 'Stunt double'], [50, '🏆', 'Kino kaskadieris', 'Movie stuntman']],
+    n => n === 1 ? 'Pirmā avārija mega rampā' : `${n} avārijas mega rampā`, n => `${n} crash${n > 1 ? 'es' : ''} on the mega ramp`);
   tiers('rampa', 'rpBird', 'rpb', [[1, '🐦', 'Putnu draugs', 'Bird buddy'], [10, '🪶', 'Spalvu lietus', 'Feather shower']],
     n => n === 1 ? 'Lidojumā satiki putnu (tas aizlidoja sveiks!)' : `Lidojumos satiki ${n} putnus`, n => `Bumped into ${n} bird${n > 1 ? 's' : ''} (they flew away fine!)`);
   tiers('rampa', 'rpLevel', 'rplv', [[5, '🎖️', 'Lēcējs', 'Jumper'], [10, '🏅', 'Mega lēcējs', 'Mega jumper'], [20, '👑', 'Rampas karalis', 'Ramp king']],
