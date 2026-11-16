@@ -36,7 +36,9 @@
   R.setVol = v => { R.vol = Math.max(0, Math.min(1, v)); if (R.muted && R.vol > 0) R.muted = false; R.apply(); save(); emit(); };
   R.mute = () => { R.muted = !R.muted; R.apply(); save(); emit(); };
   R.duck = k => { R.k = k; R.apply(); };
-  R.start = () => { if (R.started) return; R.started = true; R.playRadio(R.radio); };
+  // lokālajos testa serveros (localhost) radio pats nesāk skanēt – testējot ir klusums; ar ▶ var ieslēgt
+  const TEST = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost)$/.test(location.hostname);
+  R.start = () => { if (R.started) return; R.started = true; if (TEST) { ensure(); const x = RADIOS[R.radio]; setSrc(x.u, x.hls); R.apply(); emit(); return; } R.playRadio(R.radio); };
   setInterval(() => { if (R.started && !R.pl && R.playing() && now() > R.nextPL) R.playPL(); }, 2000);
   // ---- vadība iestatījumu logā ----
   R.controlsHTML = () => `<div class="twr"><div class="twrT"></div><div class="twrB"><button data-r="prev">⏮</button><button data-r="toggle">▶</button><button data-r="next">⏭</button><button data-r="mute">🔇</button></div>

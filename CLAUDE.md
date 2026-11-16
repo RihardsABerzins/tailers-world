@@ -15,6 +15,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - **Katrā spēlē ir ⚙ iestatījumi**: radio vadība (`TWRadio.controlsHTML()` + `TWRadio.wire(el)`), mūzikas skaļums un efektu skaļums (+ Graffiti: gaišums, valoda). Jaunai spēlei tie jāpievieno.
 - **Iestatījumi visās spēlēs izskatās un darbojas vienādi**: ⚙ poga tajā pašā vietā (augšējā joslā), tas pats loga izskats (tumšs panelis, noapaļots, virsraksts „⚙ Iestatījumi”), tā pati secība – 1) radio (⏮ ⏯ ⏭ 🔇 + mūzikas skaļums), 2) efektu skaļums, 3) spēles specifiskie iestatījumi, 4) poga „Gatavs”. Jaunu iestatījumu pievieno visās spēlēs vienādi; atšķirīgu dizainu katrai spēlei netaisa.
 - Graffiti arī izmanto `tw-radio.js` (atskaņotāja josla un pauzes iestatījumi vada `TWRadio`).
+- **Testos klusums**: lokālajos testa serveros (localhost, 127.0.0.1, file:) radio pats nesāk skanēt (`TEST` tw-radio.js); ar ▶ var ieslēgt. Mainot tw-radio.js, palielini `?v=` visās lapās.
 
 ## Struktūra
 - **Katrai spēlei sava mape** (`/grafiti/`, nākamā – `/<spēle>/`): `index.html` (iezīmējums), `style.css`, `game.js`, `lang.js` (tulkojumi), mūzika/attēli tajā pašā mapē. Kopīgi tikai `tw-*.js`, `firebase-config.js` un sākumlapa.
