@@ -45,12 +45,16 @@ function genCity() {
 const CITY = genCity(), WORLD = CITY.world;
 
 // ================= three.js aina =================
-const renderer = new T3.WebGLRenderer({ canvas: $('cv'), antialias: (devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 2, devicePixelRatio || 1)); renderer.outputEncoding = T3.sRGBEncoding; renderer.toneMapping = T3.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; // dabiskākas, ne tik izbalējušas krāsas
-const scene = new T3.Scene(); scene.background = new T3.Color(0x9fd3ff); scene.fog = new T3.Fog(0xbfe3ff, 240, 1250);
+// asāka bilde: malu nogludināšana vienmēr; izšķirtspēja līdz 2× (telefonā DPR 3 → 2), pati samazinās, ja kadri krītas (DYN)
+const renderer = new T3.WebGLRenderer({ canvas: $('cv'), antialias: true, powerPreference: 'high-performance' });
+const PRMAX = Math.min(2, devicePixelRatio || 1), DYN = { pr: PRMAX, t: 0, acc: 0, n: 0 }; renderer.setPixelRatio(PRMAX); renderer.outputEncoding = T3.sRGBEncoding; renderer.toneMapping = T3.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; // dabiskākas, ne tik izbalējušas krāsas
+const scene = new T3.Scene(); scene.background = new T3.Color(0x9fd3ff); scene.fog = new T3.Fog(0xbfe3ff, 450, 1250); // migla tālāk – tuvumā skaidrāk
 const camera = new T3.PerspectiveCamera(62, 1, .3, 1350);
 const hemi = new T3.HemisphereLight(0xeaf6ff, 0x6a7d5a, .95); scene.add(hemi); const sun = new T3.DirectionalLight(0xfff4e0, .75); sun.position.set(-.6, 1, -.4); scene.add(sun);
-const tex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new T3.CanvasTexture(c); if (rep) { t.wrapS = t.wrapT = T3.RepeatWrapping; } t.anisotropy = 4; return t; };
+const tex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new T3.CanvasTexture(c); if (rep) { t.wrapS = t.wrapT = T3.RepeatWrapping; } t.anisotropy = ANISO; return t; };
+const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+// visām ielādētajām (GLB) tekstūrām – anizotropija, lai slīpumā nav izplūdušas
+function sharpenTextures(root) { (root || scene).traverse(o => { (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m && m.map && m.map.anisotropy < ANISO) { m.map.anisotropy = ANISO; m.map.needsUpdate = true; } }); }); }
 const MATS = {}; const mat = (c, o) => { const k = c + JSON.stringify(o || {}); return MATS[k] || (MATS[k] = new T3.MeshLambertMaterial(Object.assign({ color: c }, o || {}))); };
 const m4 = new T3.Matrix4(), q0 = new T3.Quaternion(), v3 = new T3.Vector3(), col = new T3.Color();
 
@@ -419,9 +423,11 @@ function buildVehicle2(vid, sel, st) {
     if (e >= 3 && KM === 'J') V.flames.push([0, hb, -1.95 * s, .6]); // reaktīvajai modelim dzinēji jau ir – tikai liesma aizmugurē
     else if (e === 3) { const ry = D.u - .16; putA(new T3.Mesh(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c))).position.set(0, ry, -.3); putA(new T3.Mesh(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5))).position.set(0, ry, .47); V.flames.push([0, hb + ry * s, -.95 * s, .5]); }
     else if (e === 4) { const jy = D.t + .2; putA(new T3.Mesh(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e))).position.set(0, jy, D.b * .35); putA(new T3.Mesh(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63))).position.set(0, jy, D.b * .35 + .85); V.flames.push([0, hb + jy * s, (D.b * .35 - .9) * s, .7]); }
-    const p = makePerson('sit'); p.scale.setScalar(.72); g.add(p); V.pilot = p;
-    if (KM) p.position.set(0, hb - (KM === 'J' ? .5 : .4) * s - (PILOT ? .14 : 0), (KM === 'J' ? .55 : .25) * s); // kabīnē
-    else p.position.set(0, (bT < 2 ? hb + D.t * s * .92 - .43 : hb - .3 * s) + (PILOT ? .3 : 0), bT < 2 ? -.15 * s : .32 * s); // Mini tēls sēž zemāk – paceļ
+    // Mini tēls stāv virsū lidaparātam (uz kartupeļa/kastes, Cessnas spārna, reaktīvās muguras); vecais tēls sēž
+    const p = makePerson(PILOT ? 'stand' : 'sit'); p.scale.setScalar(.72); g.add(p); V.pilot = p;
+    if (PILOT) p.position.set(0, hb + (KM === 'J' ? .2 : KM === 'P6' ? .44 : D.t * .95) * s, (KM === 'J' ? -.45 : KM === 'P6' ? .05 : -.15) * s);
+    else if (KM) p.position.set(0, hb - (KM === 'J' ? .5 : .4) * s, (KM === 'J' ? .55 : .25) * s);
+    else p.position.set(0, bT < 2 ? hb + D.t * s * .92 - .43 : hb - .3 * s, bT < 2 ? -.15 * s : .32 * s);
     V.len = 4.7 * s; V.flow = { ax: .55 * s, ay: .55 * s, az: 2.3 * s, cy: hb + .05, cz: 0, blunt: [.65, .85, .45, .3, .22, .15][bT + 1], drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
   } else if (vid === 'scoot') {
     const wr = .11 + (sel.wheel || 0) * .0018;
@@ -622,7 +628,7 @@ function placeBest() { if (BEST) { scene.remove(BEST); BEST = null; } const b = 
 function setVehicle() {
   if (VEHM) { scene.remove(VEHM.g); }
   disposeDebris(); if (PIL) { scene.remove(PIL.o); PIL = null; }
-  const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle2(vid, sel, ST); scene.add(VEHM.g); VEHM.g.add(STRK.grp);
+  const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle2(vid, sel, ST); scene.add(VEHM.g); sharpenTextures(VEHM.g); VEHM.g.add(STRK.grp);
   const p = RAMP.pts[0]; VEHM.g.position.set(0, p.y, p.z); VEHM.g.rotation.set(0, 0, 0); placeBest();
 }
 let BASEFOV = 72;
@@ -788,7 +794,11 @@ const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3(), 
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = clamp((now - lastT) / 1000, 0, .25); lastT = now; if (document.hidden) return;
-  DAYT += dt; applyDay(); STARS.position.copy(camera.position); if ((DAYT * 2 | 0) !== hudSec) { hudSec = DAYT * 2 | 0; hudKey = ''; hud(); }
+  DAYT += dt; applyDay();
+  // dinamiska izšķirtspēja: ja vidēji < ~42 FPS – mazāk pikseļu (līdz 1×), ja > ~55 FPS – atpakaļ līdz 2×
+  if (state === 'run') { DYN.acc += dt; DYN.n++; if ((DYN.t += dt) > 2) { const avg = DYN.acc / DYN.n; let np = DYN.pr;
+    if (avg > 1 / 42 && np > 1) np = Math.max(1, np - .25); else if (avg < 1 / 55 && np < PRMAX) np = Math.min(PRMAX, np + .25);
+    if (np !== DYN.pr) { DYN.pr = np; renderer.setPixelRatio(np); renderer.setSize(W, H, false); } DYN.t = DYN.acc = DYN.n = 0; } } STARS.position.copy(camera.position); if ((DAYT * 2 | 0) !== hudSec) { hudSec = DAYT * 2 | 0; hudKey = ''; hud(); }
   const paused = $('ov').classList.contains('on') && state === 'run';
   if (state === 'run' && !paused) {
     acc += dt; runT += dt; const ip = ejected ? (sim.coast ? { pitch: 0, roll: 0, turbo: false, help: true } : { pitch: -.7, roll: 0, turbo: false, help: false }) : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
@@ -938,7 +948,7 @@ const INTRO = [{ img: 'intro/1.webp', t: 'Velc sviru – aiziet!' }, { img: 'int
   { img: 'intro/4.webp', t: '🚀 Katapulta – izšaujies!' }, { img: 'intro/5.webp', t: 'Pērc uzlabojumus – lido tālāk!' }];
 const intro = force => window.TW && TW.intro ? TW.intro('rampa', INTRO, force) : Promise.resolve();
 function start() { loadModels(start2); }
-function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); warmUp(); hud(); requestAnimationFrame(frame); intro();
+function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); sharpenTextures(); warmUp(); hud(); requestAnimationFrame(frame); intro();
  }
 if (!ONLINE) { try { const s = JSON.parse(localStorage.getItem('rpSave')); if (s) save = Object.assign(save, s); wallet = +(localStorage.getItem('rpWalletDev') || 0); } catch (e) {} }
 if (ONLINE && window.firebase && window.TW_FIREBASE) {
