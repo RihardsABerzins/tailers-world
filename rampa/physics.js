@@ -53,6 +53,8 @@
       slots: {
         wheel: slot('🛞', 'Riteņi', 'Parastie', ['Sporta', 'Rallija', 'Bezceļu', 'Monstru', 'Lēcēju'], 50, L => ({ mu: L ? expo(.026, .008, L) : .03, roll: .02, rest: L ? lin(.34, .72, L) : .3 }), ['🛞', '🏎️', '🏁', '🛻', '👹', '🦘']),
         aero: slot('🏁', 'Aerodinamika', 'Kaste', ['Spoilers', 'Sporta', 'Sacīkšu', 'Aero', 'Raķetes forma'], 80, L => ({ cda: L ? lin(.75, .4, L) : .8 }), ['📦', '🪽', '🚙', '🏎️', '💨', '🚀']),
+        // mazi spārniņi sānos: nedaudz cēlējspēka (ilgāk planē), bet mašīna paliek mašīna (bez lidmašīnas vadības)
+        wing: slot('🪽', 'Spārniņi', 'Nav', ['Kartona', 'Plastmasas', 'Sporta', 'Karbona', 'Raķešu'], 60, L => L ? { Sw: lin(2, 9, L), m: lin(10, 35, L) } : {}, ['🚫', '📦', '🪁', '🏎️', '🦅', '🚀']),
         eng: slot('💨', 'Nitro', 'Nav', ['Nitro', 'Super', 'Mega', 'Ultra', 'Raķete'], 250, L => L ? { T: lin(3000, 9000, L), f: lin(2, 5, L), m: lin(15, 35, L) } : {}, ['🚫', '💨', '🔥', '⚡', '☄️', '🚀']),
       } },
   };
@@ -60,6 +62,7 @@
     const V = VEH[vid], S = V.slots, lv = k => S[k] ? S[k].lv[clamp(sel[k] || 0, 0, S[k].lv.length - 1)] : null;
     const w = lv('wheel'), wi = lv('wing'), e = lv('eng'), a = lv('aero'), bo = lv('body');
     const st = { vid, m: V.m, cda: a ? a.cda : V.cda, mu: w.mu, roll: w.roll, rest: w.rest || 0, crashV: V.crashV, S: 0, AR: 0, cd0: 0, T: 0, fuel: 0, flips: !!V.flips, bounce: !!V.bounce, wheels: (sel.wheel || 0) > 0 || vid !== 'plane', pitchK: 1, brake: { plane: .35, scoot: .3, car: .14 }[vid] };
+    if (wi && wi.Sw) { st.Sw = wi.Sw; st.m += wi.m; }
     if (wi && wi.S) { st.S = wi.S; st.AR = wi.ar; st.cd0 = wi.cd0; st.m += wi.m; st.pitchK = .85; st.span = Math.sqrt(st.S * st.AR); st.chord = st.S / st.span; }
     if (e && e.T) { st.T = e.T; st.fuel = e.f; st.m += e.m; }
     if (bo) { st.cda = bo.cda; st.m += bo.m; st.crashV = bo.crashV; }
@@ -74,7 +77,9 @@
   function forces(st, vz, vy, phi, thrust, cb) { if (cb == null) cb = 1;
     const v = Math.hypot(vz, vy) || 1e-6, gam = Math.atan2(vy, vz), a = wrap(phi - gam), q = .5 * RHO * v * v, cl = CL(st, a);
     let cd = st.cda; if (st.S) { cd += st.S * (st.cd0 + cl * cl / (Math.PI * .8 * st.AR)); if (Math.abs(a) > STALL) cd += st.S * 1.1 * Math.sin(Math.abs(a) - STALL + .2); }
-    const L = q * st.S * cl, D = q * cd, T = thrust ? st.T : 0;
+    // mašīnas spārniņi: paši nostājas pret plūsmu (neatkarīgi no mašīnas sasvēruma), krītot nes vairāk – ilgāk planē
+    const clw = st.Sw ? clamp(.35 + 2 * Math.max(0, -gam), 0, .9) : 0; if (st.Sw) cd += st.Sw * (.04 + clw * clw / 7.5);
+    const L = q * (st.S * cl + (st.Sw || 0) * clw), D = q * cd, T = thrust ? st.T : 0;
     return { az: (-D * Math.cos(gam) - L * cb * Math.sin(gam) + T * Math.cos(phi)) / st.m, ay: (-D * Math.sin(gam) + L * cb * Math.cos(gam) + T * Math.sin(phi)) / st.m - G, a, cl, L, D, stall: st.S && Math.abs(a) > STALL };
   }
 
@@ -147,6 +152,8 @@
       if (vn > st.crashV || (err > maxErr && !st.bounce) || (st.bounce && err > 100 * D2R && vn > 6) || Math.abs(this.bank) > 30 * D2R && vn > 3) return this.crash('hit', vn);
       if (st.bounce && vn > 3) { const r = st.rest; this.vz = vt * Math.cos(be) * .9 + vn * r * nz; this.vy = vt * Math.sin(be) * .9 + vn * r * ny; this.phi = be + wrap(this.phi - be) * .3; this.w *= -.3;
         if (b && b !== this.W.landing) this.roofs++; this.ev.push(['bounce', vn, b && b !== this.W.landing]); return; }
+      // pēc katapultas mašīna/skūteris bez vadītāja aizripo pa zemi un apstājas
+      if (this.coast && st.wheels && err < 60 * D2R) { this.mode = 'ground'; this.v = Math.max(0, vt); this.phi = be; this.w = 0; this.ev.push(['touch', vn, !!b && b !== this.W.landing]); return; }
       // pieskāriens zemei vai jumtam – lidojums beidzas uzreiz (bez ripošanas)
       this.phi = be; this.w = 0; this.ev.push(['touch', vn, !!b && b !== this.W.landing]); this.done('land'); }
     hitWall(b, v, x0, z0) { const st = this.st; this.x = x0; this.z = z0; this.wall = b;
@@ -156,7 +163,7 @@
       const D = .5 * RHO * v * v * st.cda / st.m;
       this.bank *= 1 - DT * 4;
       // pēc piezemēšanās – bremzes (lai nav jāgaida lēna ripošana), stūrē arī pa zemi
-      this.v += (-G * Math.sin(be) - (st.roll + st.brake) * G * Math.cos(be) - D + (this.thr ? st.T / st.m : 0)) * DT;
+      this.v += (-G * Math.sin(be) - (st.roll + st.brake * (this.coast ? 3 : 1)) * G * Math.cos(be) - D + (this.thr ? st.T / st.m : 0)) * DT;
       this.psi = clamp(this.psi - (inp.roll || 0) * .7 * Math.min(1, this.v / 5) * DT, -80 * D2R, 80 * D2R);
       if (this.v <= 1.2) { this.v = 0; return this.done('stop'); }
       const z0 = this.z, x0 = this.x; this.z += this.v * Math.cos(be) * Math.cos(this.psi) * DT; this.x += this.v * Math.cos(be) * Math.sin(this.psi) * DT; this.maxZ = Math.max(this.maxZ, this.z);

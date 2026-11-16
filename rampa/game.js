@@ -352,6 +352,8 @@ function buildVehicle2(vid, sel, st) {
     [-1, 1].forEach(sx => [-1.3, 1.3].forEach(z => { const w = put(mdl('Wheel'), sx * .84, wr, z); w.scale.setScalar(wr); }));
     if (sel.aero >= 1) { add(new T3.BoxGeometry(1.75, .06, .38), mat(0x111111), 0, 1.45 + lift, -1.85); [-.6, .6].forEach(x => add(new T3.BoxGeometry(.06, .3, .1), mat(0x111111), x, 1.28 + lift, -1.85)); }
     if (sel.aero >= 15) add(new T3.BoxGeometry(1.86, .12, 4.0), mat(0x111111), 0, .3 + lift, 0);
+    if (sel.wing) { const wl = VEH.car.slots.wing.lv[sel.wing], b = .45 + wl.Sw * .1, c = .55 + wl.Sw * .03; // spārniņi sānos (izmērs pēc līmeņa)
+      [['WingL', -1], ['WingR', 1]].forEach(([n, sx]) => { const w = put(mdl(n, { wing: WING_C[wl.tier + 1], paint: cc }), sx * .88, .58 + lift, -.45, 'wing'); w.scale.set(b, Math.min(1.2, c * 1.3), c); }); }
     if (sel.eng) { [-.5, .5].forEach(x => { add(Cyl(.12, .12, .5).rotateX(Math.PI / 2), mat(0x8c939e), x, .45 + lift, -2.15); V.flames.push([x, .45 + lift, -2.5, .5]); }); }
     const p = makePerson('sit'); p.scale.setScalar(.85); p.position.set(-.38, .22 + lift, .15); g.add(p); V.pilot = p;
     V.len = 4.4; V.flow = { ax: .95, ay: .7, az: 2.1, cy: .85 + lift, cz: 0, blunt: clamp((st.cda - .3) / .5, 0, 1), drag: clamp(st.cda / .8, .4, 1), wing: null };
@@ -567,7 +569,7 @@ function handleEvents() {
 
     else if (k === 'flip') { toast(`🤸 Salto ×${e[1]}!`); sfx('coin'); }
     else if (k === 'bounce') { puff(VEHM.g.position, 'dust', 3); camShake = .3; sfx('bump'); if (e[2]) toast('🏠 Lēciens pa jumtu!'); }
-    else if (ejected) { if (k === 'crash' || k === 'done') explodePlane(); } // bez pilota jebkurš pieskāriens = sprādziens
+    else if (ejected) { if (k === 'crash' || (k === 'done' && save.veh === 'plane')) explodePlane(); } // lidmašīna bez pilota uzsprāgst; mašīna/skūteris aizripo un apstājas
     else if (k === 'touch') { puff(VEHM.g.position, 'dust', 4); sfx('bump'); }
     else if (k === 'bonk') { sfx('bump'); camShake = .3; }
     else if (k === 'crash') startCrash(e[1], e[2]);
@@ -588,7 +590,7 @@ function startCrash(kind, v) {
 }
 // 🚀 katapulta: pilots izšaujas uz augšu un nedaudz uz priekšu, tad krīt; lidmašīna bez pilota nodur degunu, ietriecas un uzsprāgst fonā
 let ejected = false, runId = 0, FOCUS = null, camW = 0;
-function eject() { if (state !== 'run' || ejected || !sim || sim.mode !== 'air') return; ejected = true; joyReset(); inp.turbo = false; $('turbo').classList.remove('on'); $('eject').classList.remove('on'); hints(false);
+function eject() { if (state !== 'run' || ejected || !sim || (sim.mode !== 'air' && sim.mode !== 'ground')) return; ejected = true; sim.coast = save.veh !== 'plane'; joyReset(); inp.turbo = false; $('turbo').classList.remove('on'); $('eject').classList.remove('on'); hints(false);
   const hx = Math.sin(sim.psi), hz = Math.cos(sim.psi), pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); pil.rotation.set(-1.2, sim.psi, 0);
   PIL = { o: pil, v: new T3.Vector3(hx * (sim.vz + 5), Math.max(sim.vy, 0) + 10, hz * (sim.vz + 5)), t: 0, landed: false, tl: 0 };
   puff(pil.position, 'white', 3); sparks(pil.position.clone(), 14, sim.vz); sfx('eject'); camShake = .5; if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(40);  }
@@ -667,11 +669,11 @@ function frame(now) {
   DAYT += dt; applyDay(); STARS.position.copy(camera.position); if ((DAYT * 2 | 0) !== hudSec) { hudSec = DAYT * 2 | 0; hudKey = ''; hud(); }
   const paused = $('ov').classList.contains('on') && state === 'run';
   if (state === 'run' && !paused) {
-    acc += dt; runT += dt; const ip = ejected ? { pitch: -.7, roll: 0, turbo: false, help: false } : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
+    acc += dt; runT += dt; const ip = ejected ? (sim.coast ? { pitch: 0, roll: 0, turbo: false, help: true } : { pitch: -.7, roll: 0, turbo: false, help: false }) : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
     // pēc katapultas: gaida, kamēr pilots nokrīt un lidmašīna uzsprāgst (vai 4 s)
     if (ejected) { updatePilot(dt); if (DEB.length) updateDebris(dt); if (boomT && runT - boomT < 5 && DEB[0] && Math.random() < dt * 6) puff(DEB[0].o.position, 'smoke', 1);
-      if (PIL && PIL.landed && (boomT ? runT - boomT > 1.6 && runT - PIL.tl > .8 : runT - PIL.tl > 4)) finish('eject'); }
-    $('eject').classList.toggle('on', state === 'run' && !ejected && sim.mode === 'air' && sim.air > .4);
+      if (PIL && PIL.landed) { const t = runT - PIL.tl; if ((boomT && runT - boomT > 1.6 && t > .8) || (!boomT && sim.mode === 'done' && t > 1.2) || t > 4) finish('eject'); } }
+    $('eject').classList.toggle('on', state === 'run' && !ejected && (sim.mode === 'air' && sim.air > .4 || sim.mode === 'ground'));
     while (acc >= DT && state === 'run' && sim.mode !== 'done') { prev.z = sim.z; prev.y = sim.y; prev.x = sim.x; prev.phi = sim.phi; prev.psi = sim.psi; prev.bank = sim.bank; prev.s = sim.s; sim.step(ip); acc -= DT; handleEvents(); }
     const a = state === 'run' ? acc / DT : 1, L2 = (k) => prev[k] + (sim[k] - prev[k]) * a, z = L2('z'), y = L2('y'), x = L2('x'), ph = prev.phi + wrap(sim.phi - prev.phi) * a;
     VEHM.g.position.set(x, y, z); VEHM.g.rotation.set(-ph, L2('psi'), -L2('bank'));
