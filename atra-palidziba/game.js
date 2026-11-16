@@ -740,8 +740,6 @@ if (ONLINE && window.firebase && window.TW_FIREBASE) {
     try { const s = (await db.ref('ap/saves/' + UID).get()).val(); if (s) save = Object.assign(save, s); else { const l = JSON.parse(localStorage.getItem(LKEY())); if (l) save = Object.assign(save, l); } } catch (e) {}
     TW.wallet.watch(UID, v => { if (v != null) { wallet = v; hudKey = ''; } });
     if (window.TW) await TW.ready;
-    // spēle vēl nav atvērta visiem – pagaidām tikai admini/moderatori var testēt
-    if (window.TW && !TW.isStaff(UID)) { sheet(`<h2>🚑 Ātrā palīdzība 112</h2><p>Drīzumā! Spēle vēl top. 🔒</p><a class="main" style="display:block;text-align:center;text-decoration:none" href="../index.html">← Uz sākumlapu</a>`); return; }
     if (window.TW) { TW.heartbeat(UID, () => ({ game: 'Ātrā palīdzība', where: M.state === 'toHospital' ? 'Ved pacientu uz slimnīcu' : M.state === 'scene' ? 'Pie pacienta' : `Līm. ${levelOf(save.xp).l}`, name: NAME, nick: NICK })); }
     db.ref('kicks/' + UID).on('value', s => { const k = s.val(); if (k && k.until > TW.now()) { alert('Tevi uz laiku izmeta no spēles. Spēlē draudzīgi! 🙂'); location.href = '../index.html'; } }, () => {});
     if (window.TWA) TWA.load ? TWA.load(UID).catch(() => {}) : 0;
