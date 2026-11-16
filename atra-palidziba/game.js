@@ -170,7 +170,9 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 $('gear').onclick = e => { e.stopPropagation(); audioInit(); if ($('ov').classList.contains('on')) { toast('⚙ Iestatījumi – kad aizver šo logu'); return; }
   sheet(`<h2>⚙ Iestatījumi</h2><div class="setBox"><div class="step">📻 Radio un dziesmas</div><div id="radioC">${window.TWRadio ? TWRadio.controlsHTML() : ''}</div></div>
     <div class="setBox"><label class="setRow">🔔 Efekti (sirēna, dzinējs) <input id="fxV" type="range" min="0" max="100" value="${Math.round(FXV * 100)}"></label></div>
+    <div class="setBox"><button class="main ghostB" id="howTo">❓ Kā spēlēt</button></div>
     <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p><button class="main" id="setOk">✔ Gatavs</button>`);
+  $('howTo').onclick = () => { closeSheet(); showIntro(true); };
   if (window.TWRadio) TWRadio.wire($('radioC'));
   $('fxV').oninput = () => { FXV = $('fxV').value / 100; try { localStorage.setItem('apFx', FXV); } catch (e) {} sfx('tick'); };
   $('setOk').onclick = closeSheet; };
@@ -763,7 +765,11 @@ function walletAdd(m) { wallet = wallet + m; if (UID) TW.wallet.add(UID, m).then
 function medals() { if (!UID || !window.TWA) return; const L = levelOf(save.xp).l;
   TWA.sync(UID, { apCalls: save.calls, apSaved: save.saved, apCpr: save.cpr || 0, apPerfect: save.perfect || 0, apLevel: L }).then(n => n.forEach((m, i) => setTimeout(() => toast(`🏅 Jauna medaļa!<br><span style="font-size:28px">${m.i}</span> ${TWA.title ? TWA.title(m) : m.t}`), 3600 * i + 1500))).catch(() => {}); }
 try { const s = JSON.parse(localStorage.getItem('apSave')); if (s && !ONLINE) save = Object.assign(save, s); } catch (e) {}
-function start() { heliBtn(); if (save.fuel != null) amb.fuel = save.fuel; requestAnimationFrame(frame); intro(); }
+// instrukcija pirms spēles (kopīgais TW.intro): īsti kadri no spēles + daži vārdi; pirmajā reizē pati, vēlāk ⚙ → ❓ Kā spēlēt
+const INTRO = [{ img: 'intro/1.webp', t: 'Brauc pa dzelteno līniju 🚑' }, { img: 'intro/2.webp', t: 'Uzdod pareizos jautājumus' }, { img: 'intro/3.webp', t: 'Velc rīku uz traumu' },
+  { img: 'intro/4.webp', t: 'Spied ritmā – sirds masāža ❤️' }, { img: 'intro/5.webp', t: 'Noķer izlicējus! 😄' }];
+const showIntro = force => window.TW && TW.intro ? TW.intro('ap', INTRO, force) : Promise.resolve();
+function start() { heliBtn(); if (save.fuel != null) amb.fuel = save.fuel; requestAnimationFrame(frame); showIntro().then(intro); }
 function intro() {
   sheet(`<div class="step">Tailers World · pilsēta</div><h2>🚑 Ātrā palīdzība 112</h2>
     <p>Tu esi ātrās palīdzības brigāde. Brauc pie pacientiem, noskaidro, kas noticis, palīdzi un, ja vajag, ved uz slimnīcu.</p>
