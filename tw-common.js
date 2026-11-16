@@ -2,6 +2,14 @@
 // Lomas nosaka pēc konta (uid), nevis pēc vārda – tāpēc ar iesauku nevar uzdoties par adminu.
 (function(){
   const TW = window.TW = { adminUid: null, admins: {}, mods: {}, off: 0 };
+  // Pilnais redzamais augstums. iOS „no sākuma ekrāna” (standalone) innerHeight / height:100% neietver apakšējo drošo zonu
+  // (mājas indikatoru) → spēles kanva par īsu, apakšā tukša josla. TW.viewH() + CSS mainīgais --twH (atjauno pie resize/pagrieziena).
+  const standalone = () => !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+  TW.viewH = () => { let h = innerHeight;
+    if (standalone()) { const land = innerWidth > innerHeight, sh = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height); if (sh > h && sh - h < 140) h = sh; }
+    return Math.round(h); };
+  let twH0 = 0; const setTwH = () => { const h = TW.viewH(); if (h !== twH0) { twH0 = h; document.documentElement.style.setProperty('--twH', h + 'px'); } };
+  setTwH(); setInterval(setTwH, 1000); addEventListener('resize', setTwH); addEventListener('orientationchange', () => setTimeout(setTwH, 300)); if (window.visualViewport) visualViewport.addEventListener('resize', setTwH);
   const db = firebase.database();
   TW.BAD = ['fuck','shit','bitch','dick','sex','porn','nazi','hitler','pimp','pis','dirs','sūd','sud','kak','huj','hui','bljad','blyat','suka','pidar','pedik','idiot','muļķ','mulk'];
   TW.ready = (async () => {

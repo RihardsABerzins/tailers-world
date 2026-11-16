@@ -8,7 +8,8 @@ const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const levelOf = xp => { let l = 1, need = 120; while (xp >= need) { xp -= need; l++; need = 120 + 60 * (l - 1); } return { l, cur: xp, need }; };
 const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-let W = innerWidth, H = innerHeight;
+const viewH = () => window.TW && TW.viewH ? TW.viewH() : innerHeight; // iOS standalone – pilns augstums (tw-common.js)
+let W = innerWidth, H = viewH();
 
 // ================= Saglabāšana =================
 let save = { xp: 0, flights: 0, veh: 'plane', ramp: 0, own: { plane: { wheel: 0, wing: 0, eng: 0, long: 0 } }, best: { plane: 0, scoot: 0, car: 0 }, st: { landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, first: 0 };
@@ -663,11 +664,11 @@ function gfxRender() { if (!GFX.hi || !GFX.rt) return renderer.render(scene, cam
   const tp = state === 'run' && ejected && PIL ? PIL.o.position : VEHM ? VEHM.g.position : camera.position; sun.target.position.copy(tp); sun.position.copy(tp).addScaledVector(GFX.sunDir, 250); sun.shadow.intensity = 1;
   GFX.fv.copy(tp).project(camera); GFX.mat.uniforms.focus.value = clamp((GFX.fv.y + 1) / 2, .2, .8); GFX.mat.uniforms.night.value = 1 - dayLight();
   renderer.setRenderTarget(GFX.rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(GFX.sc, GFX.cam); }
-function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H, false); gfxResize(); camera.aspect = W / H; camera.fov = BASEFOV = W < H ? 72 : 58; camera.updateProjectionMatrix(); viewOffset(); }
+function resize() { W = innerWidth; H = viewH(); renderer.setSize(W, H, false); gfxResize(); camera.aspect = W / H; camera.fov = BASEFOV = W < H ? 72 : 58; camera.updateProjectionMatrix(); viewOffset(); }
 function viewOffset() { if (state === 'shop') { const land = W > H, sh = $('shop').getBoundingClientRect();
     if (land) camera.setViewOffset(W, H, (W - sh.left + 8) / 2 * .9, 0, W, H); else camera.setViewOffset(W, H, 0, Math.min(H * .3, (H - sh.top + 8) / 2), W, H); }
   else camera.clearViewOffset(); }
-addEventListener('resize', () => { resize(); });
+addEventListener('resize', () => { resize(); }); setInterval(() => { if (innerWidth !== W || viewH() !== H) resize(); }, 1000); // drošībai (iOS pagrieziens/standalone)
 
 // ---- lidojums ----
 function go() { MM.trail = [];
