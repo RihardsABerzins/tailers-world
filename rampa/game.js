@@ -291,15 +291,17 @@ function buildVehicle2(vid, sel, st) {
       V.body = putA(new T3.Mesh(new T3.BoxGeometry(1.05, .95, 3.4), mat(CARD)), 'body'); const tp = putA(new T3.Mesh(new T3.BoxGeometry(.28, .97, 3.42), mat(0xe8d9a8))); tp.position.y = .005;
       [-1, 1].forEach(sx => { const fl = putA(new T3.Mesh(new T3.BoxGeometry(.5, .03, 1.2), mat(0xb8915c))); fl.position.set(sx * .5, .55, -.6); fl.rotation.z = sx * .5; });
     } else { V.body = putA(mdl('Body', { paint: pc }), 'body'); if (bT >= 3) putA(mdl('Nose')); if (bT >= 2) putA(mdl('Canopy')); else putA(mdl('Nose', { white: CARD })); }
-    putA(mdl('Fin', { paint: bT <= 0 ? CARD : pc })); putA(mdl('HStab', { white: bT <= 0 ? CARD : 0xf5f5f5 }));
+    // izmēri šasijas telpā: priekšgals, aizmugure, augša, apakša – lai propelleris, aste un pilots ir piestiprināti
+    const D = bT < 0 ? { f: 1.12, b: -1.05, t: .44, u: -.44, fy: -.12 } : bT === 0 ? { f: 1.7, b: -1.7, t: .475, u: -.475, fy: 0 } : { f: 2.32, b: -1.85, t: .55, u: -.5, fy: 0 };
+    [putA(mdl('Fin', { paint: bT <= 0 ? CARD : pc })), putA(mdl('HStab', { white: bT <= 0 ? CARD : 0xf5f5f5 }))].forEach(o => { o.position.z += D.b + 1.85; o.position.y += D.fy; });
     if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing ? VEH.plane.slots.wing.lv[sel.wing].tier + 1 : 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
     if (sel.wheel) { const wr = .2 + sel.wheel * .004; [-.55, .55].forEach(x => { const w = put(mdl('Wheel'), x, wr, .45); w.scale.setScalar(wr); add(Cyl(.035, .035, hb - wr - .2, 6), mat(0x9aa0aa), x * .8, wr + (hb - wr - .2) / 2, .45); });
-      const tw = put(mdl('Wheel'), 0, .1, -1.55); tw.scale.setScalar(.1); }
+      const tw = put(mdl('Wheel'), 0, .1, D.b * s * .85); tw.scale.setScalar(.1); }
     const e = sel.eng ? [1, 2, 3, 3, 4][VEH.plane.slots.eng.lv[sel.eng].tier] : 0;
-    if (e === 1 || e === 2) { const pr = putA(mdl('Prop')); pr.scale.setScalar(e === 1 ? .42 : .95); V.spin = pr; if (e === 1) { const ring = putA(new T3.Mesh(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd))); ring.position.z = 2.36; } }
-    if (e === 3) { add(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c), 0, hb - .5, -.3); add(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5), 0, hb - .5, .47); V.flames.push([0, hb - .5, -.95, .5]); }
-    if (e === 4) { add(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e), 0, hb + .62, -.6); add(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63), 0, hb + .62, .25); V.flames.push([0, hb + .62, -1.5, .7]); }
-    const p = makePerson('sit'); p.scale.setScalar(.72); p.position.set(0, hb + (bT < 2 ? .3 * s : -.3), .32); g.add(p); V.pilot = p;
+    if (e === 1 || e === 2) { const pr = putA(mdl('Prop')); pr.scale.setScalar(e === 1 ? .42 : .95); pr.position.z = D.f + .06; V.spin = pr; if (e === 1) { const ring = putA(new T3.Mesh(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd))); ring.position.z = D.f + .06; } }
+    if (e === 3) { const ry = D.u - .16; putA(new T3.Mesh(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c))).position.set(0, ry, -.3); putA(new T3.Mesh(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5))).position.set(0, ry, .47); V.flames.push([0, hb + ry * s, -.95 * s, .5]); }
+    if (e === 4) { const jy = D.t + .2; putA(new T3.Mesh(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e))).position.set(0, jy, D.b * .35); putA(new T3.Mesh(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63))).position.set(0, jy, D.b * .35 + .85); V.flames.push([0, hb + jy * s, (D.b * .35 - .9) * s, .7]); }
+    const p = makePerson('sit'); p.scale.setScalar(.72); p.position.set(0, bT < 2 ? hb + D.t * s * .92 - .43 : hb - .3 * s, bT < 2 ? -.15 * s : .32 * s); g.add(p); V.pilot = p;
     V.len = 4.7 * s; V.flow = { ax: .55 * s, ay: .55 * s, az: 2.3 * s, cy: hb + .05, cz: 0, blunt: [.65, .85, .45, .3, .22, .15][bT + 1], drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
   } else if (vid === 'scoot') {
     const wr = .11 + (sel.wheel || 0) * .0018;
@@ -514,7 +516,7 @@ function hints(on) { const el = $('hintJ'); el.classList.toggle('on', on);
 function handleEvents() {
   for (const e of sim.ev) { const k = e[0];
     if (k === 'launch') { sfx('whoosh'); if (save.flights < 3) setTimeout(() => hints(false), 6000); }
-    else if (k === 'stall') { warn('Deguns par augstu!'); sfx('stall'); }
+    else if (k === 'stall') { if (inp.pitch > 0) { warn('⚠️ Par stāvu!'); sfx('stall'); } }
     else if (k === 'flip') { toast(`🤸 Salto ×${e[1]}!`); sfx('coin'); }
     else if (k === 'bounce') { puff(VEHM.g.position, 'dust', 3); camShake = .3; sfx('bump'); if (e[2]) toast('🏠 Lēciens pa jumtu!'); }
     else if (k === 'touch') { puff(VEHM.g.position, 'dust', 4); sfx('bump'); }
@@ -582,7 +584,7 @@ function renderShop() {
   if (!o) { h += `<div class="vlock"><div style="font-size:54px">${V.i}</div><button class="buy ${wallet < V.p ? 'no' : ''}" id="buyV" style="width:100%;min-height:54px;font-size:17px">Nopirkt €${V.p}</button></div>`; sh.innerHTML = h; wireShop(); return; }
   const sel = selOf(vid);
   for (const [k, S] of Object.entries(V.slots)) { const lv = sel[k], have = o[k] || 0, nx = S.lv[have + 1];
-    h += `<div class="slot"><i>${S.i}</i><div><b>${S.n} <span class="lvn">${lv}/${RP.NL}</span></b><small>${S.lv[lv].n}</small>
+    h += `<div class="slot"><i>${S.lv[lv].i || S.i}</i><div><b>${S.n} <span class="lvn">${lv}/${RP.NL}</span></b><small>${S.lv[lv].n}</small>
       <div class="lvs"><button data-k="${k}" data-l="${lv - 1}" ${lv > 0 ? '' : 'disabled'}>◀</button><div class="lvbar"><i style="width:${have / RP.NL * 100}%"></i><u style="width:${lv / RP.NL * 100}%"></u></div><button data-k="${k}" data-l="${lv + 1}" ${lv < have ? '' : 'disabled'}>▶</button></div></div>
       ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">+1<br>€${nx.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
   const r = RAMPS[save.ramp], rn = RAMPS[save.ramp + 1];
