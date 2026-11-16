@@ -1,5 +1,5 @@
-  html,body{margin:0;height:100%;background:#0b0c12;overflow:hidden;font-family:system-ui,sans-serif;color:#eee;-webkit-user-select:none;user-select:none}
-  canvas.full{position:fixed;left:0;top:0;width:100vw;height:100vh;display:block}
+  html,body{margin:0;height:var(--twH,100%);background:#0b0c12;overflow:hidden;font-family:system-ui,sans-serif;color:#eee;-webkit-user-select:none;user-select:none}
+  canvas.full{position:fixed;left:0;top:0;width:100vw;height:var(--twH,100vh);display:block}
   #fx{pointer-events:none;z-index:30}
   #hud{position:fixed;left:12px;top:12px;background:#000a;padding:10px 14px;border-radius:12px;line-height:1.5;pointer-events:none;z-index:10;backdrop-filter:blur(4px);border:1px solid #fff2}
   #hud b{color:#ffd34d;font-size:22px;text-shadow:0 0 10px #ffd34d88}
@@ -69,7 +69,7 @@
   .row .n{flex:1}
   .dot{width:22px;height:22px;border-radius:50%;box-shadow:0 0 10px currentColor}
   h2{margin:4px 0 8px}
-  #touch{position:fixed;inset:auto 0 0 0;display:none;justify-content:space-between;padding:0 14px 14px;z-index:15;pointer-events:none}
+  #touch{position:fixed;inset:auto 0 0 0;display:none;justify-content:space-between;padding:0 14px calc(14px + env(safe-area-inset-bottom));z-index:15;pointer-events:none}
   #touch div{display:flex;gap:12px;pointer-events:auto}
   #touch button{width:68px;height:68px;border-radius:50%;font-size:26px;background:#fff3;color:#fff;border:2px solid #fff5;padding:0;touch-action:none}
   #clock{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;background:#000a;border:1px solid #fff2;border-radius:12px;padding:6px 16px;text-align:center;pointer-events:none;backdrop-filter:blur(4px);min-width:170px}
@@ -131,7 +131,7 @@
     #inv button{padding:3px 7px;font-size:12px}
     #prompt{top:auto;bottom:72px;font-size:13px;padding:5px 12px;white-space:nowrap}
     #toast{bottom:auto;top:78px;font-size:13px;padding:8px 14px}
-    #touch{padding:0 8px 8px}
+    #touch{padding:0 8px calc(8px + env(safe-area-inset-bottom))}
     #touch div{gap:8px}
     #touch button{width:54px;height:54px;font-size:20px;background:#fff2}
     #policeSign{top:38px;padding:4px 14px}

@@ -162,9 +162,10 @@ const cv=document.getElementById('game'), ctx=cv.getContext('2d');
 const fx=document.getElementById('fx'), fxc=fx.getContext('2d');
 const lc=document.createElement('canvas'), lg=lc.getContext('2d');
 const bl=document.createElement('canvas'), bctx=bl.getContext('2d');
-let W=innerWidth, H=innerHeight;
-function resize(){ W=innerWidth; H=innerHeight; [cv,fx,lc].forEach(c=>{c.width=W*dpr;c.height=H*dpr;}); bl.width=Math.ceil(W/5); bl.height=Math.ceil(H/5); if(mode==='draw'||mode==='entering') layoutDraw(); }
-addEventListener('resize',resize);
+const viewH=()=>window.TW&&TW.viewH?TW.viewH():innerHeight; // iOS no sākuma ekrāna – pilns augstums (tw-common.js)
+let W=innerWidth, H=viewH();
+function resize(){ W=innerWidth; H=viewH(); [cv,fx,lc].forEach(c=>{c.width=W*dpr;c.height=H*dpr;}); bl.width=Math.ceil(W/5); bl.height=Math.ceil(H/5); if(mode==='draw'||mode==='entering') layoutDraw(); }
+addEventListener('resize',resize); setInterval(()=>{ if(innerWidth!==W||viewH()!==H) resize(); },1000); // drošībai (iOS pagrieziens/standalone)
 const baseZoom=()=>Math.min(H/720,W/520);
 // vertikālā telefonā iela ir ~63% augstumā (nevis pašā apakšā zem pogām); zem ceļa – pretējā ietve
 const camY0=()=>{ const vh=H/baseZoom(); return vh>720?Math.max(360,590-.13*vh):360; };
