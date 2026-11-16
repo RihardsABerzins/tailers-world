@@ -5,6 +5,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 ## Svarīgākais
 - **Lietotāji ir bērni**, kas spēlē **telefonos un planšetēs**, nevis datoros.
 - Viss jāpārbauda **telefonā vertikāli UN horizontāli** (piem., 390×780 un 780×390), arī planšetē.
+- **Testē frontendā iebūvētajā Claude pārlūkā** (Browser pane, `mcp__Claude_Browser__*`) – katrs aģents/sesija savā panelī: lokālais serveris (`python3 -m http.server <ports>`, ne 8777) → `preview_start`/`navigate`, izmērs ar `resize_window` (390×780, 780×390, planšete), pārbaude ar ekrānuzņēmumiem un konsoli. Nevis video ierakstus vai lietotāja Chrome. Testos radio/skaņu neieslēdz, beigās aizver cilnes un serveri.
 - Pogas lielas un ērti spiežamas ar pirkstu; teksts īss un saprotams.
 - Spēles ir **bez maksas**. Nekādu īstu naudu spēlēs (lootboxi tikai par spēles naudu/precizitāti).
 - Bērnu drošība: nevākt personas datus (lietotājvārds + parole, e-pasts tikai pēc izvēles). Publiskajā čatā **tikai gatavas frāzes**; brīvs teksts tikai privātos čukstos, ar rupju vārdu filtru (zvaigznītes) un garu ciparu (telefona numuru) slēpšanu. Var bloķēt un ziņot.
