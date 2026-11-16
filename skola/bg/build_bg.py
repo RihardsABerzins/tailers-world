@@ -1,5 +1,5 @@
 # Skola – klases fons (Blender 5.x, EEVEE + Freestyle kontūras). Strādā tikai scēnā SKOLA_BG.
-# Palaišana: exec(open(ceļš).read()); all_refs()  → skola/bg/<ref>.png (pēc tam → webp) + izdrukā REFS datus game.js.
+# Palaišana: exec(open(ceļš).read()); all_refs()  → skola/bg/<ref>.png (pēc tam → webp q90) + izdrukā REFS datus game.js.
 # Telpu būvē pēc spēles layout() (hy, fy, wx0, wx1, top) atsauces izmērā; kadrs ir EXT reizes lielāks (rezerve malām),
 # lai spēle var to vienmērīgi mērogot pēc aizmugurējās sienas platuma un piesiet pie grīdas līnijas fy.
 # Logu stikls – caurspīdīgs (Holdout): aiz tā spēle zīmē debesis ar mākoņiem un putniem.
@@ -10,13 +10,13 @@ SC = bpy.data.scenes.get('SKOLA_BG') or bpy.data.scenes.new('SKOLA_BG')
 bpy.context.window.scene = SC
 OUT = '/Users/rihardsberzins/Documents/Tclaude/tailers-world/skola/bg/'
 FK = '/Users/rihardsberzins/Documents/Tclaude/tw-modeli/27-kenney-furniture-kit/Models/GLTF format/'
-EXT = 1.6  # kadrs pret atsauces ekrānu (0.3 rezerve katrā pusē)
+EXT = 1.4  # kadrs pret atsauces ekrānu (0.2 rezerve katrā pusē)
 # atsauces ekrāni (CSS px) un to layout() – izvēlas pēc aizmugurējās sienas proporcijas
 REFS = {
-    'p':  (390, 780,  {"hy": 167.69, "fy": 279.2, "wx0": 27.3, "wx1": 362.7, "top": 49.13}, 2.0),
-    'pt': (768, 1024, {"hy": 188.55, "fy": 325.56, "wx0": 53.76, "wx1": 714.24, "top": 32.9}, 1.25),
-    'lt': (1024, 768, {"hy": 177.5, "fy": 287, "wx0": 155.28, "wx1": 868.72, "top": 41.5}, 1.25),
-    'l':  (780, 390,  {"hy": 135.375, "fy": 205, "wx0": 101.6, "wx1": 678.4, "top": 57.375}, 2.0),
+    'p':  (390, 780,  {"hy": 167.69, "fy": 279.2, "wx0": 27.3, "wx1": 362.7, "top": 49.13}, 2.4),
+    'pt': (768, 1024, {"hy": 188.55, "fy": 325.56, "wx0": 53.76, "wx1": 714.24, "top": 32.9}, 2.2),
+    'lt': (1024, 768, {"hy": 177.5, "fy": 287, "wx0": 155.28, "wx1": 868.72, "top": 41.5}, 2.2),
+    'l':  (780, 390,  {"hy": 135.375, "fy": 205, "wx0": 101.6, "wx1": 678.4, "top": 57.375}, 2.4),
 }
 
 def hexc(h, a=1.0):
@@ -154,6 +154,7 @@ def camera(Wr, Hr, L, p, camh, k):
     cam.data.shift_x = 0; cam.data.shift_y = -(Hr/2 - L['hy']) / max(Wx, Hx)
     cam.data.clip_start = 0.05; cam.data.clip_end = 80
     SC.render.resolution_x, SC.render.resolution_y = round(Wx * k), round(Hx * k)
+    SC.render.line_thickness = 1.0 * k  # ~1 CSS px kontūra jebkurā izšķirtspējā
     return cam
 
 def look():
@@ -175,6 +176,8 @@ def look():
     l = fs.linesets[0]; l.linestyle.color = (.13, .09, .11); l.select_by_visibility = True
     l.select_by_collection = True; l.collection = coll('SKB_NOLINE'); l.collection_negation = 'EXCLUSIVE'
     SC.render.film_transparent = True
+    try: SC.eevee.taa_render_samples = 128  # bez graudiem mīkstajās ēnās
+    except AttributeError: pass
     SC.render.image_settings.file_format = 'PNG'; SC.render.image_settings.color_mode = 'RGBA'
 
 def win_boxes(cam, Wr, Hr, RW):

@@ -402,13 +402,13 @@ function winSky(at, wh, seed) {
   g.strokeStyle = '#3a3a4a'; g.lineWidth = Math.max(1.2, b * .3); g.lineCap = 'round'; g.beginPath(); g.moveTo(x - b, y - f); g.quadraticCurveTo(x - b * .4, y - b * .3, x, y); g.quadraticCurveTo(x + b * .4, y - b * .3, x + b, y - f); g.stroke();
 }
 // klases fons no Blendera (bg/build_bg.py): 4 atsauces ekrāni – izvēlas pēc aizmugurējās sienas proporcijas,
-// mērogo pēc sienas platuma un piesien pie grīdas līnijas fy. Kadrs ir 1.6× atsauces ekrāns (rezerve malām),
+// mērogo pēc sienas platuma un piesien pie grīdas līnijas fy. Kadrs ir BGX× atsauces ekrāns (rezerve malām),
 // logu stikls caurspīdīgs – aiz tā zīmē debesis (win: stikla taisnstūri atsauces px). Kamēr nav ielādēts – zīmētā telpa.
-const BGV = 1, BG = {
-  p: { w: 390, h: 780, fy: 279.2, ww: 335.4, wh: 230.07, win: [[-205.8, -16, -77.1, 271.6], [-39.8, 60.1, 11.1, 228.6]] },
-  pt: { w: 768, h: 1024, fy: 325.56, ww: 660.48, wh: 292.66, win: [[-411.7, -56.9, -156.3, 308.9], [-82.3, 44.7, 18.9, 259.1]] },
-  lt: { w: 1024, h: 768, fy: 287, ww: 713.44, wh: 245.5, win: [[-350.4, -41.7, -73.5, 265.2], [6.6, 49.1, 116.3, 228.9]] },
-  l: { w: 780, h: 390, fy: 205, ww: 576.8, wh: 147.62, win: [[-309.3, 12.8, -84.8, 197.3], [-19.8, 63.6, 69.1, 171.7]] } };
+const BGV = 2, BGX = 1.4, BG = { // attēli ~2,3× atsauces px – telefonā/planšetē netiek palielināti (asums)
+  p: { w: 390, h: 780, fy: 279.2, ww: 335.4, wh: 230.07, win: [[-205.9, -16, -77.2, 271.6], [-39.9, 60.1, 11, 228.6]] },
+  pt: { w: 768, h: 1024, fy: 325.56, ww: 660.48, wh: 292.66, win: [[-411.9, -56.9, -156.4, 308.9], [-82.4, 44.7, 18.8, 259.1]] },
+  lt: { w: 1024, h: 768, fy: 287, ww: 713.44, wh: 245.5, win: [[-350.4, -41.8, -73.5, 265.2], [6.6, 49, 116.3, 228.8]] },
+  l: { w: 780, h: 390, fy: 205, ww: 576.8, wh: 147.62, win: [[-309.3, 12.7, -84.8, 197.3], [-19.8, 63.5, 69.1, 171.7]] } };
 function roomImg() {
   const R = LY.room, a = (R.fy - R.top) / (R.wx1 - R.wx0); let k = 'p', d = 1e9;
   for (const key in BG) { const e = Math.abs(Math.log(BG[key].wh / BG[key].ww / a)); if (e < d) { d = e; k = key; } }
@@ -420,7 +420,8 @@ function roomImg() {
     const gr = g.createLinearGradient(0, Y0, 0, Y1); gr.addColorStop(0, '#8fd0ff'); gr.addColorStop(.62, '#d9f1ff'); gr.addColorStop(.63, '#8fcf7a'); gr.addColorStop(1, '#5fa84e');
     g.fillStyle = gr; g.fillRect(X0, Y0, X1 - X0, Y1 - Y0); g.save(); g.beginPath(); g.rect(X0, Y0, X1 - X0, Y1 - Y0); g.clip();
     winSky((u, v) => [X0 + (X1 - X0) * u, Y0 + (Y1 - Y0) * v], (Y1 - Y0) * .55, i * .37 + .12); g.restore(); });
-  g.drawImage(b.img, ox - b.w * .3 * s, oy - b.h * .3 * s, b.w * 1.6 * s, b.h * 1.6 * s);
+  const m = (BGX - 1) / 2; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.drawImage(b.img, ox - b.w * m * s, oy - b.h * m * s, b.w * BGX * s, b.h * BGX * s);
   return true;
 }
 function drawRoom() {
