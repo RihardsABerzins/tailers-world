@@ -392,7 +392,16 @@ function buildBackdrops(){
   FAR=makeSkyline(11,120,330,'#3a2a5e',['#ffd98a','#ff9fb2','#a6e3ff'],false);
   MID=makeSkyline(29,170,430,'#1d1535',['#ffd98a','#ffb347','#ff7ab8','#8ee3ff'],true);
   const R=mulberry(5); STARS=Array.from({length:110},()=>({x:R(),y:R()*.6,s:R()*1.6+.4,p:R()*6}));
+  CLOUD_IMG=[0,1,2,3].map(i=>[makeCloud(40+i,['#ffffff','#dfe5ef']),makeCloud(40+i,['#4a4470','#26223f'])]);
+  const Q=mulberry(17); CLOUDS=Array.from({length:7},(_,i)=>{ const far=i<4; return {img:i%4,x:Q(),y:far?.08+Q()*.3:.25+Q()*.35,k:far?.45+Q()*.25:.8+Q()*.4,sp:far?4+Q()*4:9+Q()*6,f:far?.02:.06,a:far?.7:.95}; });
 }
+// mākoņi: iepriekš uzzīmēti (diena + nakts versija), debesīs tikai drawImage
+let CLOUD_IMG=null, CLOUDS=[], FLOCK=null, flockAt=8;
+function makeCloud(seed,[top,bot]){ const {c,g}=mkCanvas(280,120), R=mulberry(seed);
+  const gr=g.createLinearGradient(0,20,0,110); gr.addColorStop(0,top); gr.addColorStop(1,bot); g.fillStyle=gr;
+  g.beginPath(); g.ellipse(140,92,118,20,0,0,7); g.fill();
+  const n=4+Math.floor(R()*3); for(let i=0;i<n;i++){ const x=40+i*(200/(n-1))+R()*16-8, r=20+R()*16+(1-Math.abs(i/(n-1)-.5)*2)*22; g.beginPath(); g.arc(x,96-r*.85,r,0,7); g.fill(); }
+  return c; }
 const bgBrick=(()=>{ const c=document.createElement('canvas'); c.width=720; c.height=440; const g=c.getContext('2d'); const R=mulberry(99);
   g.fillStyle='#6a362a'; g.fillRect(0,0,720,440);
   for(let y=0;y<440;y+=28){ for(let x=(y/28%2)*-30;x<720;x+=60){ const l=34+R()*10; g.fillStyle=`hsl(${8+R()*8},${42+R()*10}%,${l}%)`; g.fillRect(x+2,y+2,56,24); } }
@@ -785,8 +794,14 @@ function render(){
   const sun=bodyAt(6), moon=bodyAt(18);
   if(sun){ const g=ctx.createRadialGradient(sun.x,sun.y,8,sun.x,sun.y,200); g.addColorStop(0,'rgba(255,236,170,.55)'); g.addColorStop(1,'rgba(255,236,170,0)'); ctx.fillStyle=g; ctx.fillRect(sun.x-200,sun.y-200,400,400); ctx.fillStyle='#fff3c0'; ctx.beginPath(); ctx.arc(sun.x,sun.y,34,0,7); ctx.fill(); }
   if(moon){ const g=ctx.createRadialGradient(moon.x,moon.y,10,moon.x,moon.y,130); g.addColorStop(0,'rgba(235,235,215,.3)'); g.addColorStop(1,'rgba(235,235,215,0)'); ctx.fillStyle=g; ctx.fillRect(moon.x-130,moon.y-130,260,260); ctx.fillStyle='#ece6cf'; ctx.beginPath(); ctx.arc(moon.x,moon.y,32,0,7); ctx.fill(); ctx.fillStyle='rgba(180,165,130,.35)'; ctx.beginPath(); ctx.arc(moon.x-8,moon.y-6,8,0,7); ctx.arc(moon.x+10,moon.y+9,5,0,7); ctx.fill(); }
-  const cc=mixc([255,170,190],[255,255,255],dk), ca=.16+.34*dk;
-  for(let k=0;k<5;k++){ const cxp=((k*430+time*(8+k*3)-cx*.05)%(W+500)+W+500)%(W+500)-250, cyp=hy*(.15+k*.1); const g=ctx.createRadialGradient(cxp,cyp,5,cxp,cyp,120); g.addColorStop(0,`rgba(${cc},${ca})`); g.addColorStop(1,`rgba(${cc},0)`); ctx.fillStyle=g; ctx.fillRect(cxp-200,cyp-120,400,240); }
+  if(!inMetro){
+    // lēni slīdoši mākoņi (2 paralakses slāņi; naktī tumšāki)
+    const cs=Math.min(1,Math.max(.6,W/900)), span=W+360*cs, sTop=clamp(SY(BASE-400),70,hy);
+    CLOUDS.forEach(c_=>{ const w=280*c_.k*cs, h=120*c_.k*cs, x=((c_.x*span+time*c_.sp-cx*c_.f)%span+span)%span-w, y=sTop*c_.y/.6-h*.6, im=CLOUD_IMG[c_.img];
+      if(dk>.02){ ctx.globalAlpha=c_.a*dk; ctx.drawImage(im[0],x,y,w,h); }
+      if(dk<.98){ ctx.globalAlpha=c_.a*(1-dk)*.85; ctx.drawImage(im[1],x,y,w,h); } });
+    ctx.globalAlpha=1;
+  }
   // ---- pasaules transformācija ----
   const T=()=>{ ctx.setTransform(dpr,0,0,dpr,0,0); ctx.translate(W/2,H/2); ctx.rotate(camRoll); ctx.scale(Zs,Zs); ctx.translate(-cx,-cy); };
   const vx0=cx-W/2/Zs, vx1=cx+W/2/Zs;
@@ -797,6 +812,14 @@ function render(){
   const haze=ctx.createLinearGradient(0,BASE-180,0,BASE); haze.addColorStop(0,'rgba(240,138,93,0)'); haze.addColorStop(1,'rgba(240,138,93,.35)'); ctx.fillStyle=haze; ctx.fillRect(vx0-10,BASE-180,vx1-vx0+20,180);
   layer(MID,.55);
   ctx.fillStyle=`rgba(150,185,215,${dk*.3})`; ctx.fillRect(vx0-10,0,vx1-vx0+20,BASE);
+  if(!inMetro){ ctx.setTransform(dpr,0,0,dpr,0,0);
+  // putnu bariņš pa laikam pārlido
+  if(!FLOCK&&time>flockAt){ const d=Math.random()<.5?1:-1, n=3+Math.floor(Math.random()*5); FLOCK={d,f:.25+Math.random()*.6,sp:45+Math.random()*30,x:d>0?-60:W+60,n,b:Array.from({length:n},(_,i)=>({dx:-Math.ceil(i/2)*18,dy:(i%2?-1:1)*Math.ceil(i/2)*9+Math.random()*4,p:Math.random()*6,s:.8+Math.random()*.4})),t:time}; }
+  if(FLOCK){ const F=FLOCK, x0=F.x+F.d*F.sp*(time-F.t), y0=clamp(SY(BASE-280),80,hy)*F.f+6*Math.sin((time-F.t)*.7);
+    ctx.strokeStyle=dk>.4?'rgba(40,40,60,.75)':'rgba(15,12,30,.7)'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.beginPath();
+    F.b.forEach(b=>{ const bx=x0+F.d*b.dx, by=y0+b.dy, s=6.5*b.s, fl=Math.sin(time*9+b.p)*s*.7; ctx.moveTo(bx-s,by-fl); ctx.quadraticCurveTo(bx-s*.4,by-fl*.3-1,bx,by); ctx.quadraticCurveTo(bx+s*.4,by-fl*.3-1,bx+s,by-fl); });
+    ctx.stroke(); if(F.d>0?x0-200>W:x0+200<0){ FLOCK=null; flockAt=time+12+Math.random()*20; } }
+    T(); }
   // ēkas
   lots.forEach(l=>{ if(l.x>vx1+50||l.x+l.w<vx0-50) return; if(!l.img) (l.kind==='wall'?renderWallLot:l.kind==='metro'?renderMetroLot:renderShopLot)(l); ctx.drawImage(l.img,l.x,LY0,l.w,LH);
     const sgL=ctx.createLinearGradient(l.x,0,l.x+40,0); sgL.addColorStop(0,'rgba(0,0,0,.3)'); sgL.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=sgL; ctx.fillRect(l.x,LY0+50,40,LH-60);
