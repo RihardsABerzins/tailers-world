@@ -12,7 +12,7 @@ let W = innerWidth, H = innerHeight;
 
 // ================= Saglabāšana =================
 let save = { xp: 0, flights: 0, veh: 'plane', ramp: 0, own: { plane: { wheel: 0, wing: 0, eng: 0, long: 0 } }, best: { plane: 0, scoot: 0, car: 0 }, st: { landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, first: 0 };
-let OPT = { help: true, streaks: true }; try { Object.assign(OPT, JSON.parse(localStorage.getItem('rpOpt')) || {}); } catch (e) {}
+let OPT = { help: true, streaks: true, gfx: true }; try { Object.assign(OPT, JSON.parse(localStorage.getItem('rpOpt')) || {}); } catch (e) {}
 const saveOpt = () => { try { localStorage.setItem('rpOpt', JSON.stringify(OPT)); } catch (e) {} };
 // tēls – kopīgs visās spēlēs (users/{uid}/look, kā Graffiti LOOK0): ch – Kenney Mini Characters id; hood/pants/cap – 'auto'/'orig' vai krāsa
 let LOOK = { ch: 'male-a', skin: '#f2c9a0', hood: 'auto', hat: 'cap', cap: 'orig', mask: 'none', pants: 'orig' };
@@ -147,7 +147,7 @@ function buildCity0() {
         poses.forEach((n, k) => { if (!groups[k].length) return; ['rest', 'shirt'].forEach(part => { const src = CITYM['P_' + n + '_' + part]; if (!src) return;
           const im = new T3.InstancedMesh(src.geometry, part === 'rest' ? rm : sm, groups[k].length);
           groups[k].forEach(([x, z, r], i) => { const h = 1.6 + ((x * 13 + z * 7) % 1 + 1) % 1 * .3; im.setMatrixAt(i, m4.compose(v3.set(x, 0, z), qq.setFromAxisAngle(up, r), new T3.Vector3(h, h, h))); if (part === 'shirt') im.setColorAt(i, col.set(SH[(i * 7 + k * 3) % SH.length])); });
-          if (lod) im.userData.lod = lod; scene.add(im); }); }); };
+          if (lod) im.userData.lod = lod; if (!lod) im.userData.cast = true; scene.add(im); }); }); };
       posed(spect, ['m_Standing_Waving', 'f_LookingUp', 'm_Standing_Hips', 'f_Standing_Waving', 'm_LookingUp', 'f_Standing_CoveringEyes', 'm_Standing', 'f_Standing_Hips'], null);
       posed(people.filter(p => Math.abs(p[0]) < 160), ['m_Walking', 'f_Walking', 'm_Standing', 'f_Standing', 'm_Running', 'f_LookingUp'], 'near'); }
     const Cy = (r, h, y, x) => new T3.CylinderGeometry(r, r * .9, h, 6).translate(x || 0, y, 0);
@@ -212,7 +212,7 @@ let dayKey = -1;
 function applyDay() { const d = dayLight(), k = Math.round(d * 60) + (isNight() ? 1000 : 0); if (k === dayKey) return; dayKey = k;
   const dusk = d > 0 && d < 1 ? 1 - Math.abs(d - .5) * 2 : 0;
   scene.background.copy(SKY[0]).lerp(SKY[1], d).lerp(SKY[2], dusk * .5); scene.fog.color.copy(FOGC[0]).lerp(FOGC[1], d).lerp(SKY[2], dusk * .35);
-  hemi.intensity = .26 + .42 * d; sun.intensity = .12 + .85 * d; sun.color.setHex(dusk > .3 ? 0xffb27a : 0xfff4e0);
+  const hk = typeof GFX !== 'undefined' && GFX.hi ? 1 : 0; hemi.intensity = (.26 + .42 * d) * (1 - .3 * hk); sun.intensity = (.12 + .85 * d) * (1 + .25 * hk); // ar ēnām – vairāk saules, mazāk debess gaismas sun.color.setHex(dusk > .3 ? 0xffb27a : 0xfff4e0);
   UNIGHT.value = 1 - d; CLOUDM.emissive.setHex(d > .5 ? 0x9aa7b5 : 0x2a3348); CLOUDM.color.setHex(d > .5 ? 0xffffff : 0x8a96b8); DB.m.material.color.setHex(d > .5 ? 0x2b2f38 : 0x0c1020); LAMPM.color.setHex(d < .5 ? 0xffd27a : 0xd8dde6); STARS.material.opacity = Math.max(0, 1 - d * 2.5); hudKey = ''; }
 const TREES = [], LAMPM = new T3.MeshBasicMaterial({ color: 0xd8dde6 });
 function mergeGeos(list) { const pos = [], nor = []; list.forEach(g => { g = g.index ? g.toNonIndexed() : g; pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); });
@@ -222,10 +222,10 @@ const CHUNKS = [], CH = 350;
 // lod: 'near' – detalizētie modeļi tikai tuvajos gabalos; 'far' – vienkāršie aizstājēji tikai tālāk (telefonam mazāk trijstūru)
 function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh || m.userData.noChunk) continue; const groups = new Map(), mt = new T3.Matrix4(), c = new T3.Color(), lod = m.userData.lod;
   for (let i = 0; i < m.count; i++) { m.getMatrixAt(i, mt); const k = Math.floor(mt.elements[14] / CH); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); }
-  if (groups.size < 2 && !lod) continue; scene.remove(m);
+  if (groups.size < 2 && !lod) { if (m.userData.cast) m.castShadow = true; m.receiveShadow = true; continue; } scene.remove(m);
   groups.forEach((ids, k) => { const s = new T3.InstancedMesh(m.geometry, m.material, ids.length); s.frustumCulled = false;
     ids.forEach((i, j) => { m.getMatrixAt(i, mt); s.setMatrixAt(j, mt); if (m.instanceColor) { m.getColorAt(i, c); s.setColorAt(j, c); } });
-    scene.add(s); CHUNKS.push({ s, k, lod, z0: k * CH - 80, z1: (k + 1) * CH + 80 }); }); } }
+    scene.add(s); CHUNKS.push({ s, k, lod, cast: !!m.userData.cast, z0: k * CH - 80, z1: (k + 1) * CH + 80 }); }); } }
 // sākumā visus gabalus vienreiz uzzīmē (GPU saņem buferus/šeiderus uzreiz → lidojumā nav aizķeršanās, kad parādās jauns gabals)
 function warmUp() { CHUNKS.forEach(c => c.s.visible = true); renderer.compile(scene, camera); renderer.render(scene, camera); }
 function cullChunks() { const z = camera.position.z, kc = Math.floor(z / CH);
@@ -283,7 +283,7 @@ function buildRamp(H) {
   pts.forEach(p => full.forEach(([x, y], j) => { pos.push(x, p.y + y, p.z); uv.push(1 - ux[j] / ux[n - 1], p.s / 24); }));
   for (let i = 0; i < pts.length - 1; i++) for (let j = 0; j < n - 1; j++) { const a = i * n + j, b = a + 1, c = a + n, d = c + 1; idx.push(a, c, b, b, c, d); }
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
-  const ST = rampStyle(), SC = RSTY[ST], rt = rampTex(ST); const rm = new T3.MeshLambertMaterial({ map: rt, side: T3.DoubleSide }); rampGroup.add(new T3.Mesh(g, rm));
+  const ST = rampStyle(), SC = RSTY[ST], rt = rampTex(ST); const rm = new T3.MeshLambertMaterial({ map: rt, side: T3.DoubleSide }); const rmm = new T3.Mesh(g, rm); rmm.receiveShadow = true; rampGroup.add(rmm);
   // margas pa malām (gludas caurules) + apakšpuse tumšāka
   const rail = pts.filter((p, i) => i % 2 === 0).map(p => new T3.Vector3(0, p.y + RR + 1.05, p.z));
   [-1, 1].forEach(sx => { const c = new T3.CatmullRomCurve3(rail.map(v => new T3.Vector3(sx * (FW + RR + 1.1), v.y, v.z)));
@@ -628,11 +628,42 @@ function placeBest() { if (BEST) { scene.remove(BEST); BEST = null; } const b = 
 function setVehicle() {
   if (VEHM) { scene.remove(VEHM.g); }
   disposeDebris(); if (PIL) { scene.remove(PIL.o); PIL = null; }
-  const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle2(vid, sel, ST); scene.add(VEHM.g); sharpenTextures(VEHM.g); VEHM.g.add(STRK.grp);
+  const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle2(vid, sel, ST); scene.add(VEHM.g); sharpenTextures(VEHM.g); VEHM.g.traverse(o => { if (o.isMesh) o.castShadow = true; }); VEHM.g.add(STRK.grp);
   const p = RAMP.pts[0]; VEHM.g.position.set(0, p.y, p.z); VEHM.g.rotation.set(0, 0, 0); placeBest();
 }
 let BASEFOV = 72;
-function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H, false); camera.aspect = W / H; camera.fov = BASEFOV = W < H ? 72 : 58; camera.updateProjectionMatrix(); viewOffset(); }
+// ---- grafika „augsta”: saules ēnas, kas seko braucamrīkam + viens pēcapstrādes solis (distances izpludinājums ap fokusu,
+// nakts spīdums ap gaismām, vinjete). „Vienkārša” – bez tā. Ja telefons neiztur (FPS zems arī pie 1× izšķirtspējas) – ieslēdzas vienkāršā.
+const GFX = { hi: OPT.gfx !== false, auto: false, ready: false, slow: 0, sunDir: new T3.Vector3(-.6, 1, -.4).normalize(), fv: new T3.Vector3() };
+function gfxSetup() { if (GFX.ready) return; GFX.ready = true;
+  renderer.shadowMap.enabled = GFX.hi; renderer.shadowMap.type = T3.PCFSoftShadowMap;
+  sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); const sc = sun.shadow.camera; sc.left = -75; sc.right = 75; sc.top = 75; sc.bottom = -75; sc.near = 10; sc.far = 500; sc.updateProjectionMatrix(); sun.shadow.bias = -.0015; sun.shadow.normalBias = .12; scene.add(sun.target);
+  const RT = renderer.capabilities.isWebGL2 && T3.WebGLMultisampleRenderTarget ? T3.WebGLMultisampleRenderTarget : T3.WebGLRenderTarget;
+  GFX.rt = new RT(4, 4, { format: T3.RGBAFormat, encoding: T3.sRGBEncoding }); if ('samples' in GFX.rt) GFX.rt.samples = 4;
+  GFX.mat = new T3.ShaderMaterial({ depthTest: false, depthWrite: false, uniforms: { tD: { value: GFX.rt.texture }, res: { value: new T3.Vector2(1, 1) }, focus: { value: .45 }, night: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+    fragmentShader: `uniform sampler2D tD; uniform vec2 res; uniform float focus, night; varying vec2 vUv;
+      void main(){ vec3 c = texture2D(tD, vUv).rgb; float up = vUv.y - focus;
+        float b = smoothstep(.2, .42, up) * .9 + smoothstep(.3, .55, -up) * .45; // ap braucamrīku ass; tālums (augšā) izpludināts vairāk, apakšmala mazliet
+        vec2 px = 1. / res; vec3 acc = c; float ws = 1.; vec3 glow = vec3(0.);
+        for (int i = 0; i < 8; i++) { float a = float(i) * .785398 + .39; vec2 o = vec2(cos(a), sin(a)) * px;
+          vec3 s1 = texture2D(tD, vUv + o * (1.2 + 3. * b)).rgb, s2 = texture2D(tD, vUv + o * (3. + 7. * b)).rgb;
+          acc += (s1 + s2) * b; ws += 2. * b; glow += max(s1 - .72, 0.) + max(s2 - .72, 0.); }
+        vec3 col = acc / ws + glow * night * .22;
+        float v = smoothstep(1.05, .38, length((vUv - .5) * vec2(1.15, 1.))); col *= mix(.8, 1., v);
+        gl_FragColor = vec4(col, 1.); }` });
+  GFX.sc = new T3.Scene(); const q = new T3.Mesh(new T3.PlaneGeometry(2, 2), GFX.mat); q.frustumCulled = false; GFX.sc.add(q); GFX.cam = new T3.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  // ēnas met: braucamrīks + pilots, tuvās mājas/koki/cilvēki, skatītāji; uztver: zeme, rampa, parki, mājas
+  CHUNKS.forEach(c => { c.s.castShadow = c.lod === 'near' || !!c.cast; c.s.receiveShadow = true; }); scene.traverse(o => { if (o.isMesh && !o.isInstancedMesh && o.geometry && o.geometry.type === 'PlaneGeometry') o.receiveShadow = true; });
+  if (rampGroup) rampGroup.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
+  gfxResize(); }
+function gfxSet(on) { GFX.hi = on; renderer.shadowMap.enabled = on; dayKey = -1; scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); }
+function gfxResize() { if (!GFX.rt) return; const v = renderer.getDrawingBufferSize(new T3.Vector2()); GFX.rt.setSize(v.x, v.y); GFX.mat.uniforms.res.value.copy(v); }
+function gfxRender() { if (!GFX.hi || !GFX.rt) return renderer.render(scene, camera);
+  const tp = state === 'run' && ejected && PIL ? PIL.o.position : VEHM ? VEHM.g.position : camera.position; sun.target.position.copy(tp); sun.position.copy(tp).addScaledVector(GFX.sunDir, 250); sun.shadow.intensity = 1;
+  GFX.fv.copy(tp).project(camera); GFX.mat.uniforms.focus.value = clamp((GFX.fv.y + 1) / 2, .2, .8); GFX.mat.uniforms.night.value = 1 - dayLight();
+  renderer.setRenderTarget(GFX.rt); renderer.render(scene, camera); renderer.setRenderTarget(null); renderer.render(GFX.sc, GFX.cam); }
+function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H, false); gfxResize(); camera.aspect = W / H; camera.fov = BASEFOV = W < H ? 72 : 58; camera.updateProjectionMatrix(); viewOffset(); }
 function viewOffset() { if (state === 'shop') { const land = W > H, sh = $('shop').getBoundingClientRect();
     if (land) camera.setViewOffset(W, H, (W - sh.left + 8) / 2 * .9, 0, W, H); else camera.setViewOffset(W, H, 0, Math.min(H * .3, (H - sh.top + 8) / 2), W, H); }
   else camera.clearViewOffset(); }
@@ -798,7 +829,8 @@ function frame(now) {
   // dinamiska izšķirtspēja: ja vidēji < ~42 FPS – mazāk pikseļu (līdz 1×), ja > ~55 FPS – atpakaļ līdz 2×
   if (state === 'run') { DYN.acc += dt; DYN.n++; if ((DYN.t += dt) > 2) { const avg = DYN.acc / DYN.n; let np = DYN.pr;
     if (avg > 1 / 42 && np > 1) np = Math.max(1, np - .25); else if (avg < 1 / 55 && np < PRMAX) np = Math.min(PRMAX, np + .25);
-    if (np !== DYN.pr) { DYN.pr = np; renderer.setPixelRatio(np); renderer.setSize(W, H, false); } DYN.t = DYN.acc = DYN.n = 0; } } STARS.position.copy(camera.position); if ((DAYT * 2 | 0) !== hudSec) { hudSec = DAYT * 2 | 0; hudKey = ''; hud(); }
+    if (np !== DYN.pr) { DYN.pr = np; renderer.setPixelRatio(np); renderer.setSize(W, H, false); gfxResize(); }
+    if (GFX.hi && np <= 1 && avg > 1 / 38 && ++GFX.slow >= 2) { gfxSet(false); GFX.auto = true; toast('⚙ Grafika: vienkārša (lai neraustās)'); } DYN.t = DYN.acc = DYN.n = 0; } } STARS.position.copy(camera.position); if ((DAYT * 2 | 0) !== hudSec) { hudSec = DAYT * 2 | 0; hudKey = ''; hud(); }
   const paused = $('ov').classList.contains('on') && state === 'run';
   if (state === 'run' && !paused) {
     acc += dt; runT += dt; const ip = ejected ? (sim.coast ? { pitch: 0, roll: 0, turbo: false, help: true } : { pitch: -.7, roll: 0, turbo: false, help: false }) : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
@@ -854,7 +886,7 @@ function frame(now) {
   speedFx(dt, state === 'run' && sim && !ejected ? sim.speed : 0);
   if (state === 'run' && sim && (MM.t += dt) > .1) { MM.t = 0; const mp = ejected && PIL ? PIL.o.position : VEHM.g.position; if (sim.mode !== 'ramp') { MM.trail.push([mp.x, mp.z]); if (MM.trail.length > 400) MM.trail.shift(); } mmDraw(mp.x, mp.z); } const fv = BASEFOV + 12 * fovK; if (Math.abs(camera.fov - fv) > .05) { camera.fov = fv; camera.updateProjectionMatrix(); }
   if (camShake > 0) { camShake = Math.max(0, camShake - dt * 1.6); camera.position.x += rnd(-.3, .3) * camShake; camera.position.y += rnd(-.3, .3) * camShake; }
-  renderer.render(scene, camera);
+  gfxRender();
 }
 
 // ================= Vadība =================
@@ -892,13 +924,15 @@ $('gear').onclick = e => { e.stopPropagation(); audioInit(); if ($('ov').classLi
   sheet(`<h2>⚙ Iestatījumi</h2><div class="setBox"><div class="step">📻 Radio un dziesmas</div><div id="radioC">${window.TWRadio ? TWRadio.controlsHTML() : ''}</div></div>
     <div class="setBox"><label class="setRow">🔔 Efekti (vējš, avārijas) <input id="fxV" type="range" min="0" max="100" value="${Math.round(FXV * 100)}"></label></div>
     <div class="setBox"><div class="step">🛫 Lidojums</div><div class="setRow" style="margin:6px 0">🧭 Palīgs izlīdzina</div><div class="seg" id="sHelp"><button data-x="1" class="${OPT.help ? 'on' : ''}">Ieslēgts</button><button data-x="0" class="${OPT.help ? '' : 'on'}">Izslēgts</button></div>
-      <div class="setRow" style="margin:10px 0 6px">🌬 Gaisa strīpas</div><div class="seg" id="sStr"><button data-x="1" class="${OPT.streaks ? 'on' : ''}">Rādīt</button><button data-x="0" class="${OPT.streaks ? '' : 'on'}">Nerādīt</button></div></div>
+      <div class="setRow" style="margin:10px 0 6px">🌬 Gaisa strīpas</div><div class="seg" id="sStr"><button data-x="1" class="${OPT.streaks ? 'on' : ''}">Rādīt</button><button data-x="0" class="${OPT.streaks ? '' : 'on'}">Nerādīt</button></div>
+      <div class="setRow" style="margin:10px 0 6px">✨ Grafika (ēnas, izpludināts tālums)</div><div class="seg" id="sGfx"><button data-x="1" class="${GFX.hi ? 'on' : ''}">Augsta</button><button data-x="0" class="${GFX.hi ? '' : 'on'}">Vienkārša</button></div></div>
     <button class="main ghostB" id="howTo" style="margin-bottom:8px">❓ Kā spēlēt</button>
     <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p>
     <p style="color:#9fb0ff;font-size:11.5px">3D modeļi: Vojtěch Balák, jeremy (CC BY 3.0, Poly Pizza), Quaternius (CC0).</p><button class="main" id="setOk">✔ Gatavs</button>`);
   $('howTo').onclick = () => { closeSheet(); intro(true); };
   if (window.TWRadio) TWRadio.wire($('radioC'));
   $('fxV').oninput = () => { FXV = $('fxV').value / 100; try { localStorage.setItem('rpFx', FXV); } catch (x) {} sfx('tick'); };
+  $('sGfx').querySelectorAll('button').forEach(b => b.onclick = () => { OPT.gfx = b.dataset.x === '1'; saveOpt(); gfxSet(OPT.gfx); GFX.slow = 0; $('sGfx').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
   [['sHelp', 'help'], ['sStr', 'streaks']].forEach(([id, k]) => $(id).querySelectorAll('button').forEach(b => b.onclick = () => { OPT[k] = b.dataset.x === '1'; saveOpt(); $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }));
   $('setOk').onclick = () => { closeSheet(); if (state === 'end') finishSheetAgain(); }; };
 function finishSheetAgain() { openShop(); }
@@ -948,7 +982,7 @@ const INTRO = [{ img: 'intro/1.webp', t: 'Velc sviru – aiziet!' }, { img: 'int
   { img: 'intro/4.webp', t: '🚀 Katapulta – izšaujies!' }, { img: 'intro/5.webp', t: 'Pērc uzlabojumus – lido tālāk!' }];
 const intro = force => window.TW && TW.intro ? TW.intro('rampa', INTRO, force) : Promise.resolve();
 function start() { loadModels(start2); }
-function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); sharpenTextures(); warmUp(); hud(); requestAnimationFrame(frame); intro();
+function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); gfxSetup(); resize(); openShop(); sharpenTextures(); warmUp(); hud(); requestAnimationFrame(frame); intro();
  }
 if (!ONLINE) { try { const s = JSON.parse(localStorage.getItem('rpSave')); if (s) save = Object.assign(save, s); wallet = +(localStorage.getItem('rpWalletDev') || 0); } catch (e) {} }
 if (ONLINE && window.firebase && window.TW_FIREBASE) {
