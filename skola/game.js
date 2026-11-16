@@ -749,6 +749,10 @@ function hud() {
   $('mFill').style.width = md + '%'; $('mFill').style.background = md >= 60 ? '#2ecc71' : md >= 35 ? '#ffb020' : '#ff5a6a';
 }
 const TIERS = ['', 'viegli', 'vidēji', 'grūti'];
+// instrukcija pirms pirmās stundas (kopīgais TW.intro); vēlreiz – ⚙ „❓ Kā spēlēt”
+const INTRO = [{ img: 'intro/1.webp', t: 'Pieskaries skolēnam ar pareizo atbildi' }, { img: 'intro/2.webp', t: 'Redzi ❗? Ātri pieskaries draiskulim!' },
+  { img: 'intro/3.webp', t: '🚽 Laist uz tualeti? Šmaucējs smīn' }, { img: 'intro/4.webp', t: '☕ Kafija dod enerģiju' }, { ico: '📁', t: 'Par grūtu? Mapītē izvēlies klasi' }];
+const intro = force => window.TW && TW.intro ? TW.intro('skola', INTRO, force) : Promise.resolve();
 function lobby() {
   if (L) L.st = 'end'; banner('');
   const lv = tLv();
@@ -757,7 +761,7 @@ function lobby() {
     <div class="fact">❗ = draiskulis! Ātri pieskaries viņam.<br>☕ Nogursti? Iedzer kafiju. 📁 Par grūtu? Mapītē izvēlies klasi.</div>
     <div class="chips"><span>🍎 ${lv}. līmenis</span><span>🎓 ${grade()}. klase</span><span>😈 līdz ${maxBusy()} draiskuļiem</span><button id="setB">⚙ Iestatījumi</button></div>
     <div class="row2 go2"><button class="main green" id="go">🔔 Sākt stundu</button><button class="main ghostB" id="shopB">🛍 Klase un tāfele</button></div>`);
-  $('go').onclick = startLesson; $('shopB').onclick = () => shop(lobby); $('setB').onclick = () => { closeSheet(); $('gear').click(); };
+  $('go').onclick = () => { closeSheet(); intro().then(startLesson); }; $('shopB').onclick = () => shop(lobby); $('setB').onclick = () => { closeSheet(); $('gear').click(); };
 }
 function shop(back) {
   const cur = save.board;
@@ -779,10 +783,11 @@ $('gear').onclick = e => { e.stopPropagation(); audioInit(); const wasOpen = $('
   if (wasOpen && L && L.st !== 'end') { toast('⚙ Iestatījumi – kad aizver šo logu'); return; } // stundas laikā logu nepārtrauc; lobijā/veikalā – atver
   sheet(`<h2>⚙ Iestatījumi</h2><div class="setBox"><div class="step">📻 Radio un dziesmas</div><div id="radioC">${window.TWRadio ? TWRadio.controlsHTML() : ''}</div></div>
     <div class="setBox"><label class="setRow">🔔 Efekti (zvans, joki) <input id="fxV" type="range" min="0" max="100" value="${Math.round(FXV * 100)}"></label></div>
-    <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p><button class="main" id="setOk">✔ Gatavs</button>`);
+    <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p><button class="main ghostB" id="howB">❓ Kā spēlēt</button><button class="main" id="setOk">✔ Gatavs</button>`);
   if (window.TWRadio) TWRadio.wire($('radioC'));
   $('fxV').oninput = () => { FXV = $('fxV').value / 100; try { localStorage.setItem('skFx', FXV); } catch (e) {} sfx('tick'); };
-  $('setOk').onclick = () => { closeSheet(); if (!L || L.st === 'end') lobby(); }; };
+  $('setOk').onclick = () => { closeSheet(); if (!L || L.st === 'end') lobby(); };
+  $('howB').onclick = () => { closeSheet(); $('ov').classList.add('on'); intro(true).then(() => { if (!L || L.st === 'end') lobby(); else closeSheet(); }); }; };
 
 // ================= Skaņa =================
 let FXV = 1; try { FXV = +(localStorage.getItem('skFx') ?? 1); } catch (e) {}
