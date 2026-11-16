@@ -65,7 +65,8 @@
   // Instrukcija pirms spēles: 3–5 bildes ar dažiem vārdiem, pēc tam „Spēlēt!”. Vienāds izskats visās spēlēs.
   // TW.intro(key, slides, force) → Promise (atrisinās, kad aizver). slides: [{img: 'intro/1.webp' | ico: '🚀', t: 'Īss teksts'}].
   // Pirmajā reizē rāda pats (localStorage twIntro:key); force = true – rāda vienmēr (❓ poga iestatījumos / pauzē).
-  TW.intro = (key, slides, force) => new Promise(res => {
+  // opts.i18n – spēle atbalsta angļu valodu (Graffiti): pogas pēc localStorage twLang, netulko (data-notr).
+  TW.intro = (key, slides, force, opts) => new Promise(res => {
     const k = 'twIntro:' + key; let seen = false; try { seen = !!localStorage.getItem(k); } catch (e) {}
     if ((seen && !force) || !slides || !slides.length) return res();
     if (!document.getElementById('twIntroCss')) { const st = document.createElement('style'); st.id = 'twIntroCss'; st.textContent = `
@@ -83,12 +84,13 @@
       #twIntro .next.go{background:linear-gradient(160deg,#5ef08a,#22c55e);color:#062b12;box-shadow:0 4px 0 #15803d}
       @media (orientation:landscape) and (max-height:520px){#twIntro{padding-left:calc(68px + env(safe-area-inset-left))}#twIntro .pic{font-size:40vh}#twIntro .box{width:min(860px,100%);height:100%;display:grid;grid-template-columns:1.6fr 1fr;align-content:center;grid-template-rows:1fr auto auto auto;gap:10px 18px}
         #twIntro .pic{grid-row:1/5;align-self:center;max-height:none;width:100%;height:auto;aspect-ratio:16/10}#twIntro .txt{align-self:end}#twIntro .dots,#twIntro .skip{justify-self:center}}`; document.head.appendChild(st); }
-    const ov = document.createElement('div'); ov.id = 'twIntro'; let i = 0;
+    const ov = document.createElement('div'); ov.id = 'twIntro'; let i = 0, en = false; try { en = !!(opts && opts.i18n) && localStorage.getItem('twLang') === 'en'; } catch (er) {}
+    const W = en ? { next: 'Next ▶', play: '▶ Play!', skip: 'Skip' } : { next: 'Tālāk ▶', play: '▶ Spēlēt!', skip: 'Izlaist' };
     const e = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const draw = () => { const s = slides[i], last = i === slides.length - 1;
       ov.innerHTML = `<div class="box"><div class="pic">${s.img ? `<img src="${e(s.img)}" alt="">` : e(s.ico || '')}</div><div class="txt">${e(s.t || '')}</div>
         <div class="dots">${slides.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
-        <div class="row"><button class="next${last ? ' go' : ''}" type="button">${last ? '▶ Spēlēt!' : 'Tālāk ▶'}</button></div><button class="skip${last ? ' hide' : ''}" type="button">Izlaist</button></div>`; };
+        <div class="row"><button class="next${last ? ' go' : ''}" type="button" data-notr>${last ? W.play : W.next}</button></div><button class="skip${last ? ' hide' : ''}" type="button" data-notr>${W.skip}</button></div>`; };
     const close = () => { try { localStorage.setItem(k, '1'); } catch (er) {} ov.remove(); res(); };
     ov.addEventListener('pointerdown', ev => ev.stopPropagation());
     ov.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('button');

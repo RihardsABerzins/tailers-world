@@ -1740,7 +1740,7 @@ const INTRO=[
   {img:'intro/3.webp',t:'Watch out for police 🚓 – hide!'},
   {img:'intro/4.webp',t:'Buy paint and eat 🍔'},
 ];
-const showIntro=force=>window.TW&&TW.intro?TW.intro('grafiti',INTRO,force):Promise.resolve();
+const showIntro=force=>window.TW&&TW.intro?TW.intro('grafiti',INTRO,force,{i18n:true}):Promise.resolve();
 document.getElementById('pzHelp').onclick=()=>{ pauseOv.classList.remove('on'); showIntro(true).then(openPauseAgain); };
 function openPauseAgain(){ mode='world'; openPause(); }
 const GUIDE=[
