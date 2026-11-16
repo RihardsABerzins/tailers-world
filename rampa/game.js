@@ -172,6 +172,8 @@ function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh) conti
   groups.forEach((ids, k) => { const s = new T3.InstancedMesh(m.geometry, m.material, ids.length); s.frustumCulled = false;
     ids.forEach((i, j) => { m.getMatrixAt(i, mt); s.setMatrixAt(j, mt); if (m.instanceColor) { m.getColorAt(i, c); s.setColorAt(j, c); } });
     scene.add(s); CHUNKS.push({ s, z0: k * CH - 80, z1: (k + 1) * CH + 80 }); }); } }
+// sākumā visus gabalus vienreiz uzzīmē (GPU saņem buferus/šeiderus uzreiz → lidojumā nav aizķeršanās, kad parādās jauns gabals)
+function warmUp() { CHUNKS.forEach(c => c.s.visible = true); renderer.compile(scene, camera); renderer.render(scene, camera); }
 function cullChunks() { const z = camera.position.z, fz = Math.cos(camera.rotation.y) >= 0 ? 1 : -1; for (const c of CHUNKS) c.s.visible = c.z1 > z - 220 && c.z0 < z + 1300; }
 function label(text, fg, bg, size) { const t = tex(256, 88, (g, w, h) => { g.fillStyle = bg; const r = 26; g.beginPath(); g.moveTo(r, 4); g.arcTo(w - 4, 4, w - 4, h - 4, r); g.arcTo(w - 4, h - 4, 4, h - 4, r); g.arcTo(4, h - 4, 4, 4, r); g.arcTo(4, 4, w - 4, 4, r); g.fill();
   g.fillStyle = fg; g.font = `900 ${size * 2}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 2); });
@@ -181,11 +183,18 @@ function wedgeGeo() { // prizma: aizmugurē augstums 1, uz priekšu (z) slīpi l
   const U = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 1], [1, 1]];
   f.forEach(tri => tri.forEach(i => { pos.push(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]); uv.push(U[i][0], i >= 4 ? 4 : i >= 2 ? 0 : 0); }));
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(uv, 2)); g.computeVertexNormals(); return g; }
+// rampas tekstūra: u – viss šķērsgriezums (0..1, vidū grīda), v – 24 m garumā; tumšs segums, bultas, apmales, ātruma svītras
 let RTEX = null;
-function rampTex() { return RTEX || (RTEX = tex(128, 256, (g, w, h) => { g.fillStyle = '#c9a272'; g.fillRect(0, 0, w, h); g.strokeStyle = '#9c784a99'; g.lineWidth = 2;
-  for (let y = 0; y < h; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
-  g.fillStyle = '#00000014'; for (let i = 0; i < 40; i++) g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 8 + Math.random() * 30);
-  g.fillStyle = '#ffffff88'; for (let y = 0; y < h; y += 64) g.fillRect(w / 2 - 2, y, 4, 36); g.fillStyle = '#ffd34dcc'; g.fillRect(w * .31, 0, 3, h); g.fillRect(w * .69 - 3, 0, 3, h); }, true)); }
+function rampTex() { return RTEX || (RTEX = tex(512, 256, (g, w, h) => { const U = u => u * w, F0 = .369, F1 = .631;
+  g.fillStyle = '#20252e'; g.fillRect(0, 0, w, h); g.fillStyle = '#2a2f38'; g.fillRect(U(F0), 0, U(F1 - F0), h); // sienas / grīda
+  g.fillStyle = '#7e8794'; g.fillRect(0, 0, U(.045), h); g.fillRect(U(.955), 0, U(.045), h); // augšmala
+  g.fillStyle = '#00000040'; for (let y = 0; y < h; y += 32) g.fillRect(0, y, w, 2); for (const u of [.12, .25, .44, .56, .75, .88]) g.fillRect(U(u), 0, 2, h); // paneļu šuves
+  g.fillStyle = '#ffffff10'; for (let i = 0; i < 500; i++) g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+  for (const [u, c, wd] of [[.16, '#ff7a1a', 9], [.84, '#ff7a1a', 9], [.185, '#ffffffaa', 3], [.815, '#ffffffaa', 3]]) { g.fillStyle = c; g.fillRect(U(u) - wd / 2, 0, wd, h); } // ātruma svītras
+  for (let y = 0; y < h; y += 32) [[F0 - .016, F0], [F1, F1 + .016]].forEach(([a, b]) => { g.fillStyle = (y / 32) % 2 ? '#ffffff' : '#e53935'; g.fillRect(U(a), y, U(b - a), 32); }); // apmales
+  g.fillStyle = '#ffffffcc'; for (let y = 8; y < h; y += 64) g.fillRect(w / 2 - 2, y, 4, 34); // vidus līnija
+  g.strokeStyle = '#ffd34dd0'; g.lineWidth = 9; g.lineCap = 'round'; g.lineJoin = 'round'; // bulta uz priekšu (tekstūrā uz augšu)
+  for (const cy of [80, 108, 136]) { g.beginPath(); g.moveTo(w * .45, cy + 22); g.lineTo(w / 2, cy); g.lineTo(w * .55, cy + 22); g.stroke(); } }, true)); }
 
 // ---- milzu rampa (U formas šķērsgriezums) ----
 let RAMP = null, rampGroup = null, GATE = null, gateA = 0, leverK = 0;
@@ -199,23 +208,31 @@ function buildRamp(H) {
   const half = cs.slice(), full = half.concat(half.slice().reverse().map(([x, y]) => [-x, y]));
   const pts = RAMP.pts.filter((p, i) => i % 3 === 0 || i === RAMP.pts.length - 1), pos = [], uv = [], idx = [], n = full.length;
   let ux = [0]; for (let j = 1; j < n; j++) ux.push(ux[j - 1] + Math.hypot(full[j][0] - full[j - 1][0], full[j][1] - full[j - 1][1]));
-  const um = ux[n - 1] / 2; pts.forEach(p => full.forEach(([x, y], j) => { pos.push(x, p.y + y, p.z); uv.push((ux[j] - um) / 28 + .5, p.s / 12); }));
+  pts.forEach(p => full.forEach(([x, y], j) => { pos.push(x, p.y + y, p.z); uv.push(1 - ux[j] / ux[n - 1], p.s / 24); }));
   for (let i = 0; i < pts.length - 1; i++) for (let j = 0; j < n - 1; j++) { const a = i * n + j, b = a + 1, c = a + n, d = c + 1; idx.push(a, c, b, b, c, d); }
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
   const rt = rampTex(); const rm = new T3.MeshLambertMaterial({ map: rt, side: T3.DoubleSide }); rampGroup.add(new T3.Mesh(g, rm));
   // margas pa malām (gludas caurules) + apakšpuse tumšāka
   const rail = pts.filter((p, i) => i % 2 === 0).map(p => new T3.Vector3(0, p.y + RR + 1.05, p.z));
   [-1, 1].forEach(sx => { const c = new T3.CatmullRomCurve3(rail.map(v => new T3.Vector3(sx * (FW + RR + 1.1), v.y, v.z)));
-    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(c, Math.min(400, rail.length * 2), .16, 6, false), mat(0xd9dde3)));
-    const posts = rail.filter((v, i) => i % 3 === 0), pI = new T3.InstancedMesh(new T3.CylinderGeometry(.07, .07, 1.05, 5).translate(0, -.52, 0), mat(0x9aa0aa), posts.length);
+    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(c, Math.min(400, rail.length * 2), .16, 6, false), mat(0x454b56)));
+    // LED līnija sienas augšmalā (spīd arī naktī)
+    const led = new T3.CatmullRomCurve3(rail.map(v => new T3.Vector3(sx * (FW + RR + .05), v.y - 1.0, v.z)));
+    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(led, Math.min(400, rail.length * 2), .09, 5, false), new T3.MeshBasicMaterial({ color: 0x2fe6ff })));
+    const posts = rail.filter((v, i) => i % 3 === 0), pI = new T3.InstancedMesh(new T3.CylinderGeometry(.07, .07, 1.05, 5).translate(0, -.52, 0), mat(0x2b2f36), posts.length);
     posts.forEach((v, i) => pI.setMatrixAt(i, m4.compose(v3.set(sx * (FW + RR + 1.1), v.y, v.z), q0, new T3.Vector3(1, 1, 1)))); rampGroup.add(pI); });
-  const under = new T3.Mesh(g, new T3.MeshLambertMaterial({ color: 0x6f5a40, side: T3.BackSide })); under.position.y = -.25; rampGroup.add(under);
+  const under = new T3.Mesh(g, new T3.MeshLambertMaterial({ color: 0x1c2027, side: T3.BackSide })); under.position.y = -.25; rampGroup.add(under);
   rm.side = T3.FrontSide;
   // balsti
-  const sup = pts.filter((p, i) => i % 4 === 0), sI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, 0), mat(0x8a8f99), sup.length * 2);
+  const sup = pts.filter((p, i) => i % 4 === 0), sI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, 0), mat(0x3b414c), sup.length * 2);
   sup.forEach((p, i) => [-11, 11].forEach((x, k) => sI.setMatrixAt(i * 2 + k, m4.compose(v3.set(x, 0, p.z), q0, new T3.Vector3(1.1, Math.max(.1, p.y - .3), 1.1))))); rampGroup.add(sI);
+  // šķērssijas starp balstiem ik 12 m augstumā (kopne)
+  const bm = []; sup.forEach(p => { for (let y = 10; y < p.y - 2; y += 12) bm.push([p.z, y]); });
+  const bI = new T3.InstancedMesh(new T3.BoxGeometry(22, .5, .5), mat(0x2b3039), Math.max(1, bm.length)); bm.forEach(([z, y], i) => bI.setMatrixAt(i, m4.compose(v3.set(0, y, z), q0, new T3.Vector3(1, 1, 1)))); bI.count = bm.length; rampGroup.add(bI);
   // starta platforma ar darbnīcu
-  const p0 = RAMP.pts[0], plat = new T3.Mesh(new T3.BoxGeometry(34, 2, 26), mat(0x5c6270)); plat.position.set(0, p0.y - 1, p0.z - 12); rampGroup.add(plat);
+  const p0 = RAMP.pts[0], plat = new T3.Mesh(new T3.BoxGeometry(34, 2, 26), mat(0x2c313a));
+  const hz = tex(128, 16, (g2, w) => { g2.fillStyle = '#1b1b1f'; g2.fillRect(0, 0, w, 16); g2.fillStyle = '#ffd34d'; for (let i = -1; i < 9; i++) { g2.beginPath(); g2.moveTo(i * 16, 16); g2.lineTo(i * 16 + 8, 0); g2.lineTo(i * 16 + 16, 0); g2.lineTo(i * 16 + 8, 16); g2.fill(); } }, true); hz.repeat.set(4, 1);
+  const edge = new T3.Mesh(new T3.BoxGeometry(34.2, .7, .3), new T3.MeshLambertMaterial({ map: hz })); edge.position.set(0, p0.y - .35, p0.z + 1.05); rampGroup.add(edge); plat.position.set(0, p0.y - 1, p0.z - 12); rampGroup.add(plat);
   const gar = new T3.Mesh(new T3.BoxGeometry(16, 8, 10), mat(0xe8c9a8)); gar.position.set(0, p0.y + 4, p0.z - 20); rampGroup.add(gar);
   const door = new T3.Mesh(new T3.BoxGeometry(9, 5.5, .2), mat(0x3d4552)); door.position.set(0, p0.y + 2.75, p0.z - 14.9); rampGroup.add(door);
   const sign = label('🔧 DARBNĪCA', '#2b1a00', '#ffd34d', 22); sign.position.set(0, p0.y + 9.6, p0.z - 14.8); sign.scale.set(9, 3.1, 1); rampGroup.add(sign);
@@ -224,7 +241,8 @@ function buildRamp(H) {
   [-7, 7].forEach(x => { const post = new T3.Mesh(new T3.BoxGeometry(.4, 3.2, .4).translate(0, 1.6, 0), mat(0x3d4552)); post.position.set(x, p0.y, p0.z + 4.2); rampGroup.add(post); });
   const bt = tex(128, 16, (g2, w) => { for (let i = 0; i < 8; i++) { g2.fillStyle = i % 2 ? '#ffffff' : '#e53935'; g2.fillRect(i * w / 8, 0, w / 8, 16); } });
   const bar = new T3.Mesh(new T3.BoxGeometry(14, .22, .18).translate(7, 0, 0), new T3.MeshLambertMaterial({ map: bt })); bar.position.y = 2.1; GATE.add(bar); GATE.userData.bar = bar;
-  const tower = new T3.Mesh(new T3.BoxGeometry(30, 1, 22).translate(0, .5, 0), mat(0x7d838e)); tower.scale.y = p0.y - 2; tower.position.set(0, 0, p0.z - 12); rampGroup.add(tower);
+  const tower = new T3.Mesh(new T3.BoxGeometry(30, 1, 22).translate(0, .5, 0), mat(0x353b46));
+  const big = label('MEGA RAMPA', '#ffd34d', '#15181dee', 30); big.position.set(0, p0.y + 13.5, p0.z - 20); big.scale.set(16, 5.5, 1); rampGroup.add(big); tower.scale.y = p0.y - 2; tower.position.set(0, 0, p0.z - 12); rampGroup.add(tower);
 }
 
 // ================= Braucamrīki un tēls =================
@@ -233,7 +251,7 @@ const LOOKC = () => ({ skin: LOOK.skin || '#f2c9a0', body: LOOK.hood && LOOK.hoo
 const MODELS = {};
 function loadModels(cb) {
   const go2 = () => { try { const ld = new T3.GLTFLoader(), get = u => new Promise(r => ld.load(u, g => r(g.scene), undefined, () => r(null)));
-    (async () => { const g = await get('models.glb?v=1'); if (g) g.children.forEach(o => { MODELS[o.name] = o; });
+    (async () => { const g = await get('models.glb?v=3'); if (g) g.children.forEach(o => { MODELS[o.name] = o; });
       for (const n of ['tree_oak', 'tree_default', 'tree_fat', 'tree_pineRoundA']) { const sc = await get('../atra-palidziba/models/nature/' + n + '.glb'); if (sc) TREES.push(treeParts(sc)); }
       cb(); })(); } catch (e) { cb(); } };
   if (T3.GLTFLoader) return go2();
@@ -267,7 +285,8 @@ function makePerson2(pose) { const c = LOOKC(), t = { skin: c.skin, body: c.body
   const head = mdl('Head', t); g.add(head); const helm = mdl('Helmet', t); g.add(helm);
   g.userData = { legs, torso, arms, head }; setPose(g, pose); return g; }
 function setPose(p, pose) { const u = p.userData; u.legs.rotation.x = pose === 'sit' ? -Math.PI / 2 : 0; u.legs.position.y = pose === 'sit' ? .62 : .6; u.torso.rotation.x = pose === 'crouch' ? .45 : 0;
-  u.arms.forEach(a => { a.rotation.x = pose === 'sit' ? -1.1 : pose === 'crouch' ? -1.2 : pose === 'wave' ? 0 : -.3; a.rotation.z = pose === 'wave' ? (a.position.x > 0 ? -2.6 : .2) : pose === 'chute' ? (a.position.x > 0 ? -2.8 : 2.8) : 0; });
+  u.arms.forEach(a => { a.rotation.x = pose === 'sit' ? -1.1 : pose === 'crouch' ? -1.2 : pose === 'wave' || pose === 'splat' ? 0 : -.3; a.rotation.z = pose === 'wave' ? (a.position.x > 0 ? -2.6 : .2) : pose === 'chute' ? (a.position.x > 0 ? -2.8 : 2.8) : pose === 'splat' ? (a.position.x > 0 ? 2.3 : -2.3) : 0; });
+  u.legs.children.forEach((l, i) => { l.rotation.z = pose === 'splat' ? (i ? .32 : -.32) : 0; });
   if (pose === 'crouch') { u.legs.scale.y = .8; } else u.legs.scale.y = 1; }
 
 const WING_C = [0, 0xc9a26b, 0xe0c08a, 0xff6b8a, 0x4fc3f7, 0xffffff];
@@ -296,7 +315,7 @@ function buildVehicle2(vid, sel, st) {
     [putA(mdl('Fin', { paint: bT <= 0 ? CARD : pc })), putA(mdl('HStab', { white: bT <= 0 ? CARD : 0xf5f5f5 }))].forEach(o => { o.position.z += D.b + 1.85; o.position.y += D.fy; });
     if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing ? VEH.plane.slots.wing.lv[sel.wing].tier + 1 : 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
     if (sel.wheel) { const wr = .2 + sel.wheel * .004; [-.55, .55].forEach(x => { const w = put(mdl('Wheel'), x, wr, .45); w.scale.setScalar(wr); add(Cyl(.035, .035, hb - wr - .2, 6), mat(0x9aa0aa), x * .8, wr + (hb - wr - .2) / 2, .45); });
-      const tw = put(mdl('Wheel'), 0, .1, D.b * s * .85); tw.scale.setScalar(.1); }
+      const tw = put(mdl('Wheel'), 0, .1, D.b * s * .85); tw.scale.setScalar(.1); add(Cyl(.03, .03, hb - .2, 6), mat(0x9aa0aa), 0, .1 + (hb - .2) / 2, D.b * s * .85); }
     const e = sel.eng ? [1, 2, 3, 3, 4][VEH.plane.slots.eng.lv[sel.eng].tier] : 0;
     if (e === 1 || e === 2) { const pr = putA(mdl('Prop')); pr.scale.setScalar(e === 1 ? .42 : .95); pr.position.z = D.f + .06; V.spin = pr; if (e === 1) { const ring = putA(new T3.Mesh(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd))); ring.position.z = D.f + .06; } }
     if (e === 3) { const ry = D.u - .16; putA(new T3.Mesh(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c))).position.set(0, ry, -.3); putA(new T3.Mesh(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5))).position.set(0, ry, .47); V.flames.push([0, hb + ry * s, -.95 * s, .5]); }
@@ -363,7 +382,7 @@ const tc = new T3.Vector3(), ftmp = [0, 0, 0, 0, 0, 0, 0];
 function updateStreaks(V, dt, sp, alpha, cl, on) {
   const geo = STRK.mesh.geometry; if (!on || sp < 3 || !V.flow) { geo.setDrawRange(0, 0); return; }
   if (STRK.vref !== V) { streakSeeds(V); STRK.vref = V; }
-  STRK.grp.rotation.x = alpha; STRK.t += dt; STRK.mat.map.offset.x -= dt * Math.min(sp, 40) * .09; STRK.mat.opacity = clamp((sp - 3) / 10, 0, 1);
+  STRK.grp.rotation.x = alpha; STRK.t += dt; STRK.mat.map.offset.x -= dt * Math.min(sp, 42) * .3; // „komētas” skrien gandrīz gaisa ātrumā (ierobežots, lai kadros nemirgo) STRK.mat.opacity = clamp((sp - 3) / 10, 0, 1);
   const F = V.flow, { N, K } = STRK, pos = geo.attributes.position.array, cc = geo.attributes.color.array, uv = geo.attributes.uv.array, t = STRK.t;
   const zf = F.az + 2.5 + V.len * .25 + Math.min(3, sp * .05), zb = -(F.az + 2.5 + Math.min(5, sp * .1)), h = (zf - zb) / (K - 1);
   STRK.grp.updateMatrixWorld(); tc.copy(camera.position); STRK.grp.worldToLocal(tc);
@@ -392,15 +411,17 @@ const SPK = { n: 260, pos: new Float32Array(260 * 3) }; { const g = new T3.Buffe
 const BITS = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1), new T3.MeshLambertMaterial({ color: 0xffffff }), 220); BITS.count = 0; BITS.frustumCulled = false; scene.add(BITS);
 function puff(p, kind, n) { for (let i = 0; i < n; i++) { const s = spPool.find(x => !x.visible); if (!s) return; s.visible = true; s.position.set(p.x + rnd(-1, 1), p.y + rnd(0, 1), p.z + rnd(-1, 1));
   const c = kind === 'smoke' ? [.35, .36, .4] : kind === 'dust' ? [.78, .7, .58] : [.95, .95, .95]; s.material.color.setRGB(...c); s.material.opacity = kind === 'smoke' ? .75 : .8;
-  const tr = kind === 'trail'; if (tr) { s.material.color.setRGB(.3, .3, .33); s.material.opacity = .6; }
-  FX.puffs.push({ s, v: tr ? new T3.Vector3(rnd(-.3, .3), rnd(.2, .6), rnd(-.3, .3)) : new T3.Vector3(rnd(-2, 2), kind === 'smoke' ? rnd(1.5, 3.5) : rnd(.3, 2.5), rnd(-2, 2)), life: 0, max: tr ? rnd(1.2, 1.8) : kind === 'smoke' ? rnd(2.5, 4) : rnd(1.2, 2.2), s0: tr ? .35 : kind === 'smoke' ? 1.2 : kind === 'white' ? .5 : 1.6, grow: tr ? .9 : kind === 'smoke' ? 2.2 : kind === 'white' ? .8 : 3, op: s.material.opacity }); } }
+  const tr = kind === 'trail', fi = kind === 'fire'; if (tr) { s.material.color.setRGB(.3, .3, .33); s.material.opacity = .6; } if (fi) { s.material.color.setRGB(1, rnd(.45, .75), .15); s.material.opacity = .95; s.position.x += rnd(-1, 1); s.position.z += rnd(-1, 1); }
+  FX.puffs.push({ s, v: tr ? new T3.Vector3(rnd(-.3, .3), rnd(.2, .6), rnd(-.3, .3)) : fi ? new T3.Vector3(rnd(-3, 3), rnd(2, 6), rnd(-3, 3)) : new T3.Vector3(rnd(-2, 2), kind === 'smoke' ? rnd(1.5, 3.5) : rnd(.3, 2.5), rnd(-2, 2)), life: 0, max: tr ? rnd(1.2, 1.8) : fi ? rnd(.6, 1.1) : kind === 'smoke' ? rnd(2.5, 4) : rnd(1.2, 2.2), s0: tr ? .35 : fi ? 2.6 : kind === 'smoke' ? 1.2 : kind === 'white' ? .5 : 1.6, grow: tr ? .9 : fi ? 4.2 : kind === 'smoke' ? 2.2 : kind === 'white' ? .8 : 3, op: s.material.opacity }); } }
 function sparks(p, n, v) { for (let i = 0; i < n && FX.sparks.length < SPK.n; i++) FX.sparks.push({ p: p.clone(), v: new T3.Vector3(rnd(-6, 6), rnd(2, 10), (v || 0) * rnd(.1, .5) + rnd(-5, 5)), life: rnd(.4, 1) }); }
 function bits(p, n, kind, v) { for (let i = 0; i < n && FX.bits.length < 220; i++) { const glass = kind === 'glass', fe = kind === 'feather';
   if (fe) { FX.bits.push({ p: p.clone().add(new T3.Vector3(rnd(-.5, .5), rnd(-.3, .3), rnd(-.5, .5))), v: new T3.Vector3(rnd(-2, 2), rnd(0, 2), rnd(-2, 2)), r: new T3.Euler(rnd(0, 6), rnd(0, 6), 0), rv: rnd(-4, 4), s: new T3.Vector3(.08, .015, .26), c: 0xffffff, life: 0, rest: false, fl: true }); continue; }
   FX.bits.push({ p: p.clone().add(new T3.Vector3(rnd(-1.5, 1.5), rnd(-1, 1), 0)), v: new T3.Vector3(rnd(-5, 5), rnd(1, 7), (v || 0) * rnd(-.2, .25) + rnd(-3, 1)), r: new T3.Euler(rnd(0, 6), rnd(0, 6), 0), rv: rnd(-9, 9),
     s: glass ? new T3.Vector3(rnd(.15, .4), rnd(.15, .4), .03) : new T3.Vector3(.5, .08, .35), c: glass ? 0xbfe6ff : pick([0xa34a2a, 0x8c3b22, 0xb85a35]), life: 0, rest: false }); } }
+// ēkas siena, kurai trāpīja (x, z – punkts ārpusē): virsmas punkts un ārējā normāle
+function wallFace(b, x, z) { if (z <= b.z0 + .1) return { x, z: b.z0, nx: 0, nz: -1 }; if (z >= b.z1 - .1) return { x, z: b.z1, nx: 0, nz: 1 }; if (x <= b.x0 + .1) return { x: b.x0, z, nx: -1, nz: 0 }; return { x: b.x1, z, nx: 1, nz: 0 }; }
 function decal(b, y, x, z) { // logu caurums uz tās sienas, kurai trāpīja
-  let px = x, pz = z, ry = 0; if (z <= b.z0 + .1) { pz = b.z0 - .06; ry = Math.PI; } else if (z >= b.z1 - .1) { pz = b.z1 + .06; } else if (x <= b.x0 + .1) { px = b.x0 - .06; ry = -Math.PI / 2; } else { px = b.x1 + .06; ry = Math.PI / 2; }
+  const f = wallFace(b, x, z), px = f.x + f.nx * .06, pz = f.z + f.nz * .06, ry = Math.atan2(f.nx, f.nz);
   const d = new T3.Mesh(new T3.PlaneGeometry(2.6, 2.2), new T3.MeshBasicMaterial({ color: 0x1d232c })); d.position.set(px, y, pz); d.rotation.y = ry; scene.add(d); FX.decals.push(d);
   const cr = new T3.Mesh(new T3.PlaneGeometry(4.5, .25), new T3.MeshBasicMaterial({ color: 0x2a2a2a })); cr.position.set(px, y + .9, pz); cr.position.x += Math.sin(ry) * .01; cr.rotation.set(0, ry, .5); scene.add(cr); FX.decals.push(cr); }
 function clearFX() { FX.puffs.forEach(f => f.s.visible = false); FX.puffs = []; FX.sparks = []; FX.bits = []; BITS.count = 0; FX.decals.forEach(d => scene.remove(d)); FX.decals = []; }
@@ -467,8 +488,19 @@ function birdHit(b, front) { const engine = front && ST.T && !sim.engDead; sim.b
   b.hit = 1.3; b.v.set(Math.sin(sim.psi) * sim.speed * .4, 3, Math.cos(sim.psi) * sim.speed * .4); bits(b.p, 14, 'feather', 0); puff(b.p, 'white', 2); camShake = .4; sfx('bird');
   if (engine) { toast('🐦💥 Putns dzinējā! Dzinējs apstājās'); sfx('sputter'); $('turbo').classList.remove('on'); inp.turbo = false; } else toast('🐦 Bonk! Putns!'); }
 
-// ---- izpletnis ----
-let PIL = null; // izšautais pilots { o, v, t, landed }
+// ---- izšautais pilots ----
+let PIL = null; // { o, v, t, landed, tl }
+// cilvēciņš „ielīp” sienā: izplestas rokas un kājas, ar seju pret sienu, saplacināts; paliek tur
+function splat(o, b, x, y, z) { const f = wallFace(b, x, z); scene.attach(o); setPose(o, 'splat'); o.rotation.order = 'YXZ'; o.rotation.set(0, Math.atan2(-f.nx, -f.nz), 0);
+  const sc = Math.max(.9, o.scale.x); o.scale.set(sc * 1.05, sc, sc * .55); o.position.set(f.x + f.nx * .12, clamp(y, .2, b.h - 1.6 * sc) , f.z + f.nz * .12);
+  decal(b, o.position.y + .7 * sc, f.x - f.nx, f.z - f.nz); puff(o.position, 'dust', 3); return f; }
+// bez pilota lidmašīna ietriecas un uzsprāgst (to redz fonā, kamēr kamera seko pilotam)
+let boomT = 0;
+function explodePlane() { if (boomT || !sim) return; boomT = runT || .001; const p = VEHM.g.position.clone(), vel = new T3.Vector3(Math.sin(sim.psi) * sim.vz, sim.vy, Math.cos(sim.psi) * sim.vz), wall = !!sim.wall;
+  sim.mode = 'done'; breakApart(VEHM, vel.multiplyScalar(.6), wall); updateStreaks(VEHM, 0, 0, 0, 0, false);
+  puff(p, 'fire', 14); puff(tmp.copy(p).add(v3.set(0, 2, 0)), 'fire', 6); puff(p, 'smoke', 8); sparks(p.clone().add(new T3.Vector3(0, 1, 0)), 90, sim.vz * .5);
+  const b = wall ? sim.wall : surfAt(WORLD, p.x, p.z).b; if (b && !b.landing) { if (wall) { bits(p.clone(), 26, 'glass', -sim.vz); decal(b, clamp(p.y + 1, 2, b.h - 1), p.x, p.z); } else bits(new T3.Vector3(p.x, b.h, p.z), 20, 'tile', sim.vz); }
+  sfx('crash'); camShake = Math.max(camShake, .35); }
 
 // ================= Spēles stāvoklis =================
 let state = 'boot', sim = null, VEHM = null, ST = null, prev = null, acc = 0, crashT = 0, runT = 0, endInfo = null, inp = { pitch: 0, roll: 0, turbo: false }, lastT = performance.now(), shopT = 0, camShake = 0;
@@ -497,8 +529,8 @@ addEventListener('resize', () => { resize(); });
 // ---- lidojums ----
 function go() {
   if (state !== 'shop' && state !== 'end') return;
-  audioInit(); closeSheet(); $('shop').classList.remove('on'); setVehicle(); clearFX();
-  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0 }; camPsi = 0; camSnap = true; resetBirds(); ejected = false; runId++; $('eject').classList.remove('on'); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
+  audioInit(); closeSheet(); $('shop').classList.remove('on'); setVehicle(); updateStreaks(VEHM, 0, 0, 0, 0, false); clearFX();
+  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0, s: 0 }; camPsi = 0; camSnap = true; resetBirds(); ejected = false; boomT = 0; FOCUS = null; camW = 0; runId++; $('eject').classList.remove('on'); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
   gateA = 0; leverK = 0; setLever(0); $('lever').classList.add('on'); $('dist').classList.add('on'); $('dM').textContent = '0 m'; $('dSub').textContent = VEH[save.veh].i + ' ' + VEH[save.veh].n;
 }
 // svira: velc rokturi lejā līdz galam → barjera atveras un brauciens sākas
@@ -518,31 +550,38 @@ function handleEvents() {
 
     else if (k === 'flip') { toast(`🤸 Salto ×${e[1]}!`); sfx('coin'); }
     else if (k === 'bounce') { puff(VEHM.g.position, 'dust', 3); camShake = .3; sfx('bump'); if (e[2]) toast('🏠 Lēciens pa jumtu!'); }
+    else if (ejected) { if (k === 'crash' || k === 'done') explodePlane(); } // bez pilota jebkurš pieskāriens = sprādziens
     else if (k === 'touch') { puff(VEHM.g.position, 'dust', 4); sfx('bump'); }
     else if (k === 'bonk') { sfx('bump'); camShake = .3; }
     else if (k === 'crash') startCrash(e[1], e[2]);
-    else if (k === 'done') { if (!ejected) finish(e[1] === 'land' ? 'land' : 'stop'); } }
+    else if (k === 'done') finish(e[1] === 'land' ? 'land' : 'stop'); }
   sim.ev.length = 0;
 }
 function startCrash(kind, v) {
   state = 'crash'; crashT = 0; camShake = 1; joyReset(); $('eject').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); inp.turbo = false; const p = VEHM.g.position.clone(), vel = new T3.Vector3(Math.sin(sim.psi) * sim.vz, sim.vy, Math.cos(sim.psi) * sim.vz), wall = kind === 'wall', b = wall ? sim.wall : surfAt(WORLD, sim.x, sim.z).b;
   breakApart(VEHM, vel, wall); updateStreaks(VEHM, 0, 0, 0, 0, false);
+  // pilots: ietriecoties mājā – paliek iesprūdis sienā; citādi aizlido un nokrīt
+  const pil = VEHM.pilot; FOCUS = null;
+  if (wall && b && !b.landing) { const f = splat(pil, b, sim.x, p.y + .2, sim.z); DEB.push({ o: pil, rest: 2 }); FOCUS = { p: pil.position, nx: f.nx, nz: f.nz }; }
+  else { scene.attach(pil); setPose(pil, 'stand'); DEB.push({ o: pil, v: new T3.Vector3(vel.x * .55 + rnd(-1, 1), Math.abs(vel.y) * .2 + rnd(3, 6), vel.z * .55), w: new T3.Vector3(rnd(-5, 5), rnd(-3, 3), rnd(-5, 5)), main: false, r: .25, rest: 0 }); }
   sparks(p.clone().add(new T3.Vector3(0, .5, 0)), 60, sim.vz); puff(p, 'dust', 10); puff(p, 'smoke', 4);
   if (b && !b.landing) { const y = wall ? clamp(p.y + 1, 2, b.h - 1) : b.h; if (wall) { bits(new T3.Vector3(p.x, y, p.z), 34, 'glass', -sim.vz); decal(b, y, p.x, p.z); } if (!wall || p.y > b.h - 5) bits(new T3.Vector3(p.x, b.h, p.z + (wall ? 1 : 0)), 26, 'tile', sim.vz); }
   sfx('crash'); if (b && !b.landing) setTimeout(() => sfx('glass'), 120);
   if (!ejected) endInfo = { kind: 'crash', dist: Math.max(0, sim.maxZ) };
 }
-// 🪂 katapulta: pilots izšaujas kā lode uz priekšu, pēc brīža sāk krist ātrāk un tad atver izpletni; braucamrīks lido tālāk viens
-let ejected = false, runId = 0;
+// 🚀 katapulta: pilots izšaujas uz augšu un nedaudz uz priekšu, tad krīt; lidmašīna bez pilota nodur degunu, ietriecas un uzsprāgst fonā
+let ejected = false, runId = 0, FOCUS = null, camW = 0;
 function eject() { if (state !== 'run' || ejected || !sim || sim.mode !== 'air') return; ejected = true; joyReset(); inp.turbo = false; $('turbo').classList.remove('on'); $('eject').classList.remove('on'); hints(false);
   const hx = Math.sin(sim.psi), hz = Math.cos(sim.psi), pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); pil.rotation.set(-1.2, sim.psi, 0);
-  PIL = { o: pil, v: new T3.Vector3(hx * (sim.vz + 5), Math.max(sim.vy, 0) + 10, hz * (sim.vz + 5)), t: 0, landed: false, eject: true };
+  PIL = { o: pil, v: new T3.Vector3(hx * (sim.vz + 5), Math.max(sim.vy, 0) + 10, hz * (sim.vz + 5)), t: 0, landed: false, tl: 0 };
   puff(pil.position, 'white', 3); sparks(pil.position.clone(), 14, sim.vz); sfx('eject'); camShake = .5; if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(40);  }
 function updatePilot(dt) { if (!PIL || PIL.landed) return; const P = PIL, o = P.o; P.t += dt;
-  // izšautais pilots lido kā lode un krīt; pieskaroties zemei/jumtam – lidojums beidzas
-  P.v.y -= GR * 1.35 * dt; o.rotation.order = 'YXZ'; o.rotation.set(Math.atan2(Math.hypot(P.v.x, P.v.z), P.v.y), Math.atan2(P.v.x, P.v.z), 0);
-  o.position.addScaledVector(P.v, dt); const fl = floorAt(o.position.x, o.position.z);
-  if (o.position.y <= fl) { o.position.y = fl; P.landed = true; o.rotation.set(0, Math.PI, 0); setPose(o, 'wave'); puff(o.position, 'dust', 4); sfx('bump'); camShake = .4; } }
+  // izšautais pilots lido kā lode un krīt (gaiss viņu bremzē → lidmašīna aizsteidzas priekšā); kur nokrīt – tur paliek
+  P.v.y -= GR * 1.35 * dt; P.v.x *= 1 - .3 * dt; P.v.z *= 1 - .3 * dt; o.rotation.order = 'YXZ'; o.rotation.set(Math.atan2(Math.hypot(P.v.x, P.v.z), P.v.y), Math.atan2(P.v.x, P.v.z), 0);
+  const x0 = o.position.x, z0 = o.position.z; o.position.addScaledVector(P.v, dt); const s = surfAt(WORLD, o.position.x, o.position.z);
+  const stop = () => { P.landed = true; P.tl = runT; P.v.set(0, 0, 0); sfx('bump'); camShake = .4; };
+  if (s.b && !s.b.landing && o.position.y < roofH(s.b, o.position.z) - .4 && !inside(s.b, x0, z0)) { const y = o.position.y; o.position.x = x0; o.position.z = z0; splat(o, s.b, x0, y, z0); P.wall = true; return stop(); }
+  if (o.position.y <= s.h) { o.position.y = s.h; o.rotation.set(0, Math.PI, 0); setPose(o, 'wave'); puff(o.position, 'dust', 4); stop(); } }
 function finish(kind) {
   if (state === 'end') return;
   const landed = kind === 'land', ej = ejected, dist = Math.max(0, Math.round(ej && PIL ? PIL.o.position.z : endInfo ? endInfo.dist : sim.maxZ)), vid = save.veh, old = save.best[vid] || 0, rec = dist > old && dist >= 5;
@@ -575,7 +614,7 @@ function finish(kind) {
 function rampSpeed(st) { const s = new Sim(st, RAMP, WORLD); for (let i = 0; i < 120 * 40 && s.mode === 'ramp'; i++) s.step({ pitch: 0 }); return s.mode === 'ramp' ? s.v : (s.ev[0] || [0, s.v])[1]; }
 function openShop() {
   camSnap = true;
-  state = 'shop'; ejected = false; $('eject').classList.remove('on'); $('lever').classList.remove('on'); document.body.classList.remove('run'); closeSheet(); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); clearFX(); setVehicle(); renderShop(); $('shop').classList.add('on'); viewOffset();
+  state = 'shop'; ejected = false; $('eject').classList.remove('on'); $('lever').classList.remove('on'); document.body.classList.remove('run'); closeSheet(); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); clearFX(); setVehicle(); updateStreaks(VEHM, 0, 0, 0, 0, false); renderShop(); $('shop').classList.add('on'); viewOffset();
 }
 function renderShop() {
   const vid = save.veh, V = VEH[vid], o = own(vid), sh = $('shop');
@@ -611,28 +650,30 @@ function frame(now) {
   DAYT += dt; applyDay(); STARS.position.copy(camera.position); if ((DAYT * 2 | 0) !== hudSec) { hudSec = DAYT * 2 | 0; hudKey = ''; hud(); }
   const paused = $('ov').classList.contains('on') && state === 'run';
   if (state === 'run' && !paused) {
-    acc += dt; runT += dt; const ip = ejected ? { pitch: 0, roll: 0, turbo: false, help: true } : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
-    if (ejected) { updatePilot(dt); if (PIL && PIL.landed) { finish('eject'); } }
+    acc += dt; runT += dt; const ip = ejected ? { pitch: -.7, roll: 0, turbo: false, help: false } : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
+    // pēc katapultas: gaida, kamēr pilots nokrīt un lidmašīna uzsprāgst (vai 4 s)
+    if (ejected) { updatePilot(dt); if (DEB.length) updateDebris(dt); if (boomT && runT - boomT < 5 && DEB[0] && Math.random() < dt * 6) puff(DEB[0].o.position, 'smoke', 1);
+      if (PIL && PIL.landed && (boomT ? runT - boomT > 1.6 && runT - PIL.tl > .8 : runT - PIL.tl > 4)) finish('eject'); }
     $('eject').classList.toggle('on', state === 'run' && !ejected && sim.mode === 'air' && sim.air > .4);
-    while (acc >= DT && state === 'run' && sim.mode !== 'done') { prev.z = sim.z; prev.y = sim.y; prev.x = sim.x; prev.phi = sim.phi; prev.psi = sim.psi; prev.bank = sim.bank; sim.step(ip); acc -= DT; handleEvents(); }
+    while (acc >= DT && state === 'run' && sim.mode !== 'done') { prev.z = sim.z; prev.y = sim.y; prev.x = sim.x; prev.phi = sim.phi; prev.psi = sim.psi; prev.bank = sim.bank; prev.s = sim.s; sim.step(ip); acc -= DT; handleEvents(); }
     const a = state === 'run' ? acc / DT : 1, L2 = (k) => prev[k] + (sim[k] - prev[k]) * a, z = L2('z'), y = L2('y'), x = L2('x'), ph = prev.phi + wrap(sim.phi - prev.phi) * a;
     VEHM.g.position.set(x, y, z); VEHM.g.rotation.set(-ph, L2('psi'), -L2('bank'));
     if (state === 'run') updateBirds(dt);
     if (state === 'run') { const sp = sim.speed; if (VEHM.spin) VEHM.spin.rotation.z += dt * (sim.thr ? 60 : 8 + sp * .5);
       VEHM.flameM.forEach(f => { f.visible = sim.thr; if (sim.thr) f.scale.setScalar(.8 + Math.random() * .5); });
-      updateStreaks(VEHM, dt, sp, sim.mode === 'air' ? sim.alpha : 0, sim.mode === 'air' ? sim.cl : 0, OPT.streaks);
+      updateStreaks(VEHM, dt, sp, sim.mode === 'air' ? sim.alpha : 0, sim.mode === 'air' ? sim.cl : 0, OPT.streaks && !boomT);
       $('dM').textContent = Math.max(0, Math.round(ejected && PIL ? PIL.o.position.z : sim.maxZ)) + ' m'; $('dSub').textContent = `⬆ ${Math.max(0, Math.round(sim.y - surfAt(WORLD, sim.x, sim.z).h))} m · ${Math.round(sp * 3.6)} km/h`;
       if (ST.T) $('turbo').style.setProperty('--f', (sim.fuel / ST.fuel * 100) + '%');
       if (!sim.stall) $('warn').classList.remove('on');
       wind(sp); engine(sim.thr);
       const fx = Math.sin(sim.psi), fz = Math.cos(sim.psi);
       if (sim.thr && VEHM.flames.length && Math.random() < dt * 12) puff(tmp.set(x - fx * (VEHM.len * .7), y + .4, z - fz * (VEHM.len * .7)), 'trail', 1);
-      if (sim.engDead && Math.random() < dt * 14) puff(tmp.set(x + fx * VEHM.len * .4, y + .7, z + fz * VEHM.len * .4), 'trail', 1); }
+      if (sim.engDead && !boomT && Math.random() < dt * 14) puff(tmp.set(x + fx * VEHM.len * .4, y + .7, z + fz * VEHM.len * .4), 'trail', 1); }
   } else if (state === 'shop') { shopT += dt; wind(0); engine(false); }
   if (GATE) { gateA += ((state === 'shop' || state === 'ready' ? 0 : 1) - gateA) * Math.min(1, dt * 6); GATE.userData.bar.rotation.z = gateA * 1.45 + (state === 'ready' ? leverK * .06 : 0); }
   if (state === 'crash' || state === 'end') { crashT += dt; updateDebris(dt); updatePilot(dt); wind(0); engine(false);
     if (state === 'crash' && crashT < 3 && Math.random() < dt * 8 && DEB[0]) puff(DEB[0].o.position, 'smoke', 1);
-    if (state === 'crash' && (ejected ? (PIL && PIL.landed) || crashT > 8 : crashT > .9)) finish('crash'); }
+    if (state === 'crash' && (ejected ? (PIL && PIL.landed) || crashT > 8 : crashT > (FOCUS ? 2.4 : .9))) finish('crash'); } // sienā iesprūdušo cilvēciņu parāda ilgāk
   updateFX(dt);
   // ēna
   const vp = state === 'shop' || state === 'run' ? VEHM.g.position : PIL ? PIL.o.position : VEHM.g.position, sh = state === 'run' && sim && sim.mode !== 'ramp' ? surfAt(WORLD, vp.x, vp.z).h : -9;
@@ -644,13 +685,18 @@ function frame(now) {
   else if (state === 'run' || state === 'ready') { const p = ejected && PIL ? PIL.o.position : VEHM.g.position, sp = state === 'ready' ? 0 : ejected && PIL ? Math.min(25, PIL.v.length()) : sim.speed, back = (port ? 6.5 : 5.2) + VEHM.len * .95 + sp * .045, up = 1.7 + VEHM.len * .32 + sp * .018;
     const onR = !ejected && (state === 'ready' || sim.mode === 'ramp' || p.z < 0); camPsi += wrap(sim.psi - camPsi) * Math.min(1, dt * 2.5); const hx = Math.sin(camPsi), hz = Math.cos(camPsi);
     let cy = p.y + up, cz = p.z - back * hz, cx = p.x - back * hx;
-    if (onR) { const rs0 = (sim.mode === 'ramp' ? sim.s : RAMP.len) - back, rp = rampAt(RAMP, Math.max(0, rs0)); cy = Math.max(cy, rp.y + up + 1); cz = rp.z + Math.min(0, rs0); cx = p.x; }
+    // rampas pozīcija interpolēta tāpat kā braucamrīks (citādi kamera raustās ar fizikas soļu skaitu kadrā)
+    if (onR) { const rs0 = (sim.mode === 'ramp' ? prev.s + (sim.s - prev.s) * (acc / DT) : RAMP.len) - back, rp = rampAt(RAMP, Math.max(0, rs0)); cy = Math.max(cy, rp.y + up + 1); cz = rp.z + Math.min(0, rs0); cx = p.x; }
     if (state === 'ready') { cy = p.y + 2.2 + VEHM.len * .15; cz = p.z - (3.5 + VEHM.len * .9); cx = p.x; }
     // kamera piesieta braucamrīkam (bez atpalikšanas ātrumā → neraustās); gludi mainās tikai nobīde
     camOff.lerp(tmp.set(cx - p.x, cy - p.y, cz - p.z), camSnap ? 1 : 1 - Math.exp(-dt * 3)); camSnap = false; camera.position.copy(p).add(camOff);
-    const la = 10 + sp * .25; camL.set(p.x + hx * la, p.y + 1 + (state === 'ready' ? -2.5 : 0), p.z + hz * la); }
-  else { const tgt = PIL && crashT > 1.4 ? PIL.o.position : DEB[0] ? DEB[0].o.position : VEHM.g.position;
-    camT.set(tgt.x + 8 + Math.min(6, crashT), tgt.y + 5 + Math.min(4, crashT), tgt.z - 14); camL.copy(tgt); camL.y += 1.5; camera.position.lerp(camT, 1 - Math.exp(-dt * 2)); }
+    const la = 10 + sp * .25; camL.set(p.x + hx * la, p.y + 1 + (state === 'ready' ? -2.5 : 0), p.z + hz * la);
+    // pēc katapultas skats nedaudz pagriežas uz lidmašīnu, ja tā ir priekšā – avāriju redz fonā
+    if (ejected) { const tp = boomT && DEB[0] ? DEB[0].o.position : VEHM.g.position; tmp.copy(tp).sub(camera.position); const w = tmp.x * hx + tmp.z * hz > 5 && tmp.length() < 280 ? .4 : 0; camW += (w - camW) * Math.min(1, dt * 2); camL.lerp(tp, camW); } }
+  else if (!(ejected && state === 'end')) { const tgt = FOCUS ? FOCUS.p : DEB[0] ? DEB[0].o.position : VEHM.g.position;
+    if (FOCUS) camT.set(tgt.x + FOCUS.nx * 10 + FOCUS.nz * 4, tgt.y + 2.5 + Math.min(2, crashT), tgt.z + FOCUS.nz * 10 - FOCUS.nx * 4); // skats uz sienā iesprūdušo cilvēciņu
+    else camT.set(tgt.x + 8 + Math.min(6, crashT), tgt.y + 5 + Math.min(4, crashT), tgt.z - 14);
+    camL.copy(tgt); camL.y += 1.5; camera.position.lerp(camT, 1 - Math.exp(-dt * 2)); }
   camera.lookAt(camL);
   cullChunks();
   if (camShake > 0) { camShake = Math.max(0, camShake - dt * 1.6); camera.position.x += rnd(-.3, .3) * camShake; camera.position.y += rnd(-.3, .3) * camShake; }
@@ -741,7 +787,7 @@ function medals() { if (!UID || !window.TWA) return; const S = save.st, b = save
 function fixSave() { const d = { plane: 0, scoot: 0, car: 0 }; save.best = Object.assign(d, save.best || {}); save.st = Object.assign({ landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, save.st || {});
   save.own = save.own || {}; if (!save.own.plane) save.own.plane = { wheel: 0, wing: 0, eng: 0, long: 0 }; if (!VEH[save.veh] || !save.own[save.veh]) save.veh = 'plane'; save.ramp = clamp(save.ramp || 0, 0, RAMPS.length - 1); }
 function start() { loadModels(start2); }
-function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); hud(); requestAnimationFrame(frame);
+function start2() { const ld = $('loading'); if (ld) ld.remove(); fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); warmUp(); hud(); requestAnimationFrame(frame);
  }
 if (!ONLINE) { try { const s = JSON.parse(localStorage.getItem('rpSave')); if (s) save = Object.assign(save, s); wallet = +(localStorage.getItem('rpWalletDev') || 0); } catch (e) {} }
 if (ONLINE && window.firebase && window.TW_FIREBASE) {
