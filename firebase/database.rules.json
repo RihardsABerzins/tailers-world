@@ -33,6 +33,21 @@
             }
           }
         }
+      },
+      "repeat": {
+        ".read": "auth != null",
+        "$city": {
+          "$id": {
+            ".write": "auth != null && ((!data.exists() && newData.child('u').val() === auth.uid) || !newData.exists())",
+            ".validate": "!newData.exists() || (newData.hasChildren(['u','s','t']) && newData.child('t').isNumber() && (data.exists() || !newData.child('r').exists()) && newData.child('s').isString() && newData.child('s').val().length <= 24000 && (!newData.child('n').exists() || (newData.child('n').isString() && newData.child('n').val().length <= 16)))",
+            "r": {
+              "$ru": {
+                ".write": "auth != null && auth.uid === $ru && data.parent().parent().exists() && data.parent().parent().child('u').val() !== auth.uid",
+                ".validate": "newData.hasChildren(['a','t']) && newData.child('a').isNumber() && newData.child('a').val() >= 0 && newData.child('a').val() <= 100"
+              }
+            }
+          }
+        }
       }
     },
     "ap": {

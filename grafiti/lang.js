@@ -24,6 +24,15 @@
     ['🎒 Backpack','🎒 Mugursoma'],['Items are found in loot boxes – in dumpsters 🗑️ and on bonus walls in the metro 🎁.','Priekšmetus atrodi lootboxos – miskastēs 🗑️ un metro bonusa sienās 🎁.'],
     ['Your character gets hungry over time. When food is 0%, you walk slower and your hands shake – drawings get wobbly.','Tavs tēls laika gaitā izsalkst. Kad ēdiens ir 0%, tu ej lēnāk, un rokas trīc – zīmējumi sanāk šķībi.'],
     ['Eat at a café 🍔 or a pizzeria 🍕','Paēd kafejnīcā 🍔 vai picērijā 🍕'],['When you are hungry, an arrow shows the way to the nearest café.','Kad esi izsalcis, bultiņa rāda ceļu uz tuvāko kafejnīcu.'],
+    ['🔁 Repeat a drawing!','🔁 Atkārto zīmējumu!'],['REPEAT ME','ATKĀRTO MANI'],['E – repeat a drawing (90%+ = lootbox 🎁)','E – atkārto zīmējumu (90%+ = lootbox 🎁)'],['Paint drying…','Krāsa žūst…'],
+    ['🔁 Repeat my drawing','🔁 Atkārto manu zīmējumu'],['Pick a drawing and repeat it as exactly as you can – money and XP for accuracy, 90%+ = lootbox 🎁! The author gets a small bonus.','Izvēlies zīmējumu un atkārto to pēc iespējas precīzāk – nauda un XP par precizitāti, 90%+ = lootbox 🎁! Autors saņem mazu bonusu.'],
+    ['✏️ Draw your own for others','✏️ Uzzīmē savu citiem'],['No drawings here yet – be the first! ✏️','Šeit vēl nav zīmējumu – esi pirmais! ✏️'],['(you)','(tavs)'],['🗑️ Delete','🗑️ Dzēst'],['🔁 Repeat','🔁 Atkārtot'],['Report and clean','Ziņot un notīrīt'],['❓ Sure?','❓ Tiešām?'],
+    ['🚩 = a bad drawing? Report it – it is cleaned for everyone and an admin checks it.','🚩 = slikts zīmējums? Ziņo – tas tiek notīrīts visiem, un admins to pārbauda.'],
+    ['🗑️ Drawing deleted.','🗑️ Zīmējums izdzēsts.'],['🚩 Thanks! The drawing was cleaned and an admin will check it.','🚩 Paldies! Zīmējums notīrīts, un admins to pārbaudīs.'],
+    ['someone repeated your drawing!','kāds atkārtoja tavu zīmējumu!'],['Author bonus','Autora bonuss'],
+    ['🔁 Repeat it exactly! 90% = 🎁','🔁 Atkārto precīzi! 90% = 🎁'],['✏️ Draw something for others to repeat!','✏️ Uzzīmē kaut ko, ko citi atkārtos!'],
+    ['👁 Show sample','👁 Rādīt paraugu'],['🙈 Hide sample','🙈 Slēpt paraugu'],['✏️ Draw a bit more – others need something to repeat!','✏️ Uzzīmē vēl mazliet – citiem jābūt ko atkārtot!'],
+    ['Shared! Others can now repeat it.','Kopīgots! Tagad citi var to atkārtot.'],['Perfect copy!','Precīza kopija!'],
     ['🎨 Draw anything!','🎨 Zīmē, ko gribi!'],['FREESTYLE','BRĪVĀ SIENA'],['Freestyle – draw anything you like!','Brīvā siena – zīmē, ko gribi!'],['Freestyle!','Brīvais zīmējums!'],['Draw a bit more!','Uzzīmē mazliet vairāk!'],
     ['Keep the old drawing','Atstāt veco zīmējumu'],['Clean the wall first','Vispirms notīrīt sienu'],
     ['Police backup is coming from the other side!','Policijas pastiprinājums brauc no otras puses!'],
@@ -131,7 +140,7 @@
   ];
   // Atsevišķi vārdi (tikai veseli vārdi)
   const WORDS=[
-    ['Officer','Policists'],['Police','Policija'],['Train','Vilciens'],['Exit','Izeja'],['Hidden','Paslēpies'],['Calm','Mierīgi'],['Day','Diena'],['Good','Labi'],['Poor','Švaki'],
+    ['Officer','Policists'],['Police','Policija'],['Train','Vilciens'],['Exit','Izeja'],['Hidden','Paslēpies'],['Calm','Mierīgi'],['Day','Diena'],['Good','Labi'],['Repeat','Atkārtot'],['Poor','Švaki'],
     ['City','Pilsēta'],['Level','Līmenis'],['level','līmenis'],['levels','līmeņi'],['district','rajons'],['shape','forma'],['Wall','Siena'],['Walls','Sienas'],['hiding','paslēpies'],
     ['Select','Izvēlēties'],['Use','Lietot'],['speed','ātrums'],['bonus','bonuss'],['Go','Braukt'],['Close','Aizvērt'],['Music','Mūzika'],['Next','Nākamā'],
     ['Black','Melna'],['Red','Sarkana'],['Blue','Zila'],['Green','Zaļa'],['Yellow','Dzeltena'],['Pink','Rozā'],['Orange','Oranža'],['Purple','Violeta'],['Gold','Zelta'],['Neon','Neona'],

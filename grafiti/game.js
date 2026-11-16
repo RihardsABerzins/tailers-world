@@ -110,7 +110,7 @@ const OTHER_SHOPS=['pizza','bike','shoes','arcade','flower','barber']; const LOT
 // katrā līmenī 3 sienas: galvenā (līmeņa forma) + 2 papildu ar formām no līmeņa kopas
 for(let k=0;k<NLEV;k++){ const m=k%10; if(k>0&&m===0) LOT_DEFS.push({k:'metro',ds:k/10}); LOT_DEFS.push({k:'wall',t:k,v:0});
   if(k===0) LOT_DEFS.push({k:'paint'},{k:'cafe'},{k:'metro',ds:0}); else if(m===0) LOT_DEFS.push({k:'paint'}); else if(m===3) LOT_DEFS.push({k:'cafe'}); else if(m===6||m===9) LOT_DEFS.push({k:OTHER_SHOPS[_sc++%OTHER_SHOPS.length]});
-  LOT_DEFS.push({k:'wall',t:k,v:1},{k:'wall',t:k,v:2}); if(m===0) LOT_DEFS.push({k:'wall',t:k,v:3,free:1}); }
+  LOT_DEFS.push({k:'wall',t:k,v:1},{k:'wall',t:k,v:2}); if(m===0) LOT_DEFS.push({k:'wall',t:k,v:3,free:1},{k:'wall',t:k,v:4,rep:1}); }
 // Formas: nejauša no līmenim atļautajām (vieglākās + līmeņa forma), neatkārto pēdējās uzzīmētās
 const recentShapes=[];
 // No 2. pilsētas katra līmeņa 2 papildu sienas prasa noteiktu krāsu (katrā pilsētā klāt nāk jauna). Ja tās nav – jānopērk Krāsu depo.
@@ -121,15 +121,15 @@ function pickShape(k,avoid=[]){ const pool=k===0?NAMED_SHAPES.slice(0,4):k<18?NA
   return c[(Math.random()*c.length)|0]; }
 const usedIn={};
 const lots=[], walls=[];
-let cursorX=520, lastK=0;
+let cursorX=520, lastK=0, _wk=0; const lotByWk={};
 LOT_DEFS.forEach((d,i)=>{
-  const w=(d.k==='wall'||d.k==='metro')?560:620, l={i,kind:d.k,x:cursorX,w,cx:cursorX+w/2,seed:i*7919+13,img:null,off:Math.random()*40};
-  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,free:!!d.free,layers:[],need:d.free?null:rollNeed(d.t,d.v),shape:(usedIn[d.t]=usedIn[d.t]||[]).push(pickShape(d.t,usedIn[d.t]))&&usedIn[d.t][usedIn[d.t].length-1],art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
+  const w=(d.k==='wall'||d.k==='metro')?560:620, l={i,wk:d.rep?-1:_wk++,kind:d.k,x:cursorX,w,cx:cursorX+w/2,seed:i*7919+13,img:null,off:Math.random()*40};
+  if(d.k==='wall'){ const t=TIERS[d.t]; Object.assign(l,{tier:d.t,v:d.v,free:!!d.free,rep:!!d.rep,repSrc:null,layers:[],need:d.free||d.rep?null:rollNeed(d.t,d.v),shape:(usedIn[d.t]=usedIn[d.t]||[]).push(pickShape(d.t,usedIn[d.t]))&&usedIn[d.t][usedIn[d.t].length-1],art:null,glow:'#fff',cool:0,px:l.cx-PANEL.w/2,py:PANEL.y}); walls.push(l); }
   else if(d.k==='metro'){ l.ds=d.ds; l.info=SHOP_INFO.metro; l.door=l.cx-34; l.bonusAt=0; }
   else { l.door=l.x+w-126; l.info=SHOP_INFO[d.k]; }
   l.dist=(d.k==='wall'?d.t:d.k==='metro'?d.ds*10:lastK); if(d.k==='wall') lastK=d.t;
   l.city=Math.floor(l.dist/10); l.hide=d.k==='wall'?d.t%3===1&&!d.v:(d.k!=='metro'&&d.k!=='paint'&&i%3===0);
-  lots.push(l); cursorX+=w;
+  if(l.wk>=0) lotByWk[l.wk]=l; lots.push(l); cursorX+=w;
 });
 const WORLD_W=cursorX+520;
 const stations=lots.filter(l=>l.kind==='metro');
@@ -482,7 +482,7 @@ function renderWallLot(l){
   // prožektori
   [px+60,px+PANEL.w-60].forEach(x=>{ g.fillStyle='#222'; g.fillRect(x-2,py-30,4,18); rr(g,x-10,py-38,20,10,3,'#2e2e36'); g.fillStyle='#fff7d6'; g.fillRect(x-8,py-30,16,3); });
   // līmeņa plāksnīte
-  rr(g,w/2-52,py-64,104,22,6,'#0d0c14'); g.fillStyle=l.free?'#ff4fd8':TIER_COL[l.tier]; g.font='bold 13px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(l.free?'FREESTYLE':'LEVEL '+(l.tier+1),w/2,py-53);
+  rr(g,w/2-52,py-64,104,22,6,'#0d0c14'); g.fillStyle=l.free?'#ff4fd8':l.rep?'#5ad1ff':TIER_COL[l.tier]; g.font='bold 13px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(l.free?'FREESTYLE':l.rep?'REPEAT ME':'LEVEL '+(l.tier+1),w/2,py-53);
   // notekcaurule, mēsli
   g.fillStyle='#6a7078'; g.fillRect(w-30,T,8,B-T); g.fillStyle='#0003'; g.fillRect(w-24,T,2,B-T);
   if(l.hide){ rr(g,16,B-52,96,52,4,'#2f5a3f'); rr(g,12,B-58,104,10,3,'#3b6e4d'); g.fillStyle='#0003'; g.fillRect(16,B-26,96,2); }
@@ -501,7 +501,7 @@ const levelOf=xp=>LV.filter(v=>xp>=v).length;
 const xpPct=()=>{ const lv=level(); if(lv>=LV.length) return 100; const a=LV[lv-1], b=LV[lv]; return Math.round(clamp(((save.xp||0)-a)/(b-a),0,1)*100); };
 const xpTxt=()=>{ const lv=level(); return lv>=LV.length?`${save.xp||0} (max)`:`${(save.xp||0)-LV[lv-1]}/${LV[lv]-LV[lv-1]}`; };
 let _lx=-1,_lv=1; const level=()=>{ const xp=save.xp||0; if(xp!==_lx){ _lx=xp; _lv=levelOf(xp); } return _lv; };
-const locked=w=>!w.free&&level()<w.tier+1; // freestyle sienas – visiem
+const locked=w=>!w.free&&!w.rep&&level()<w.tier+1; // freestyle un atkārtošanas sienas – visiem
 const districtOf=x=>{ const l=lots.find(l=>x>=l.x&&x<l.x+l.w); const i=l?l.i:(x<lots[0].x?0:lots.length-1); return lots[i].dist; };
 npcs.forEach(n=>{ n.snitch=Math.random()<Math.min(.8,.2+.06*districtOf(n.x)); });
 const STAR_AT=[35,55,70,85,95], COP_SPEED=[220,220,250,280,310,340], COP_COUNT=[0,1,1,2,3,4];
@@ -717,7 +717,7 @@ function update(dt){
     updateCtx();
     if(hidden){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – leave hiding spot'; }
     else if(nearLot){ promptEl.style.display='block';
-      promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='cafe'||nearLot.kind==='pizza'?'E – buy food to take away':nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):nearLot.kind==='barber'?'E – barber (change your look)':'E – shoe shop (faster running)'); }
+      promptEl.innerHTML=(nearHide?'↓ / S – hide<br>':'')+(nearLot.kind==='cafe'||nearLot.kind==='pizza'?'E – buy food to take away':nearLot.kind==='mwall'||nearLot.kind==='mtrain'||nearLot.kind==='mexit'?metroObjPrompt(nearLot):nearLot.kind==='wall'&&nearLot.rep?(nearLot.cool>0?`Paint drying… ${Math.ceil(nearLot.cool)} s`:'E – repeat a drawing (90%+ = lootbox 🎁)'):nearLot.kind==='wall'?(locked(nearLot)?`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()})`:nearLot.cool>0?`Paint still drying… ${Math.ceil(nearLot.cool)} s`:`E – paint (level ${nearLot.tier+1}, up to € ${TIERS[nearLot.tier].base}+)`):nearLot.kind==='paint'?'E – enter the paint shop and car dealer':nearLot.kind==='metro'?metroPrompt(nearLot):nearLot.kind==='barber'?'E – barber (change your look)':'E – shoe shop (faster running)'); }
     else if(nearHide){ promptEl.style.display='block'; promptEl.innerHTML='↓ / S – hide ('+(nearHide.kind==='dumpster'?'dumpster':'crates')+')'; }
     else promptEl.style.display='none';
     const zt=baseZoom()*(player.moving&&car.speed>=560?.9:1); cam.zoom=lerp(cam.zoom,zt,Math.min(1,dt*3));
@@ -805,7 +805,7 @@ function render(){
   // sienu saturs
   walls.forEach(w=>{ if(w.x>vx1||w.x+w.w<vx0) return;
     if(w.art) ctx.drawImage(w.art,w.px,w.py,PANEL.w,PANEL.h);
-    else if(w.free&&mode!=='draw'){ ctx.save(); ctx.globalAlpha=.75; ctx.font='bold 22px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#fff'; ctx.fillText('🎨 Draw anything!',w.px+PANEL.w/2,w.py+PANEL.h/2+8); ctx.restore(); }
+    else if((w.free||w.rep)&&mode!=='draw'){ ctx.save(); ctx.globalAlpha=.75; ctx.font='bold 22px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#fff'; ctx.fillText(w.rep?'🔁 Repeat a drawing!':'🎨 Draw anything!',w.px+PANEL.w/2,w.py+PANEL.h/2+8); ctx.restore(); }
     else if(mode!=='draw'){ ctx.save(); ctx.strokeStyle='#fff'; ctx.globalAlpha=.3; ctx.lineWidth=2; ctx.setLineDash([6,5]); const R=70, sx=w.px+PANEL.w/2, sy=w.py+PANEL.h/2; SHAPES[w.shape]().forEach(p=>{ ctx.beginPath(); p.forEach(([x,y],i)=>i?ctx.lineTo(sx+x*R,sy+y*R):ctx.moveTo(sx+x*R,sy+y*R)); ctx.stroke(); }); ctx.restore(); }
     if(locked(w)&&mode!=='draw'){ ctx.save(); ctx.fillStyle='rgba(8,8,24,.62)'; ctx.fillRect(w.px,w.py,PANEL.w,PANEL.h); ctx.textAlign='center'; ctx.font='64px system-ui'; ctx.fillText('🔒',w.px+PANEL.w/2,w.py+PANEL.h/2+10);
       ctx.font='bold 20px system-ui'; ctx.fillStyle='#fff'; ctx.fillText(`Needs level ${w.tier+1}`,w.px+PANEL.w/2,w.py+PANEL.h/2+50); ctx.restore(); }
@@ -1010,16 +1010,17 @@ function layoutDraw(){ const land=W>H*1.15, m=8, top=Math.max(36,document.getEle
   const inf=el('drawInfo'); inf.style.left=(DR.x+8)+'px'; inf.style.top=(DR.y+8)+'px'; const bw=el('bWipe'); bw.style.right=(W-DR.x-DR.w+8)+'px'; bw.style.top=(DR.y+8)+'px';
   dirty=true; if(mode==='draw'&&curWall) fitShape(); }
 // formu ietilpina kanvā (ar atkāpi), lai tā būtu pēc iespējas lielāka
-function fitShape(){ if(curWall.free){ const f=freeFrame(); shapeR=f.h/2; shapeBox={cx:DR.w/2,cy:DR.h/2,x0:f.x,y0:f.y,x1:f.x+f.w,y1:f.y+f.h}; targetPaths=[]; targetSamples=[]; dirty=true; return; }
+function fitShape(){ if(curWall.free||curWall.rep){ const f=freeFrame(); if(shapeBox&&shapeR&&strokes.length){ const k=f.h/2/shapeR, ox=shapeBox.x0, oy=shapeBox.y0; strokes.forEach(s_=>s_.pts.forEach(p_=>{ p_.x=f.x+(p_.x-ox)*k; p_.y=f.y+(p_.y-oy)*k; })); drips=[]; }
+    shapeR=f.h/2; shapeBox={cx:DR.w/2,cy:DR.h/2,x0:f.x,y0:f.y,x1:f.x+f.w,y1:f.y+f.h}; targetPaths=curWall.rep&&curWall.repSrc?repPaths(curWall.repSrc.s,f):[]; targetSamples=samplePaths(targetPaths); dirty=true; return; }
   const raw=SHAPES[curWall.shape](); let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   raw.forEach(p=>p.forEach(([x,y])=>{ x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y); }));
   const pad=Math.max(26,Math.min(DR.w,DR.h)*.08), R=Math.min((DR.w-pad*2)/(x1-x0),(DR.h-pad*2)/(y1-y0),340), cx=DR.w/2-(x0+x1)/2*R, cy=DR.h/2-(y0+y1)/2*R;
   if(shapeBox&&shapeR&&strokes.length){ const k=R/shapeR, ox=shapeBox.cx, oy=shapeBox.cy; strokes.forEach(s_=>s_.pts.forEach(p_=>{ p_.x=cx+(p_.x-ox)*k; p_.y=cy+(p_.y-oy)*k; })); drips=[]; }
   shapeR=R; shapeBox={cx,cy,x0:cx+x0*R,y0:cy+y0*R,x1:cx+x1*R,y1:cy+y1*R};
   targetPaths=raw.map(p=>p.map(([x,y])=>[cx+x*R,cy+y*R]));
-  targetSamples=[];
-  targetPaths.forEach(p=>{ for(let i=1;i<p.length;i++){ const [x0,y0]=p[i-1],[x1,y1]=p[i]; const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/4)); for(let k=0;k<n;k++) targetSamples.push([x0+(x1-x0)*k/n,y0+(y1-y0)*k/n]); } });
+  targetSamples=samplePaths(targetPaths);
   dirty=true; }
+function samplePaths(P){ const out=[]; P.forEach(p=>{ if(p.length===1) out.push(p[0]); for(let i=1;i<p.length;i++){ const [x0,y0]=p[i-1],[x1,y1]=p[i]; const n=Math.max(1,Math.ceil(Math.hypot(x1-x0,y1-y0)/4)); for(let k=0;k<n;k++) out.push([x0+(x1-x0)*k/n,y0+(y1-y0)*k/n]); if(i===p.length-1) out.push([x1,y1]); } }); return out; }
 // pielaide ekrāna pikseļos: tā pati grūtība kā agrāk attiecībā pret formas izmēru, bet ne mazāk par 12 px (pirksts)
 const tolPx=()=>Math.max(12,shapeR*TIERS[curWall.tier].tol/150);
 function openDraw(w){
@@ -1029,8 +1030,8 @@ function openDraw(w){
 }
 function showDraw(){
   const w=curWall; strokes=[]; drips=[]; dirty=true; shapeBox=null; pen=penT=null;
-  wipePrev=false; layoutDraw(); fitShape(); syncWipe();
-  document.getElementById('drawTitle').textContent=w.free?'🎨 Freestyle – draw anything you like!':w.isBonus?`🎁 Bonus wall – more accurate = better box!`:w.need?`Level ${w.tier+1} · paint: ${colorById(w.need).name}!`:`Wall – level ${w.tier+1}. Draw the outline!`;
+  wipePrev=false; repHide=false; layoutDraw(); fitShape(); syncWipe();
+  document.getElementById('drawTitle').textContent=w.rep?(w.repSrc?'🔁 Repeat it exactly! 90% = 🎁':'✏️ Draw something for others to repeat!'):w.free?'🎨 Freestyle – draw anything you like!':w.isBonus?`🎁 Bonus wall – more accurate = better box!`:w.need?`Level ${w.tier+1} · paint: ${colorById(w.need).name}!`:`Wall – level ${w.tier+1}. Draw the outline!`;
   buildPalette(); redraw(); dOv.classList.add('on'); updateDrawInfo(true);
   if(document.getElementById('drawTitle').offsetHeight>26){ layoutDraw(); fitShape(); redraw(); } // virsraksts 2 rindās
 }
@@ -1047,10 +1048,12 @@ function brickCover(g,w,h){ const k=Math.max(w/720,h/440); g.drawImage(bgBrick,(
 function redraw(showGhost=true){
   dctx.setTransform(dpr,0,0,dpr,0,0); dctx.shadowBlur=0; dctx.globalAlpha=1; brickCover(dctx,DR.w,DR.h);
   // citu (un savi iepriekšējie) zīmējumi uz šīs sienas – zīmē tiem pa virsu
-  if(curWall.layers&&curWall.layers.length&&!wipePrev&&!curWall.isBonus){ const cr=cropRect(), k=cr.w/720; dctx.save(); dctx.translate(cr.x,cr.y); dctx.scale(k,k); drawLayers(dctx,curWall.layers); dctx.restore(); }
-  if(curWall.free){ const f=freeFrame(); dctx.save(); dctx.fillStyle='rgba(0,0,0,.55)'; dctx.fillRect(0,0,DR.w,f.y); dctx.fillRect(0,f.y+f.h,DR.w,DR.h); dctx.fillRect(0,f.y,f.x,f.h); dctx.fillRect(f.x+f.w,f.y,DR.w,f.h);
-    dctx.strokeStyle='#ff4fd8'; dctx.lineWidth=3; dctx.setLineDash([12,8]); dctx.strokeRect(f.x,f.y,f.w,f.h); dctx.restore(); }
-  if(showGhost){ dctx.save(); dctx.strokeStyle='#fff'; dctx.globalAlpha=TIERS[curWall.tier].ghost; dctx.lineWidth=3; dctx.setLineDash([10,8]);
+  if(curWall.layers&&curWall.layers.length&&!wipePrev&&!curWall.isBonus&&!curWall.rep){ const cr=cropRect(), k=cr.w/720; dctx.save(); dctx.translate(cr.x,cr.y); dctx.scale(k,k); drawLayers(dctx,curWall.layers); dctx.restore(); }
+  if(curWall.free||curWall.rep){ const f=freeFrame(); dctx.save(); dctx.fillStyle='rgba(0,0,0,.55)'; dctx.fillRect(0,0,DR.w,f.y); dctx.fillRect(0,f.y+f.h,DR.w,DR.h); dctx.fillRect(0,f.y,f.x,f.h); dctx.fillRect(f.x+f.w,f.y,DR.w,f.h);
+    dctx.strokeStyle=curWall.rep?'#5ad1ff':'#ff4fd8'; dctx.lineWidth=3; dctx.setLineDash([12,8]); dctx.strokeRect(f.x,f.y,f.w,f.h); dctx.restore(); }
+  // atkārtošana: oriģināls blāvi kā paraugs (var paslēpt)
+  if(curWall.rep&&curWall.repSrc&&showGhost&&!repHide){ const f=freeFrame(); dctx.save(); dctx.globalAlpha=.32; dctx.translate(f.x,f.y); dctx.scale(f.w/720,f.w/720); drawLayers(dctx,[curWall.repSrc]); dctx.restore(); }
+  if(showGhost&&!curWall.rep){ dctx.save(); dctx.strokeStyle='#fff'; dctx.globalAlpha=TIERS[curWall.tier].ghost; dctx.lineWidth=3; dctx.setLineDash([10,8]);
     targetPaths.forEach(p=>{ dctx.beginPath(); p.forEach(([x,y],i)=>i?dctx.lineTo(x,y):dctx.moveTo(x,y)); dctx.stroke(); }); dctx.restore(); }
   const lw=Math.max(7,shapeR*.05);
   dctx.lineCap='round'; dctx.lineJoin='round'; dctx.lineWidth=lw;
@@ -1065,7 +1068,7 @@ function redraw(showGhost=true){
 // tāpēc uz vienas sienas var zīmēt vairāki – sanāk kopzīmējums. Glabā pēdējos 6 slāņus.
 const ART_A=720/440;
 function freeFrame(){ const w=Math.min(DR.w-16,(DR.h-16)*ART_A), h=w/ART_A; return {x:(DR.w-w)/2,y:(DR.h-h)/2,w,h}; }
-function cropRect(){ if(curWall&&curWall.free) return freeFrame(); const b=shapeBox, sh=Math.max(b.y1-b.y0,(b.x1-b.x0)/ART_A)/.72, sw=sh*ART_A; return {x:(b.x0+b.x1)/2-sw/2,y:(b.y0+b.y1)/2-sh/2,w:sw,h:sh}; }
+function cropRect(){ if(curWall&&(curWall.free||curWall.rep)) return freeFrame(); const b=shapeBox, sh=Math.max(b.y1-b.y0,(b.x1-b.x0)/ART_A)/.72, sw=sh*ART_A; return {x:(b.x0+b.x1)/2-sw/2,y:(b.y0+b.y1)/2-sh/2,w:sw,h:sh}; }
 function encodeLayer(step=4){ const cr=cropRect(), k=720/cr.w, lw=Math.round(Math.max(7,shapeR*.05)*k*10)/10, out=[];
   strokes.forEach(st=>{ const p=[]; let lx=-1e9,ly=-1e9; st.pts.forEach((q,i)=>{ const x=Math.round((q.x-cr.x)*k), y=Math.round((q.y-cr.y)*k); if(i===0||i===st.pts.length-1||Math.hypot(x-lx,y-ly)>=step){ p.push(x,y); lx=x; ly=y; } }); if(p.length) out.push([st.color,lw,p]); });
   const js=JSON.stringify(out); return js.length>24000&&step<32?encodeLayer(step*2):js; }
@@ -1077,10 +1080,10 @@ function drawLayers(g,layers){ g.save(); g.lineCap='round'; g.lineJoin='round';
 function layersArt(w){ if(!w.layers||!w.layers.length) return null; const a=document.createElement('canvas'); a.width=720; a.height=440; const g=a.getContext('2d'); g.drawImage(bgBrick,0,0); drawLayers(g,w.layers); return a; }
 let wallRef=null;
 function wallsListen(c){ if(wallRef){ wallRef.off(); wallRef=null; } if(c<0||!NET.db) return; wallRef=NET.db.ref(DBP+'walls/'+c);
-  const ap=(snap,del)=>{ const w=lots[+String(snap.key).slice(1)]; if(!w||w.kind!=='wall') return; const v=del?null:snap.val();
+  const ap=(snap,del)=>{ const w=lotByWk[+String(snap.key).slice(1)]; if(!w||w.kind!=='wall') return; const v=del?null:snap.val();
     w.layers=v?Object.values(v).filter(x=>x&&typeof x.s==='string').sort((a,b)=>(a.t||0)-(b.t||0)).slice(-6):[]; w.art=layersArt(w); if(w===curWall&&mode==='draw'){ dirty=true; syncWipe(); } };
   wallRef.on('child_added',s_=>ap(s_),()=>{}); wallRef.on('child_changed',s_=>ap(s_),()=>{}); wallRef.on('child_removed',s_=>ap(s_,true),()=>{}); }
-function shareLayer(w,layer,wipe){ if(!NET.on||!NET.db) return; const ref=NET.db.ref(`${DBP}walls/${w.city}/w${w.i}`), L=Object.assign({},layer,{t:firebase.database.ServerValue.TIMESTAMP});
+function shareLayer(w,layer,wipe){ if(!NET.on||!NET.db) return; const ref=NET.db.ref(`${DBP}walls/${w.city}/w${w.wk}`), L=Object.assign({},layer,{t:firebase.database.ServerValue.TIMESTAMP});
   if(wipe){ ref.set({[ref.push().key]:L}).catch(()=>{}); return; }
   ref.push(L).then(()=>ref.once('value')).then(sn=>{ const v=sn.val()||{}, ks=Object.keys(v).sort((a,b)=>(v[a].t||0)-(v[b].t||0)); if(ks.length>6){ const up={}; ks.slice(0,ks.length-6).forEach(k=>up[k]=null); ref.update(up); } }).catch(()=>{}); }
 function artFromDraw(){ const art=document.createElement('canvas'); art.width=720; art.height=440; const g=art.getContext('2d'); g.drawImage(bgBrick,0,0);
@@ -1105,11 +1108,11 @@ dc.addEventListener('pointermove',e=>{ if(!painting) return; const p=shake(pos(e
 const stopPaint=()=>{ if(painting) persist(); painting=false; spraySound(false); };
 dc.addEventListener('pointerup',stopPaint); dc.addEventListener('pointercancel',stopPaint);
 // zīmēšanas augšējā josla: badā un cik cilvēku redz
-let drawInfoKey='', wipePrev=false;
+let drawInfoKey='', wipePrev=false, repHide=false;
 const bWipe=document.getElementById('bWipe');
-function syncWipe(){ const show=curWall&&curWall.free&&curWall.layers&&curWall.layers.length; bWipe.style.display=show?'':'none'; bWipe.textContent=wipePrev?'↩️ Keep the old drawing':'🧽 Clean the wall first';
+function syncWipe(){ const rp=curWall&&curWall.rep&&curWall.repSrc, show=rp||curWall&&curWall.free&&curWall.layers&&curWall.layers.length; bWipe.style.display=show?'':'none'; bWipe.textContent=rp?(repHide?'👁 Show sample':'🙈 Hide sample'):wipePrev?'↩️ Keep the old drawing':'🧽 Clean the wall first';
   document.getElementById('drawInfo').style.maxWidth=show?Math.max(90,DR.w-24-bWipe.offsetWidth)+'px':''; } // čipi neiet zem pogas
-bWipe.onclick=()=>{ wipePrev=!wipePrev; syncWipe(); dirty=true; buzz(10); };
+bWipe.onclick=()=>{ if(curWall&&curWall.rep) repHide=!repHide; else wipePrev=!wipePrev; syncWipe(); dirty=true; buzz(10); };
 function updateDrawInfo(force){ if(mode!=='draw'&&!force) return; const w_=npcs.filter(n=>n.seen&&!n.called).length, c_=npcs.filter(n=>n.called&&time-n.callT<40&&Math.abs(n.x-player.x)<900).length;
   const key=`${w_}|${c_}|${starving()}|${curWall&&curWall.isBonus}`; if(key===drawInfoKey&&!force) return; drawInfoKey=key;
   let h=''; if(!(curWall&&curWall.isBonus)){ h+=w_?`<span class="${w_>=3?'hot':''}">👀 ${w_} watching</span>`:'<span>🙈 Nobody sees you</span>'; if(c_) h+=`<span class="hot">📞 ${c_} calling the police!</span>`; }
@@ -1153,7 +1156,77 @@ function finishFree(){ const w=curWall, f=freeFrame(); let tot=0, wsum=0;
   if(level()>lv0) ding([523,659,784,1047,1319]);
   leaveDraw(true); if(money){ coins(w.px+PANEL.w/2,w.py+PANEL.h/2+40,Math.min(20,4+Math.round(money/12))); sfx('coin'); }
   showResult({stars:-1,rating:enough?'Freestyle!':'Draw a bit more!',money,xp:xpGain,mult,lvUp:level()>lv0?level():0,art}); }
-function finishDraw(){ if(curWall&&curWall.isBonus){ finishBonus(); return; } if(curWall&&curWall.free){ finishFree(); return; }
+// ================= „Atkārto manu zīmējumu” (siena REPEAT ME katras pilsētas sākumā) =================
+// Viens uzzīmē oriģinālu (vektoru slānis kā sienām) → grafiti/repeat/{pilsēta}/{id} (pēdējie REP_N). Cits to izvēlas, redz blāvi kā paraugu
+// un zīmē pa virsu; precizitāti rēķina ar to pašu evaluate() pret oriģināla līnijām. ≥90 % – arī lootbox. Atkārtotājs ieraksta r/{uid},
+// autora spēle to vēlāk ierauga (repCheck) un iedod mazu bonusu. Bērnu drošība: jebkurš var ziņot un notīrīt (kā brīvo sienu).
+const REP_N=12, repList={}; let repRef=null, repOpenW=null, repLocalN=0;
+const repBonus=c=>Math.max(3,Math.round(TIERS[Math.min(NLEV-1,c*10)].base*.2));
+const escH=t=>String(t).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+function repPaths(s,f){ let arr; try{ arr=JSON.parse(s); }catch(e){ return []; } if(!Array.isArray(arr)) return []; const k=f.w/720, out=[];
+  arr.forEach(st=>{ const p=Array.isArray(st)&&st[2]; if(!Array.isArray(p)||p.length<2) return; const q=[]; for(let i=0;i+1<p.length;i+=2) q.push([f.x+(+p[i])*k,f.y+(+p[i+1])*k]); out.push(q); }); return out; }
+function repSorted(c){ return Object.values(repList[c]||{}).filter(e=>e&&typeof e.s==='string').sort((a,b)=>(b.t||0)-(a.t||0)); }
+function repArt(c){ const w=walls.find(w_=>w_.rep&&w_.city===c); if(!w) return; const e=repSorted(c)[0]; w.art=e?layersArt({layers:[e]}):null;
+  if(repOpenW&&mode==='shop') renderRepeat(); }
+function repListen(c){ if(repRef){ repRef.off(); repRef=null; } if(c<0||!NET.db) return; repRef=NET.db.ref(DBP+'repeat/'+c); repList[c]={};
+  const ap=(sn,del)=>{ if(del) delete repList[c][sn.key]; else { const v=sn.val(); if(v&&typeof v.s==='string') repList[c][sn.key]=Object.assign({},v,{id:sn.key,c}); } repArt(c); };
+  repRef.on('child_added',s_=>ap(s_),()=>{}); repRef.on('child_changed',s_=>ap(s_),()=>{}); repRef.on('child_removed',s_=>ap(s_,true),()=>{}); }
+const repMine=e=>e.u===(NET.uid||'me');
+const repCount=e=>Object.keys(e.r||{}).length;
+function openRepeat(w){ mode='shop'; promptEl.style.display='none'; repOpenW=w; renderRepeat(); shopOv.classList.add('on'); }
+function renderRepeat(){ const w=repOpenW; if(!w) return; const L=repSorted(w.city);
+  const cards=L.map((e,i)=>`<div class="repCard"><canvas width="240" height="147" data-th="${i}"></canvas>
+    <div class="repBy"><span data-notr>${escH(e.n||'?')}</span>${repMine(e)?' <b>(you)</b>':''}<small> · 🔁 ${repCount(e)}</small></div>
+    <div class="repB">${repMine(e)?`<button class="sec" data-rm="${i}">🗑️ Delete</button>`:`<button data-go="${i}">🔁 Repeat</button><button class="sec" data-rm="${i}" title="Report and clean">🚩</button>`}</div></div>`).join('');
+  shopEl.innerHTML=`<h2>🔁 Repeat my drawing</h2><p style="color:#aab;font-size:14px;margin:4px 0 10px">Pick a drawing and repeat it as exactly as you can – money and XP for accuracy, 90%+ = lootbox 🎁! The author gets a small bonus.</p>
+    <button id="repNew">✏️ Draw your own for others</button>
+    <div class="repGrid">${cards||'<p style="color:#aab">No drawings here yet – be the first! ✏️</p>'}</div>
+    <p style="color:#889;font-size:12px">🚩 = a bad drawing? Report it – it is cleaned for everyone and an admin checks it.</p>
+    <button id="shopClose">Close<span class="kh"> (Esc)</span></button>`;
+  shopEl.querySelectorAll('canvas[data-th]').forEach(cv_=>{ const g=cv_.getContext('2d'); g.scale(240/720,240/720); g.drawImage(bgBrick,0,0); drawLayers(g,[L[+cv_.dataset.th]]); });
+  document.getElementById('shopClose').onclick=closeShop;
+  document.getElementById('repNew').onclick=()=>{ const w_=repOpenW; closeShop(); w_.repSrc=null; openDraw(w_); };
+  shopEl.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ const w_=repOpenW, e=L[+b.dataset.go]; closeShop(); w_.repSrc=e; openDraw(w_); });
+  shopEl.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ if(!b.dataset.sure){ b.dataset.sure=1; b.textContent=window.tr?window.tr('❓ Sure?'):'❓ Sure?'; buzz(10); return; } repRemove(L[+b.dataset.rm]); }); }
+function repRemove(e){ const mine=repMine(e);
+  if(NET.on&&NET.db){ if(!mine) NET.db.ref('reports').push({by:NET.uid,about:e.u,what:'grafiti repeat drawing (city '+(e.c+1)+')',t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+    NET.db.ref(`${DBP}repeat/${e.c}/${e.id}`).remove().catch(()=>{}); }
+  if(repList[e.c]) delete repList[e.c][e.id]; if(save.repMine) delete save.repMine[e.c+'_'+e.id]; persist();
+  toast(mine?'🗑️ Drawing deleted.':'🚩 Thanks! The drawing was cleaned and an admin will check it.'); buzz(15); repArt(e.c); }
+function repPublish(c,layer){ save.repMine=save.repMine||{};
+  if(!NET.on||!NET.db){ const id='l'+(++repLocalN); (repList[c]=repList[c]||{})[id]=Object.assign({},layer,{id,c,t:Date.now()}); save.repMine[c+'_'+id]=0; repArt(c); return; }
+  const ref=NET.db.ref(`${DBP}repeat/${c}`), k=ref.push().key;
+  ref.child(k).set(Object.assign({},layer,{t:firebase.database.ServerValue.TIMESTAMP})).then(()=>{ save.repMine[c+'_'+k]=0; const ks=Object.keys(save.repMine); if(ks.length>20) ks.slice(0,ks.length-20).forEach(x=>delete save.repMine[x]); persist(); return ref.once('value'); })
+    .then(sn=>{ const v=sn.val()||{}, ks=Object.keys(v).sort((a,b)=>(v[a].t||0)-(v[b].t||0)); if(ks.length>REP_N){ const up={}; ks.slice(0,ks.length-REP_N).forEach(x=>up[x]=null); ref.update(up); } }).catch(()=>{}); }
+// autora bonuss: cik citu atkārtojuši manus zīmējumus kopš pēdējās pārbaudes
+function repCheck(){ if(!saveOk||!save.repMine) return; const ks=Object.keys(save.repMine); if(!ks.length) return;
+  const got=ks.map(k=>{ const j=k.indexOf('_'), c=k.slice(0,j), id=k.slice(j+1);
+    if(!NET.on||!NET.db){ const e=(repList[c]||{})[id]; return Promise.resolve(e?{k,c:+c,n:repCount(e)}:{k,gone:true}); }
+    const ref=NET.db.ref(`${DBP}repeat/${c}/${id}`); return Promise.all([ref.child('u').get(),ref.child('r').get()]).then(([u,r])=>u.exists()?{k,c:+c,n:r.numChildren()}:{k,gone:true}).catch(()=>null); });
+  Promise.all(got).then(rs=>{ let add=0, who=0; rs.forEach(x=>{ if(!x) return; if(x.gone){ delete save.repMine[x.k]; return; } const d=x.n-(save.repMine[x.k]||0); if(d>0){ add+=d*repBonus(x.c); who+=d; save.repMine[x.k]=x.n; } });
+    if(add){ save.money+=add; stat('earned',add); shownMoney=-1; persist(); ding([659,784,1047]); toast(`🔁 <b>${who}× someone repeated your drawing!</b><br>Author bonus +€${add}`); } else persist(); }); }
+setInterval(repCheck,90000);
+function finishRepeat(){ const w=curWall, src=w.repSrc, f=freeFrame(); let tot=0, wsum=0;
+  strokes.forEach(s_=>{ let L=0; for(let i=1;i<s_.pts.length;i++) L+=Math.hypot(s_.pts[i].x-s_.pts[i-1].x,s_.pts[i].y-s_.pts[i-1].y); tot+=L; wsum+=L*colorById(s_.color).mult; });
+  if(!tot){ leaveDraw(false); return; }
+  if(!src&&tot<f.w*.8){ toast('✏️ Draw a bit more – others need something to repeat!'); buzz(20); return; }
+  const tk=Math.max(0,Math.min(w.tier,level()-1)), mult=Math.max(1,Math.round(wsum/tot*100)/100), lv0=level(), xb=buff.xp2>0?2:1;
+  redraw(false); const layer={u:NET.uid||'me',n:NET.name||'',s:encodeLayer()};
+  let money, xpGain, res;
+  if(!src){ repPublish(w.city,layer); money=Math.round(TIERS[tk].base*.4*mult); xpGain=Math.round(xpFor(tk)*.4*xb); stat('repOrig');
+    res={stars:-1,rating:'Shared! Others can now repeat it.'}; }
+  else { const r=evaluate(); money=Math.round(TIERS[tk].base*r.acc*r.acc*mult); xpGain=Math.round(xpFor(tk)*(.2+r.acc*.8)*xb); stat('repeat'); if(r.acc>=.9) stat('repeat90');
+    if(NET.on&&NET.db&&src.u!==NET.uid&&!String(src.id).startsWith('l')) NET.db.ref(`${DBP}repeat/${src.c}/${src.id}/r/${NET.uid}`).set({a:Math.round(r.acc*100),t:firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+    else if(!NET.on){ src.r=Object.assign({},src.r,{me:{a:Math.round(r.acc*100)}}); }
+    res={stars:r.acc>=.9?3:r.acc>=.75?2:r.acc>=.5?1:0,rating:r.acc>=.9?'Perfect copy!':r.acc>=.75?'Super!':r.acc>=.5?'Good':r.acc>=.25?'Poor':'Scribble',acc:r.acc};
+    if(r.acc>=.9) setTimeout(()=>{ if(!lootOpen) showLoot(rollBoxTier(r.acc),r.acc); },1600); }
+  const art=layersArt({layers:[layer]}); art.crop=cropRect(); w.art=art; w.cool=20;
+  save.money+=money; save.painted++; stat('earned',money); save.xp=(save.xp||0)+xpGain; persist(); addHeatFromPaint(w); shownMoney=-1;
+  if(level()>lv0) ding([523,659,784,1047,1319]);
+  const wx=w.px+PANEL.w/2, wy=w.py+PANEL.h/2; leaveDraw(true);
+  if(money>0){ coins(wx,wy+40,Math.min(24,4+Math.round(money/12))); floatText(wx,wy-30,`+€${money}`,'#ffd34d'); sfx('coin'); }
+  showResult(Object.assign(res,{money,xp:xpGain,mult,lvUp:level()>lv0?level():0,art})); }
+function finishDraw(){ if(curWall&&curWall.isBonus){ finishBonus(); return; } if(curWall&&curWall.rep){ finishRepeat(); return; } if(curWall&&curWall.free){ finishFree(); return; }
   // krāsas bonuss – pēc tā, cik garu līniju ar katru krāsu uzvilka (nevis viens neona punkts visai sienai)
   const sl=s_=>{ let L=0; for(let i=1;i<s_.pts.length;i++) L+=Math.hypot(s_.pts[i].x-s_.pts[i-1].x,s_.pts[i].y-s_.pts[i-1].y); return L; };
   let tot=0, wsum=0, needL=0; strokes.forEach(s_=>{ const L=sl(s_); tot+=L; wsum+=L*colorById(s_.color).mult; if(s_.color===curWall.need) needL+=L; });
@@ -1357,7 +1430,7 @@ function openLoot(bt){ stat('box'); if(bt>=3) stat('legend'); const B=BOXES[bt],
 const shopOv=document.getElementById('shopOv'), shopEl=document.getElementById('shop');
 function openShop(){ mode='shop'; promptEl.style.display='none'; renderShop(); shopOv.classList.add('on'); }
 const tpOv=document.getElementById('tpOv'), tpEl=document.getElementById('tp');
-function closeShop(){ shopOv.classList.remove('on'); tpOv.classList.remove('on'); metroLot=null; metroKey=''; mode='world'; }
+function closeShop(){ repOpenW=null; shopOv.classList.remove('on'); tpOv.classList.remove('on'); metroLot=null; metroKey=''; mode='world'; }
 function openTeleport(){ if(mode!=='world') return; if(inMetro){ const t_=metroObjs.find(o=>o.kind==='mtrain'); if(Math.abs(player.x-t_.cx)<440) return openMetro(); toast(isTouch?'🚇 The train stands in the middle of the station – tap it.':'🚇 The train stands in the middle of the station – walk to it and press E.'); return; } let b=null,bd=1e9; stations.forEach(st=>{ const d=Math.abs(st.cx-player.x); if(d<bd){ bd=d; b=st; } });
   if(bd<170) return openMetro(b);
   toast(`🚇 Teleporting is metro only! Nearest station: ${Math.round(bd/10)} m ${b.cx>player.x?'→':'←'} (blue arrow).`); }
@@ -1448,6 +1521,7 @@ cv.addEventListener('pointerdown',e=>{ if(mode!=='world'||lootOpen) return; audi
 function ctxInfo(){ if(mode!=='world') return null;
   if(hidden) return null;
   const l=nearLot; if(!l) return null;
+  if(l.kind==='wall'&&l.rep) return l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🔁',t:'Repeat'};
   if(l.kind==='wall') return locked(l)?{i:'🔒',t:'Lv '+(l.tier+1)}:l.need&&!save.colors.includes(l.need)?{i:'🛒',t:colorById(l.need).name}:l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎨',t:'Paint'};
   if(l.kind==='mwall') return l.cool>0?{i:'⏳',t:Math.ceil(l.cool)+' s'}:{i:'🎁',t:'Bonus'};
   return {paint:{i:'🛒',t:'Shop'},cafe:{i:'🍔',t:'Buy'},pizza:{i:'🍕',t:'Buy'},shoes:{i:'👟',t:'Shop'},barber:{i:'💈',t:'Look'},metro:{i:'🚇',t:'Metro'},mtrain:{i:'🚆',t:'Travel'},mexit:{i:'⬆️',t:'Exit'}}[l.kind]||null; }
@@ -1461,6 +1535,7 @@ function actionE(){
   if((nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.cool<=0||nearLot.kind==='mwall'&&nearLot.cool<=0)&&!save.colors.some(id=>paintOf(id)>0)){ toast('🎨 All your paint is empty! Refill at the Paint Depot (black € 20). Every night at 02:00 you get € 20.'); return; }
   if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&save.colors.includes(nearLot.need)&&paintOf(nearLot.need)<=0){ const c=colorById(nearLot.need); toast(`🎨 This wall needs ${c.name} paint, but your can is empty – refill at the Paint Depot (€ ${refillPrice(c.id)}).`); return; }
   if(nearLot.kind==='wall'&&!locked(nearLot)&&nearLot.need&&!save.colors.includes(nearLot.need)){ const c=colorById(nearLot.need); toast(`🎨 This wall needs this paint: <b style="color:${c.hex}">${c.name}</b> – buy it at the Paint Depot (€ ${c.price}).`); return; }
+  if(nearLot.kind==='wall'&&nearLot.rep){ nearLot.cool>0?toast('Paint still drying – come back later or find another wall!'):openRepeat(nearLot); return; }
   if(nearLot.kind==='wall') locked(nearLot)?toast(`🔒 ${distName(nearLot.tier)}: needs level ${nearLot.tier+1} (you have ${level()}). Paint easier walls and earn XP.`):nearLot.cool>0?toast('Paint still drying – come back later or find another wall!'):openDraw(nearLot);
   else if(nearLot.kind==='paint') openShop();
   else if(nearLot.kind==='metro') enterMetro(nearLot);
@@ -1552,7 +1627,7 @@ async function loadSave(uid){
   walletBase=save.money; TW.wallet.watch(uid,v=>{ if(v==null||walletBusy) return; save.money=v+(save.money-walletBase); walletBase=v; dispMoney=save.money; shownMoney=-1; });
   saveUid=uid; saveOk=true; _lx=-1; dispMoney=save.money; shownMoney=-1; foodBand=3;
   metroObjs.forEach(o=>{ if(o.kind==='mwall'){ o.tier=Math.max(0,level()-1-Math.floor(Math.random()*4)); o.shape=pickShape(o.tier); } });
-  renderInv(); updateHud(); setTimeout(dailyGift,2500);
+  renderInv(); updateHud(); setTimeout(dailyGift,2500); setTimeout(repCheck,6000);
   if(cloudOk) NET.db.ref(DBP+'saves/'+uid).set(JSON.parse(JSON.stringify(save))).catch(()=>{}); }
 // Ikdienas dāvana: katru nakti 02:00 +€20 (tieši melnās krāsas uzpilde). Laiks pēc servera pulksteņa.
 function dailyGift(){ if(!saveOk) return; const d=new Date(Date.now()+(NET.off||0)-2*3600e3), key=`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
@@ -1568,7 +1643,7 @@ function netTick(){ if(!NET.on) return;
   if(window.TW&&TW.active&&!TW.active()){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } NET.city=-2; return; } // fonā/neaktīvs – citiem nerādāmies
   const c=inMetro?-1:curCity;
   if(c!==NET.city){ if(NET.ref){ NET.ref.remove().catch(()=>{}); NET.ref.onDisconnect().cancel(); NET.ref=null; } if(NET.sub){ NET.sub.off(); NET.sub=null; } NET.others={}; NET.city=c;
-    wallsListen(c);
+    wallsListen(c); repListen(c);
     if(c>=0){ NET.ref=NET.db.ref('presence/'+c+'/'+NET.uid); NET.ref.onDisconnect().remove();
       NET.sub=NET.db.ref('presence/'+c); NET.sub.on('value',s=>{ const now=Date.now()+NET.off, o={};
         s.forEach(p=>{ const v=p.val(); if(p.key!==NET.uid&&v&&now-(v.t||0)<20000){ const pr=NET.others[p.key]; o[p.key]=Object.assign({uid:p.key,dx:pr?pr.dx:v.x,step:pr?pr.step:0},v); } }); NET.others=o; }); } }
@@ -1644,6 +1719,7 @@ const TUT_LV=[
   ['🛒','Veikals','Krāsu depo (rozā izkārtne) pārdod krāsas un transportu. Krāsa zīmējot iztērējas 🎨 – uzpildi to depo (melnā lētākā, €20). Katru nakti 02:00 saņem €20 dāvanā!'],
   ['🍔','Ēdiens','Tēlam vajag ēst. Izsalcis tēls (🍔 virs galvas) iet lēnāk, un rokas trīc. Kafejnīcā vai picērijā pērc ēdienu līdzņemšanai – tas ieiet somā 🎒, un ēd, kad gribi.'],
   ['🚇','Metro','Metro uzreiz aizved uz citu rajonu vai pilsētu. Iekšā ir bonusa sienas ar lootboxiem 🎁.'],
+  ['🔁','Atkārto manu zīmējumu','Pilsētas sākumā pie sienas ATKĀRTO MANI uzzīmē savu zīmējumu citiem vai atkārto kāda cita zīmējumu. Nauda un XP par precizitāti, ar 90% un vairāk – arī lootbox 🎁!'],
   ['🏅','Medaļas un draugi','Par sasniegumiem saņem medaļas – tās redzamas sākumlapā. Pieskaries citam spēlētājam, lai kļūtu par draugiem.'],
   ['⚙️','Iestatījumi','⚙ pogā ir skaņa, gaišums un valoda, 🎵 – radio. Šo instrukciju vari atvērt vēlreiz pauzē: ❓ Kā spēlēt.'],
 ];
@@ -1656,6 +1732,7 @@ const TUT_EN=[
   ['🛒','Shop','The Paint Depot (pink sign) sells colors and vehicles. Paint runs out as you draw 🎨 – refill it there (black is cheapest, €20). Every night at 02:00 you get €20 as a gift!'],
   ['🍔','Food','Your character needs to eat. A hungry character (🍔 above the head) walks slower and their hands shake. Buy takeaway food at a café or pizzeria – it goes into your backpack 🎒, eat it whenever you like.'],
   ['🚇','Metro','The metro takes you to another district or city instantly. Inside are bonus walls with loot boxes 🎁.'],
+  ['🔁','Repeat my drawing','At the REPEAT ME wall at the start of each city, draw something for others or repeat someone else\'s drawing. Money and XP for accuracy, 90% or more also gives a loot box 🎁!'],
   ['🏅','Medals and friends','Achievements give medals – see them on the home page. Tap another player to become friends.'],
   ['⚙️','Settings','The ⚙ button has sound, brightness and language, 🎵 is the radio. Open this guide again from pause: ❓ How to play.'],
 ];

@@ -193,3 +193,9 @@
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
 /* iPhone Safari: ar user-select:none uz body laukos nevar rakstīt (čuksti, profils) */
 input,textarea,[contenteditable]{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default}
+/* „Atkārto manu zīmējumu” – zīmējumu saraksts */
+.repGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+.repCard{background:#14151b;border:1px solid #fff2;border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:5px}
+.repCard canvas{width:100%;height:auto;border-radius:6px;display:block}
+.repBy{font-size:13px;color:#dde;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.repB{display:flex;gap:6px}.repB button{flex:1;min-height:44px;padding:6px 8px;font-size:14px}.repB button[data-rm]:not(:only-child){flex:0 0 48px}
