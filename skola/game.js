@@ -405,7 +405,7 @@ function winSky(at, wh, seed) {
 // klases fons no Blendera (bg/build_bg.py): 4 atsauces ekrāni – izvēlas pēc aizmugurējās sienas proporcijas,
 // mērogo pēc sienas platuma un piesien pie grīdas līnijas fy. Kadrs ir BGX× atsauces ekrāns (rezerve malām),
 // logu stikls caurspīdīgs – aiz tā zīmē debesis (win: stikla taisnstūri atsauces px). Kamēr nav ielādēts – zīmētā telpa.
-const BGV = 2, BGX = 1.4, BG = { // attēli ~2,3× atsauces px – telefonā/planšetē netiek palielināti (asums)
+const BGV = 3, BGX = 1.4, BG = { // attēli ~2,3× atsauces px – telefonā/planšetē netiek palielināti (asums)
   p: { w: 390, h: 780, fy: 279.2, ww: 335.4, wh: 230.07, win: [[-205.9, -16, -77.2, 271.6], [-39.9, 60.1, 11, 228.6]] },
   pt: { w: 768, h: 1024, fy: 325.56, ww: 660.48, wh: 292.66, win: [[-411.9, -56.9, -156.4, 308.9], [-82.4, 44.7, 18.8, 259.1]] },
   lt: { w: 1024, h: 768, fy: 287, ww: 713.44, wh: 245.5, win: [[-350.4, -41.8, -73.5, 265.2], [6.6, 49, 116.3, 228.8]] },

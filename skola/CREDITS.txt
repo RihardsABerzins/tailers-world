@@ -1,0 +1,7 @@
+Skola – izmantotie 3D modeļi (visi CC0 / publiskais īpašums)
+
+KayKit Furniture Bits 1.0 – Kay Lousberg (https://kaylousberg.itch.io) – skapīši, plaukti, lampa, kaktusi klases fonā
+KayKit Forest Nature Pack 1.0 – Kay Lousberg – koki un krūmi aiz logiem
+KayKit City Builder Bits 1.0 – Kay Lousberg – māju siluets aiz logiem
+
+Fons uzrenderēts Blenderī ar skola/bg/build_bg.py.
