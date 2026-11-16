@@ -40,7 +40,7 @@
   const VEH = {
     plane: { i: '✈️', n: 'Lidmašīna', p: 0, m: 80, cda: .3, crashV: 8,
       slots: {
-        body: slot('🥔', 'Šasija', 'Kartupelis', ['Kartona kaste', 'Saplākšņa', 'Alumīnija', 'Sacīkšu', 'Reaktīvā'], 15, L => L ? { cda: lin(.38, .14, L), m: lin(28, 55, L), crashV: lin(7, 11.5, L) } : { cda: .5, m: 20, crashV: 6 }, ['🥔', '📦', '🪵', '🔩', '🏎️', '🛩️']),
+        body: slot('🥔', 'Virsbūve', 'Kartupelis', ['Kartona kaste', 'Saplākšņa', 'Alumīnija', 'Sacīkšu', 'Reaktīvā'], 15, L => L ? { cda: lin(.38, .14, L), m: lin(28, 55, L), crashV: lin(7, 11.5, L) } : { cda: .5, m: 20, crashV: 6 }, ['🥔', '📦', '🪵', '🔩', '🏎️', '🛩️']),
         wheel: slot('🛞', 'Riteņi', 'Nav', ['Ratiņu', 'Velo', 'Skrituļu', 'Sacīkšu', 'Gultņu'], 12, L => ({ mu: L ? expo(.045, .01, L) : .07, roll: .1 }), ['🚫', '🛒', '🚲', '🛼', '🏁', '⚙️']),
         wing: slot('🪽', 'Spārni', 'Nav', ['Kartona', 'Saplākšņa', 'Pūķa', 'Deltaplāna', 'Planiera'], 10, L => L ? { S: lin(7.5, 13, L), ar: lin(5.5, 18, L), cd0: lin(.032, .014, L), m: lin(8, 19, L) } : { S: 0 }, ['🚫', '📦', '🪵', '🪁', '🦅', '🪽']),
         eng: slot('🔥', 'Dzinējs', 'Nav', ['Ventilators', 'Propelleris', 'Raķete', 'Lielā raķete', 'Reaktīvais'], 50, L => L ? { T: lin(220, 1300, L), f: lin(3, 9, L), m: lin(4, 22, L) } : {}, ['🚫', '🌀', '✈️', '🚀', '🎆', '🔥']),

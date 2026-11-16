@@ -268,7 +268,7 @@ const LOOKC = () => ({ skin: LOOK.skin || '#f2c9a0', body: LOOK.hood && LOOK.hoo
 const MODELS = {};
 function loadModels(cb) {
   const go2 = () => { try { const ld = new T3.GLTFLoader(), get = u => new Promise(r => ld.load(u, g => r(g.scene), undefined, () => r(null)));
-    (async () => { const g = await get('models.glb?v=3'); if (g) g.children.forEach(o => { MODELS[o.name] = o; });
+    (async () => { const g = await get('models.glb?v=4'); if (g) g.children.forEach(o => { MODELS[o.name] = o; });
       for (const n of ['tree_oak', 'tree_default', 'tree_fat', 'tree_pineRoundA']) { const sc = await get('../atra-palidziba/models/nature/' + n + '.glb'); if (sc) TREES.push(treeParts(sc)); }
       cb(); })(); } catch (e) { cb(); } };
   if (T3.GLTFLoader) return go2();
@@ -313,7 +313,7 @@ function buildVehicle2(vid, sel, st) {
   const put = (o, x, y, z, kind) => { if (!o) return null; o.position.x += x; o.position.y += y; o.position.z += z; g.add(o); parts.push(o); o.userData.kind = kind || 'p'; return o; };
   const add = (geo, m, x, y, z, kind) => put(new T3.Mesh(geo, m), x, y, z, kind), Cyl = (r1, r2, h, n) => new T3.CylinderGeometry(r1, r2, h, n || 16);
   if (vid === 'plane') {
-    // šasija: 0 – kartupelis, tad kartona kaste, saplākšņa, alumīnija, sacīkšu, reaktīvā (aug līdz ar līmeni)
+    // virsbūve: 0 – kartupelis, tad kartona kaste, saplākšņa, alumīnija, sacīkšu, reaktīvā (aug līdz ar līmeni)
     const bL = sel.body || 0, bT = bL ? VEH.plane.slots.body.lv[bL].tier : -1, s = .74 + bL * .012, hb = (sel.wheel ? .84 : .53) * (.6 + .4 * s);
     const af = new T3.Group(); af.position.set(0, hb, 0); af.scale.setScalar(s); g.add(af);
     const putA = (o, kind) => { if (!o) return null; af.add(o); parts.push(o); o.userData.kind = kind || 'p'; return o; };
@@ -326,18 +326,27 @@ function buildVehicle2(vid, sel, st) {
     } else if (bT === 0) { // kartona kaste ar līmlenti
       V.body = putA(new T3.Mesh(new T3.BoxGeometry(1.05, .95, 3.4), mat(CARD)), 'body'); const tp = putA(new T3.Mesh(new T3.BoxGeometry(.28, .97, 3.42), mat(0xe8d9a8))); tp.position.y = .005;
       [-1, 1].forEach(sx => { const fl = putA(new T3.Mesh(new T3.BoxGeometry(.5, .03, 1.2), mat(0xb8915c))); fl.position.set(sx * .5, .55, -.6); fl.rotation.z = sx * .5; });
-    } else { V.body = putA(mdl('Body', { paint: pc }), 'body'); if (bT >= 3) putA(mdl('Nose')); if (bT >= 2) putA(mdl('Canopy')); else putA(mdl('Nose', { white: CARD })); }
-    // izmēri šasijas telpā: priekšgals, aizmugure, augša, apakša – lai propelleris, aste un pilots ir piestiprināti
+    } else if (MODELS.P6Body) { V.body = putA(mdl(bT >= 4 ? 'JBody' : 'P6Body', { paint: pc }), 'body'); } // gatavie modeļi: 1.–3. pakāpe – Cessna (Vojtěch Balák), 4. – reaktīvā (jeremy)
+    else { V.body = putA(mdl('Body', { paint: pc }), 'body'); if (bT >= 3) putA(mdl('Nose')); if (bT >= 2) putA(mdl('Canopy')); else putA(mdl('Nose', { white: CARD })); }
+    const KM = bT >= 1 && MODELS.P6Body ? (bT >= 4 ? 'J' : 'P6') : null;
+    // izmēri virsbūves telpā: priekšgals, aizmugure, augša, apakša – lai propelleris, aste un pilots ir piestiprināti
     const D = bT < 0 ? { f: 1.12, b: -1.05, t: .44, u: -.44, fy: -.12 } : bT === 0 ? { f: 1.7, b: -1.7, t: .475, u: -.475, fy: 0 } : { f: 2.32, b: -1.85, t: .55, u: -.5, fy: 0 };
-    [putA(mdl('Fin', { paint: bT <= 0 ? CARD : pc })), putA(mdl('HStab', { white: bT <= 0 ? CARD : 0xf5f5f5 }))].forEach(o => { o.position.z += D.b + 1.85; o.position.y += D.fy; });
-    if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing ? VEH.plane.slots.wing.lv[sel.wing].tier + 1 : 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
+    if (!KM) [putA(mdl('Fin', { paint: bT <= 0 ? CARD : pc })), putA(mdl('HStab', { white: bT <= 0 ? CARD : 0xf5f5f5 }))].forEach(o => { o.position.z += D.b + 1.85; o.position.y += D.fy; });
+    // gatavā modeļa spārni: platums mērogots pēc nopirktajiem spārniem (bez spārniem – nav)
+    if (st.S && KM) { const half = KM === 'J' ? 1.9 : 2.5, k = clamp(st.span / 2 / (half * s), .6, 1.9), wc = WING_C[VEH.plane.slots.wing.lv[sel.wing].tier + 1];
+      ['WingL', 'WingR'].forEach(n => { const w = putA(mdl(KM + n, { white: wc, paint: pc }), 'wing'); w.scale.x = k; }); }
+    else if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing ? VEH.plane.slots.wing.lv[sel.wing].tier + 1 : 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
     if (sel.wheel) { const wr = .2 + sel.wheel * .004; [-.55, .55].forEach(x => { const w = put(mdl('Wheel'), x, wr, .45); w.scale.setScalar(wr); add(Cyl(.035, .035, hb - wr - .2, 6), mat(0x9aa0aa), x * .8, wr + (hb - wr - .2) / 2, .45); });
       const tw = put(mdl('Wheel'), 0, .1, D.b * s * .85); tw.scale.setScalar(.1); add(Cyl(.03, .03, hb - .2, 6), mat(0x9aa0aa), 0, .1 + (hb - .2) / 2, D.b * s * .85); }
     const e = sel.eng ? [1, 2, 3, 3, 4][VEH.plane.slots.eng.lv[sel.eng].tier] : 0;
-    if (e === 1 || e === 2) { const pr = putA(mdl('Prop')); pr.scale.setScalar(e === 1 ? .42 : .95); pr.position.z = D.f + .06; V.spin = pr; if (e === 1) { const ring = putA(new T3.Mesh(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd))); ring.position.z = D.f + .06; } }
-    if (e === 3) { const ry = D.u - .16; putA(new T3.Mesh(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c))).position.set(0, ry, -.3); putA(new T3.Mesh(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5))).position.set(0, ry, .47); V.flames.push([0, hb + ry * s, -.95 * s, .5]); }
-    if (e === 4) { const jy = D.t + .2; putA(new T3.Mesh(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e))).position.set(0, jy, D.b * .35); putA(new T3.Mesh(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63))).position.set(0, jy, D.b * .35 + .85); V.flames.push([0, hb + jy * s, (D.b * .35 - .9) * s, .7]); }
-    const p = makePerson('sit'); p.scale.setScalar(.72); p.position.set(0, bT < 2 ? hb + D.t * s * .92 - .43 : hb - .3 * s, bT < 2 ? -.15 * s : .32 * s); g.add(p); V.pilot = p;
+    if ((e === 1 || e === 2) && KM === 'P6') V.spin = putA(mdl('P6Prop'));
+    else if ((e === 1 || e === 2) && KM !== 'J') { const pr = putA(mdl('Prop')); pr.scale.setScalar(e === 1 ? .42 : .95); pr.position.z = D.f + .06; V.spin = pr; if (e === 1) { const ring = putA(new T3.Mesh(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd))); ring.position.z = D.f + .06; } }
+    if (e >= 3 && KM === 'J') V.flames.push([0, hb, -1.95 * s, .6]); // reaktīvajai modelim dzinēji jau ir – tikai liesma aizmugurē
+    else if (e === 3) { const ry = D.u - .16; putA(new T3.Mesh(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c))).position.set(0, ry, -.3); putA(new T3.Mesh(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5))).position.set(0, ry, .47); V.flames.push([0, hb + ry * s, -.95 * s, .5]); }
+    else if (e === 4) { const jy = D.t + .2; putA(new T3.Mesh(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e))).position.set(0, jy, D.b * .35); putA(new T3.Mesh(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63))).position.set(0, jy, D.b * .35 + .85); V.flames.push([0, hb + jy * s, (D.b * .35 - .9) * s, .7]); }
+    const p = makePerson('sit'); p.scale.setScalar(.72); g.add(p); V.pilot = p;
+    if (KM) p.position.set(0, hb - (KM === 'J' ? .5 : .4) * s, (KM === 'J' ? .55 : .25) * s); // kabīnē
+    else p.position.set(0, bT < 2 ? hb + D.t * s * .92 - .43 : hb - .3 * s, bT < 2 ? -.15 * s : .32 * s);
     V.len = 4.7 * s; V.flow = { ax: .55 * s, ay: .55 * s, az: 2.3 * s, cy: hb + .05, cz: 0, blunt: [.65, .85, .45, .3, .22, .15][bT + 1], drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
   } else if (vid === 'scoot') {
     const wr = .11 + (sel.wheel || 0) * .0018;
@@ -348,13 +357,15 @@ function buildVehicle2(vid, sel, st) {
     V.len = 1.4; V.flow = { ax: .35, ay: .8, az: .45, cy: .95, cz: 0, blunt: clamp((st.cda - .1) / .22, 0, 1), drag: clamp(st.cda / .3, .4, 1), wing: null };
   } else {
     const wr = .36 + (sel.wheel || 0) * .008, lift = wr - .36, cc = 0x1e88e5;
-    V.body = put(mdl('CBody', { paint: cc }), 0, lift, 0, 'body'); put(mdl('CCabin', { paint: cc }), 0, lift, 0);
-    [-1, 1].forEach(sx => [-1.3, 1.3].forEach(z => { const w = put(mdl('Wheel'), sx * .84, wr, z); w.scale.setScalar(wr); }));
-    if (sel.aero >= 1) { add(new T3.BoxGeometry(1.75, .06, .38), mat(0x111111), 0, 1.45 + lift, -1.85); [-.6, .6].forEach(x => add(new T3.BoxGeometry(.06, .3, .1), mat(0x111111), x, 1.28 + lift, -1.85)); }
+    // sporta mašīna (Quaternius, CC0); ja modeļa nav – vecā virsbūve
+    const NC = !!MODELS.CarBody, WX = NC ? .87 : .84, WZ = NC ? 1.5 : 1.3, RZ = NC ? -2.2 : -1.85;
+    if (NC) V.body = put(mdl('CarBody', { paint: cc }), 0, lift, 0, 'body'); else { V.body = put(mdl('CBody', { paint: cc }), 0, lift, 0, 'body'); put(mdl('CCabin', { paint: cc }), 0, lift, 0); }
+    [-1, 1].forEach(sx => [-WZ, WZ].forEach(z => { const w = put(mdl('Wheel'), sx * WX, wr, z); w.scale.setScalar(wr); }));
+    if (sel.aero >= 1) { add(new T3.BoxGeometry(1.75, .06, .38), mat(0x111111), 0, 1.45 + lift, RZ); [-.6, .6].forEach(x => add(new T3.BoxGeometry(.06, .3, .1), mat(0x111111), x, 1.28 + lift, RZ)); }
     if (sel.aero >= 15) add(new T3.BoxGeometry(1.86, .12, 4.0), mat(0x111111), 0, .3 + lift, 0);
     if (sel.wing) { const wl = VEH.car.slots.wing.lv[sel.wing], b = .45 + wl.Sw * .1, c = .55 + wl.Sw * .03; // spārniņi sānos (izmērs pēc līmeņa)
-      [['WingL', -1], ['WingR', 1]].forEach(([n, sx]) => { const w = put(mdl(n, { wing: WING_C[wl.tier + 1], paint: cc }), sx * .88, .58 + lift, -.45, 'wing'); w.scale.set(b, Math.min(1.2, c * 1.3), c); }); }
-    if (sel.eng) { [-.5, .5].forEach(x => { add(Cyl(.12, .12, .5).rotateX(Math.PI / 2), mat(0x8c939e), x, .45 + lift, -2.15); V.flames.push([x, .45 + lift, -2.5, .5]); }); }
+      [['WingL', -1], ['WingR', 1]].forEach(([n, sx]) => { const w = put(mdl(n, { wing: WING_C[wl.tier + 1], paint: cc }), sx * (NC ? 1.05 : .88), .58 + lift, -.45, 'wing'); w.scale.set(b, Math.min(1.2, c * 1.3), c); }); }
+    if (sel.eng) { [-.5, .5].forEach(x => { add(Cyl(.12, .12, .5).rotateX(Math.PI / 2), mat(0x8c939e), x, .45 + lift, NC ? -2.4 : -2.15); V.flames.push([x, .45 + lift, NC ? -2.75 : -2.5, .5]); }); }
     const p = makePerson('sit'); p.scale.setScalar(.85); p.position.set(-.38, .22 + lift, .15); g.add(p); V.pilot = p;
     V.len = 4.4; V.flow = { ax: .95, ay: .7, az: 2.1, cy: .85 + lift, cz: 0, blunt: clamp((st.cda - .3) / .5, 0, 1), drag: clamp(st.cda / .8, .4, 1), wing: null };
   }
@@ -539,7 +550,8 @@ function setVehicle() {
   const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle2(vid, sel, ST); scene.add(VEHM.g); VEHM.g.add(STRK.grp);
   const p = RAMP.pts[0]; VEHM.g.position.set(0, p.y, p.z); VEHM.g.rotation.set(0, 0, 0); placeBest();
 }
-function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H, false); camera.aspect = W / H; camera.fov = W < H ? 72 : 58; camera.updateProjectionMatrix(); viewOffset(); }
+let BASEFOV = 72;
+function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H, false); camera.aspect = W / H; camera.fov = BASEFOV = W < H ? 72 : 58; camera.updateProjectionMatrix(); viewOffset(); }
 function viewOffset() { if (state === 'shop') { const land = W > H, sh = $('shop').getBoundingClientRect();
     if (land) camera.setViewOffset(W, H, (W - sh.left + 8) / 2 * .9, 0, W, H); else camera.setViewOffset(W, H, 0, Math.min(H * .3, (H - sh.top + 8) / 2), W, H); }
   else camera.clearViewOffset(); }
@@ -601,6 +613,7 @@ function updatePilot(dt) { if (!PIL || PIL.landed) return; const P = PIL, o = P.
   const stop = () => { P.landed = true; P.tl = runT; P.v.set(0, 0, 0); sfx('bump'); camShake = .4; };
   if (s.b && !s.b.landing && o.position.y < roofH(s.b, o.position.z) - .4 && !inside(s.b, x0, z0)) { const y = o.position.y; o.position.x = x0; o.position.z = z0; splat(o, s.b, x0, y, z0); P.wall = true; return stop(); }
   if (o.position.y <= s.h) { o.position.y = s.h; o.rotation.set(0, Math.PI, 0); setPose(o, 'wave'); puff(o.position, 'dust', 4); stop(); } }
+const PAY = .65;
 function finish(kind) {
   if (state === 'end') return;
   const landed = kind === 'land', ej = ejected, dist = Math.max(0, Math.round(ej && PIL ? PIL.o.position.z : endInfo ? endInfo.dist : sim.maxZ)), vid = save.veh, old = save.best[vid] || 0, rec = dist > old && dist >= 5;
@@ -611,6 +624,7 @@ function finish(kind) {
   if (sim.roofs) { money += sim.roofs * 2; parts.push([`🏠 Jumti ×${sim.roofs}`, '+€' + sim.roofs * 2]); }
   if (rec) { const b = 5 + Math.round((dist - old) / 10); money += b; parts.push(['🏆 Jauns rekords', '+€' + b]); }
   if (!save.first) { save.first = 1; money += 25; parts.push(['🎁 Pirmais lēciens', '+€25']); }
+  money = Math.max(1, Math.round(money * PAY)); // lidot tagad vieglāk un tālāk → nauda −35 %
   const xp = Math.round(dist / 10) + (landed ? 5 : 0) + 2, lv0 = levelOf(save.xp).l;
   save.last = save.last || {}; const prevD = save.last[vid], more = prevD != null ? dist - prevD : 0; save.last[vid] = dist;
   save.xp += xp; save.flights++; if (rec) save.best[vid] = dist;
@@ -671,6 +685,21 @@ function wireShop() { const sh = $('shop');
   const g = $('go'); if (g) g.onclick = () => go(); }
 
 // ================= Kamera un kadrs =================
+// ---- spidometrs un ātruma sajūta: līnijas no ekrāna vidus + plašāks skats ātrumā ----
+const SPMAX = 400; let spShown = -1, fovK = 0;
+function speedo(v) { const kmh = Math.round(v * 3.6); if (kmh === spShown) return; spShown = kmh; const f = clamp(kmh / SPMAX, 0, 1);
+  $('spV').textContent = kmh; $('spArc').setAttribute('stroke-dasharray', `${f * 100} 100`); $('spNeedle').style.transform = `rotate(${-135 + 270 * f}deg)`;
+  $('spArc').setAttribute('stroke', f > .75 ? '#ff5a4e' : f > .45 ? '#ffb020' : '#ffd34d'); }
+const SFX = { c: $('sfx'), g: $('sfx').getContext('2d'), L: [] };
+for (let i = 0; i < 46; i++) SFX.L.push({ a: Math.random() * 6.283, d: Math.random(), w: .6 + Math.random() * .8 });
+function speedFx(dt, v) { const c = SFX.c, g = SFX.g, k = clamp((v - 18) / 55, 0, 1); fovK += (k - fovK) * Math.min(1, dt * 2);
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  g.clearRect(0, 0, W, H); if (fovK < .02) return;
+  const cx = W / 2, cy = H * .42, R = Math.hypot(W, H) * .55; g.lineCap = 'round';
+  for (const l of SFX.L) { l.d += dt * (.9 + 2.6 * fovK) * l.w; if (l.d > 1) { l.d = .22 + Math.random() * .15; l.a = Math.random() * 6.283; }
+    const ca = Math.cos(l.a), sa = Math.sin(l.a), r0 = l.d * R, r1 = r0 + (.04 + .22 * fovK) * R * l.w;
+    g.strokeStyle = `rgba(255,255,255,${(.08 + .42 * fovK) * Math.min(1, (l.d - .22) * 5)})`; g.lineWidth = 1.2 + 2.2 * l.d * fovK;
+    g.beginPath(); g.moveTo(cx + ca * r0, cy + sa * r0); g.lineTo(cx + ca * r1, cy + sa * r1); g.stroke(); } }
 const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3(), camOff = new T3.Vector3(); let camPsi = 0, camSnap = true;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -690,7 +719,7 @@ function frame(now) {
     if (state === 'run') { const sp = sim.speed; if (VEHM.spin) VEHM.spin.rotation.z += dt * (sim.thr ? 60 : 8 + sp * .5);
       VEHM.flameM.forEach(f => { f.visible = sim.thr; if (sim.thr) f.scale.setScalar(.8 + Math.random() * .5); });
       updateStreaks(VEHM, dt, sp, sim.mode === 'air' ? sim.alpha : 0, sim.mode === 'air' ? sim.cl : 0, OPT.streaks && !boomT);
-      $('dM').textContent = Math.max(0, Math.round(ejected && PIL ? PIL.o.position.z : sim.maxZ)) + ' m'; $('dSub').textContent = `⬆ ${Math.max(0, Math.round(sim.y - surfAt(WORLD, sim.x, sim.z).h))} m · ${Math.round(sp * 3.6)} km/h`;
+      $('dM').textContent = Math.max(0, Math.round(ejected && PIL ? PIL.o.position.z : sim.maxZ)) + ' m'; $('dSub').textContent = `⬆ ${Math.max(0, Math.round(sim.y - surfAt(WORLD, sim.x, sim.z).h))} m`; speedo(ejected && PIL ? PIL.v.length() : sp);
       if (ST.T) $('turbo').style.setProperty('--f', (sim.fuel / ST.fuel * 100) + '%');
       if (!sim.stall) $('warn').classList.remove('on');
       wind(sp); engine(sim.thr);
@@ -727,6 +756,8 @@ function frame(now) {
     camL.copy(tgt); camL.y += 1.5; camera.position.lerp(camT, 1 - Math.exp(-dt * 2)); }
   camera.lookAt(camL);
   cullChunks(); updateDecoBirds(dt);
+  // ātrumā skats paplašinās (līdz +12°) un no vidus skrien līnijas
+  speedFx(dt, state === 'run' && sim && !ejected ? sim.speed : 0); const fv = BASEFOV + 12 * fovK; if (Math.abs(camera.fov - fv) > .05) { camera.fov = fv; camera.updateProjectionMatrix(); }
   if (camShake > 0) { camShake = Math.max(0, camShake - dt * 1.6); camera.position.x += rnd(-.3, .3) * camShake; camera.position.y += rnd(-.3, .3) * camShake; }
   renderer.render(scene, camera);
 }
@@ -768,7 +799,8 @@ $('gear').onclick = e => { e.stopPropagation(); audioInit(); if ($('ov').classLi
     <div class="setBox"><div class="step">🛫 Lidojums</div><div class="setRow" style="margin:6px 0">🧭 Palīgs izlīdzina</div><div class="seg" id="sHelp"><button data-x="1" class="${OPT.help ? 'on' : ''}">Ieslēgts</button><button data-x="0" class="${OPT.help ? '' : 'on'}">Izslēgts</button></div>
       <div class="setRow" style="margin:10px 0 6px">🌬 Gaisa strīpas</div><div class="seg" id="sStr"><button data-x="1" class="${OPT.streaks ? 'on' : ''}">Rādīt</button><button data-x="0" class="${OPT.streaks ? '' : 'on'}">Nerādīt</button></div></div>
     <button class="main ghostB" id="howTo" style="margin-bottom:8px">❓ Kā spēlēt</button>
-    <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p><button class="main" id="setOk">✔ Gatavs</button>`);
+    <p style="color:#9fb0ff;font-size:13.5px">Radio un Papīra Lidmašīnu dziesmas skan visās Tailers World spēlēs.</p>
+    <p style="color:#9fb0ff;font-size:11.5px">3D modeļi: Vojtěch Balák, jeremy (CC BY 3.0, Poly Pizza), Quaternius (CC0).</p><button class="main" id="setOk">✔ Gatavs</button>`);
   $('howTo').onclick = () => { closeSheet(); intro(true); };
   if (window.TWRadio) TWRadio.wire($('radioC'));
   $('fxV').oninput = () => { FXV = $('fxV').value / 100; try { localStorage.setItem('rpFx', FXV); } catch (x) {} sfx('tick'); };

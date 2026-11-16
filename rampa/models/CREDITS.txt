@@ -1,0 +1,12 @@
+Mega rampa – izmantotie gatavie 3D modeļi (apstrādāti Blenderī, sadalīti daļās, mērogoti; iekļauti rampa/models.glb)
+
+Small Airplane – Vojtěch Balák – https://poly.pizza/m/7cvx6ex-xfL
+  Licence: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/) – lidmašīna 1.–3. virsbūves pakāpei (P6Body, P6WingL/R, P6Prop); šasija noņemta.
+Jet – jeremy – https://poly.pizza/m/6fyLMORhgGK
+  Licence: CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/) – reaktīvā lidmašīna 4. pakāpei (JBody, JWingL/R).
+Sports Car – Quaternius – https://poly.pizza/m/1mkmFkAz5v (Quaternius Cars)
+  Licence: CC0 1.0 (publiskais īpašums) – spēlētāja mašīna (CarBody); riteņi – pašu.
+Man – Quaternius – https://poly.pizza/m/HMnuH5geEG
+  Licence: CC0 1.0 (publiskais īpašums) – pilots/vadītājs (Torso, LegL/R, ArmL/R, Head), rokas nolaistas, sadalīts pa locītavām; ķivere – pašu.
+
+Pārējie modeļi (skūteris, kartupelis, kartona kaste, ķivere, riteņi, kaijas, rampa) – pašu veidoti (models_src.blend).
