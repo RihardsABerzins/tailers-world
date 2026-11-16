@@ -390,9 +390,9 @@ function wrap(txt, maxW) { const out = []; let line = ''; for (const w of String
 const CHALK = '"Chalkboard SE","Comic Sans MS","Segoe Print",system-ui,sans-serif';
 
 // aiz logiem: lēni slīdoši mākoņi un pa laikam pārlido putniņš (tikai dekorācija)
-function winSky(xa, xb, Y0, Y1, onWall, seed) {
-  const t = performance.now() / 1000, ww = xb - xa, wh = onWall(xa, Y1) - onWall(xa, Y0);
-  const at = (u, v) => { const x = xa + ww * u; return [x, onWall(x, Y0 + (Y1 - Y0) * v)]; };
+// at(u, v) → ekrāna punkts loga laukumā (0..1), wh – loga augstums px
+function winSky(at, wh, seed) {
+  const t = performance.now() / 1000;
   g.fillStyle = '#ffffffd9';
   for (let i = 0; i < 3; i++) { const u = ((t * (.012 + i * .004) + seed * 1.7 + i * .45) % 1.6) - .3, [x, y] = at(u, .12 + i * .17), r = wh * (.07 + (i % 2) * .025);
     g.beginPath(); g.arc(x, y, r, 0, 7); g.arc(x + r * .9, y - r * .35, r * .8, 0, 7); g.arc(x + r * 1.7, y, r * .75, 0, 7); g.ellipse(x + r * .8, y + r * .25, r * 1.5, r * .45, 0, 0, 7); g.fill(); }
@@ -401,11 +401,34 @@ function winSky(xa, xb, Y0, Y1, onWall, seed) {
   const [x, y] = at(ph / 5 * 1.3 - .15, .3 + Math.sin(ph * 1.3) * .06), b = Math.max(2.5, wh * .045), f = Math.sin(t * 14) * b * .6;
   g.strokeStyle = '#3a3a4a'; g.lineWidth = Math.max(1.2, b * .3); g.lineCap = 'round'; g.beginPath(); g.moveTo(x - b, y - f); g.quadraticCurveTo(x - b * .4, y - b * .3, x, y); g.quadraticCurveTo(x + b * .4, y - b * .3, x + b, y - f); g.stroke();
 }
+// klases fons no Blendera (bg/build_bg.py): 4 atsauces ekrāni – izvēlas pēc aizmugurējās sienas proporcijas,
+// mērogo pēc sienas platuma un piesien pie grīdas līnijas fy. Kadrs ir 1.6× atsauces ekrāns (rezerve malām),
+// logu stikls caurspīdīgs – aiz tā zīmē debesis (win: stikla taisnstūri atsauces px). Kamēr nav ielādēts – zīmētā telpa.
+const BGV = 1, BG = {
+  p: { w: 390, h: 780, fy: 279.2, ww: 335.4, wh: 230.07, win: [[-205.8, -16, -77.1, 271.6], [-39.8, 60.1, 11.1, 228.6]] },
+  pt: { w: 768, h: 1024, fy: 325.56, ww: 660.48, wh: 292.66, win: [[-411.7, -56.9, -156.3, 308.9], [-82.3, 44.7, 18.9, 259.1]] },
+  lt: { w: 1024, h: 768, fy: 287, ww: 713.44, wh: 245.5, win: [[-350.4, -41.7, -73.5, 265.2], [6.6, 49.1, 116.3, 228.9]] },
+  l: { w: 780, h: 390, fy: 205, ww: 576.8, wh: 147.62, win: [[-309.3, 12.8, -84.8, 197.3], [-19.8, 63.6, 69.1, 171.7]] } };
+function roomImg() {
+  const R = LY.room, a = (R.fy - R.top) / (R.wx1 - R.wx0); let k = 'p', d = 1e9;
+  for (const key in BG) { const e = Math.abs(Math.log(BG[key].wh / BG[key].ww / a)); if (e < d) { d = e; k = key; } }
+  const b = BG[k]; if (!b.img) { b.img = new Image(); b.img.src = `bg/${k}.webp?v=${BGV}`; }
+  if (!b.img.complete || !b.img.naturalWidth) return false;
+  const s = (R.wx1 - R.wx0) / b.ww, ox = W / 2 - b.w / 2 * s, oy = R.fy - b.fy * s; // atsauces px → ekrāns
+  g.fillStyle = '#e8d6b8'; g.fillRect(0, 0, W, H);
+  b.win.forEach(([x0, y0, x1, y1], i) => { const X0 = ox + x0 * s, Y0 = oy + y0 * s, X1 = ox + x1 * s, Y1 = oy + y1 * s; if (X1 < 0) return;
+    const gr = g.createLinearGradient(0, Y0, 0, Y1); gr.addColorStop(0, '#8fd0ff'); gr.addColorStop(.62, '#d9f1ff'); gr.addColorStop(.63, '#8fcf7a'); gr.addColorStop(1, '#5fa84e');
+    g.fillStyle = gr; g.fillRect(X0, Y0, X1 - X0, Y1 - Y0); g.save(); g.beginPath(); g.rect(X0, Y0, X1 - X0, Y1 - Y0); g.clip();
+    winSky((u, v) => [X0 + (X1 - X0) * u, Y0 + (Y1 - Y0) * v], (Y1 - Y0) * .55, i * .37 + .12); g.restore(); });
+  g.drawImage(b.img, ox - b.w * .3 * s, oy - b.h * .3 * s, b.w * 1.6 * s, b.h * 1.6 * s);
+  return true;
+}
 function drawRoom() {
   const b = LY.board, R = LY.room, { hy, fy, wx0, wx1, top } = R, cx = W / 2;
   const ex = y => hy + (y - hy) * cx / (cx - wx0); // kur stars no pazušanas punkta caur sienas stūri sasniedz ekrāna malu
+  let gr; if (!roomImg()) {
   // grīda ar dēļiem perspektīvā
-  let gr = g.createLinearGradient(0, fy, 0, H); gr.addColorStop(0, '#9a6a3e'); gr.addColorStop(1, '#c9905a'); g.fillStyle = gr; g.fillRect(0, fy, W, H - fy);
+  gr = g.createLinearGradient(0, fy, 0, H); gr.addColorStop(0, '#9a6a3e'); gr.addColorStop(1, '#c9905a'); g.fillStyle = gr; g.fillRect(0, fy, W, H - fy);
   g.strokeStyle = '#00000020'; g.lineWidth = 1.5; g.beginPath();
   for (let i = -16; i <= 16; i++) { const xb = cx + i * (wx1 - wx0) / 12; g.moveTo(xb, fy); g.lineTo(cx + (xb - cx) * (H - hy) / (fy - hy), H); } g.stroke();
   g.strokeStyle = '#00000012'; g.beginPath(); for (let z = .86; z > .1; z -= .14) { const y = hy + (fy - hy) / z; if (y > H) break; g.moveTo(0, y); g.lineTo(W, y); } g.stroke();
@@ -427,7 +450,7 @@ function drawRoom() {
     for (const [a0, a1] of wx0 > 110 ? [[.12, .42], [.55, .85]] : wx0 > 40 ? [[.2, .8]] : [[.14, .86]]) { const xa = wx0 * a0, xb = wx0 * a1, Y0 = top + (fy - top) * .16, Y1 = top + (fy - top) * .66;
       g.beginPath(); g.moveTo(xa, onWall(xa, Y0)); g.lineTo(xb, onWall(xb, Y0)); g.lineTo(xb, onWall(xb, Y1)); g.lineTo(xa, onWall(xa, Y1)); g.closePath();
       gr = g.createLinearGradient(0, onWall(xa, Y0), 0, onWall(xa, Y1)); gr.addColorStop(0, '#9fd6ff'); gr.addColorStop(.7, '#d9f1ff'); gr.addColorStop(.71, '#8fcf7a'); gr.addColorStop(1, '#6fb35e'); g.fillStyle = gr; g.fill();
-      g.save(); g.clip(); winSky(xa, xb, Y0, Y1, onWall, a0); g.restore();
+      g.save(); g.clip(); winSky((u, v) => { const x = xa + (xb - xa) * u; return [x, onWall(x, Y0 + (Y1 - Y0) * v)]; }, onWall(xa, Y1) - onWall(xa, Y0), a0); g.restore();
       g.beginPath(); g.moveTo(xa, onWall(xa, Y0)); g.lineTo(xb, onWall(xb, Y0)); g.lineTo(xb, onWall(xb, Y1)); g.lineTo(xa, onWall(xa, Y1)); g.closePath();
       g.lineWidth = 4; g.strokeStyle = '#fff'; g.stroke(); const xm = (xa + xb) / 2; g.lineWidth = 3; g.beginPath(); g.moveTo(xm, onWall(xm, Y0)); g.lineTo(xm, onWall(xm, Y1)); g.stroke(); }
   }
@@ -435,6 +458,7 @@ function drawRoom() {
     const xa = W - wx0 * .75, xb = W - wx0 * .3, onR = (x, Y) => hy + (Y - hy) * (x - cx) / (wx1 - cx), Y0 = top + (fy - top) * .3;
     g.beginPath(); g.moveTo(xa, onR(xa, Y0)); g.lineTo(xb, onR(xb, Y0)); g.lineTo(xb, onR(xb, fy)); g.lineTo(xa, onR(xa, fy)); g.closePath(); g.fillStyle = '#a8743f'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#7a5434'; g.stroke();
     circ(xa + (xb - xa) * .2, onR(xa, top + (fy - top) * .65), Math.max(2, wx0 * .025)); g.fillStyle = '#ffd34d'; g.fill();
+  }
   }
   drawClock();
   // tāfele ar rāmi, ēnu un plauktiņu
