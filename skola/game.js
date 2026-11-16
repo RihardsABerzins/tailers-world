@@ -4,7 +4,8 @@
 'use strict';
 const cv = document.getElementById('cv'), g = cv.getContext('2d');
 const $ = id => document.getElementById(id);
-let W = innerWidth, H = innerHeight, DPR = Math.min(2, devicePixelRatio || 1);
+const viewH = () => window.TW && TW.viewH ? TW.viewH() : innerHeight; // iOS standalone – pilns augstums (tw-common.js)
+let W = innerWidth, H = viewH(), DPR = Math.min(2, devicePixelRatio || 1);
 
 const QN = 8; // jautājumi stundā
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -140,7 +141,7 @@ const later = (s, fn) => timers.push({ t: LT + s, fn });
 // izkārtojums: 3D klase no skolotāja galda – aizmugurējā siena ar tāfeli, grīda perspektīvā,
 // 10 skolēni 3 rindās (4+3+3, tālākie mazāki), apakšā skolotāja galds ar kafijas krūzi
 function layout() {
-  W = innerWidth; H = innerHeight; const land = W > H, sr = $('stat').getBoundingClientRect(), tr = $('task').getBoundingClientRect();
+  W = innerWidth; H = viewH(); const land = W > H, sr = $('stat').getBoundingClientRect(), tr = $('task').getBoundingClientRect();
   const gap = W - 2 * Math.max(sr.right, W - tr.left) - 16;
   if (land && gap >= 300) { const bw = Math.min(gap, 560), bh = clamp(H * .28, 80, 150); LY.board = { x: (W - bw) / 2, y: sr.top + 2, w: bw, h: bh }; }
   else { const top = Math.max(sr.bottom, tr.bottom) + 10, bh = land ? clamp(H * .25, 78, 170) : clamp(H * .19, 104, 200), bw = Math.min(W * .8, land ? Math.max(420, W * .56) : 620);
@@ -162,8 +163,8 @@ function layout() {
   LY.mug = { x: W - clamp(W * .14, 50, 120), y: H - dh * .5, r: dh * .3 };
   LY.folder = { x: clamp(W * .08, 14, 70), y: H - dh * .82, w: dh * 1.1, h: dh * .66 };
 }
-function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; layout(); }
-addEventListener('resize', resize);
+function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = viewH(); cv.width = W * DPR; cv.height = H * DPR; layout(); }
+addEventListener('resize', resize); setInterval(() => { if (innerWidth !== W || viewH() !== H) resize(); }, 1000); // drošībai (iOS pagrieziens/standalone)
 
 // ================= Stunda =================
 // grūtība aug ar skolotāja līmeni: faktu pakāpes (1–3), matemātikas minimums, draiskuļu skaits un ātrums
