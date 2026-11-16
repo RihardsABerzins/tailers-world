@@ -283,7 +283,7 @@ function newCall() {
   Object.assign(M, { state: 'call', night, c, px, py, rx, ry, t: 0, bumps: 0, cond: 100, sc: {}, asked: new Set(), picked: new Set(), cprScore: null, decision: null, hinted: false, t2: 0, bumps1: 0 });
   M.route = routeTo(rx, ry); M.expect = M.route.len / 300 + 6;
   sfx('call'); buzz([60, 80, 60]);
-  sheet(`<div class="step">📞 Izsaukums${night ? ' · 🌙 Nakts – grūtāks, bet ×1.5' : ''}</div><h2>${c.who} ${c.call}</h2><p>📍 <b>${streetOf(rx, ry)}</b> · ${Math.round(M.route.len / 10)} m</p>
+  sheet(`<div class="step">📞 Izsaukums${night ? ' · 🌙 Nakts – grūtāks, bet ×1,5' : ''}</div><h2>${c.who} ${c.call}</h2><p>📍 <b>${streetOf(rx, ry)}</b> · ${Math.round(M.route.len / 10)} m</p>
     <p style="color:#9fb0ff">Ieslēdz sirēnu 🚨 – mašīnas palaidīs garām. Sarkanie ceļi kartē ir sastrēgumi.</p>
     <button class="main red" id="go">🚑 Braucam!</button><button class="main ghostB" id="skip">🚗 Ignorēt – vienkārši braukāt</button>`);
   $('go').onclick = () => { closeSheet(); M.state = 'toPatient'; if (!amb.siren) toggleSiren(); };
@@ -336,7 +336,10 @@ function stepDx() {
     <div class="opts">${opts.map((d, k) => `<button class="opt" data-d="${k}">🩺 ${d.t}</button>`).join('')}</div>`);
   document.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const d = opts[+b.dataset.d]; M.sc.dx = d.ok ? 100 : 0;
     document.querySelectorAll('[data-d]').forEach(x => { const o = opts[+x.dataset.d]; x.disabled = true; if (o.ok) x.classList.add('right'); else if (x === b) x.classList.add('wrong'); });
-    sfx(d.ok ? 'good' : 'bad'); if (d.ok) { setTimeout(stepTools, 800); return; }
+    sfx(d.ok ? 'good' : 'bad');
+    // simulētājs atmaskots – izsaukums beidzas uzreiz, palīdzēt un vest uz slimnīcu nevajag
+    if (d.ok && c.fake) { M.sc.help = 100; M.sc.decide = 100; M.decision = false; setTimeout(() => finish(true), 700); return; }
+    if (d.ok) { setTimeout(stepTools, 800); return; }
     // nepareizi – parāda pareizo atbildi un ļauj izlasīt savā tempā
     const right = opts.find(o => o.ok), fb = document.createElement('div'); fb.className = 'fact'; fb.innerHTML = `❌ Šoreiz nē. Pareizi ir: <b>${right.t}</b>.<br><small>Pievērs uzmanību pazīmēm aprakstā un pacienta atbildēm.</small>`;
     const nb = document.createElement('button'); nb.className = 'main'; nb.textContent = 'Saprotu, palīdzam →'; nb.onclick = stepTools; $('sheet').append(fb, nb); nb.scrollIntoView({ behavior: 'smooth', block: 'end' }); });
@@ -378,7 +381,7 @@ function stepDecide() {
   $('dH').onclick = () => pick(true); $('dS').onclick = () => pick(false);
 }
 function arriveHospital() { sfx('door'); if (amb.siren) toggleSiren(); finish(); }
-function finish() {
+function finish(caught) {
   const c = M.c, S1 = M.sc;
   const drive1 = clamp(Math.round(100 - Math.max(0, M.t1 - M.expect) * 1.6 - M.bumps1 * 8), 0, 100);
   let drive = drive1;
@@ -392,6 +395,14 @@ function finish() {
   const lv1 = levelOf(save.xp).l; persist(); walletAdd(money); medals();
   M.state = 'result'; $('pBar').classList.remove('on'); sfx(stars >= 2 ? 'win' : 'good');
   const col = v => v >= 80 ? '#2ecc71' : v >= 50 ? '#ffb020' : '#ff3b4e';
+  if (caught) { // īss paziņojums, pēc brīža aizveras pats un spēle turpinās
+    sheet(`<div class="stars" style="font-size:54px">😄</div><h2 style="text-align:center">Malacis, noķēri!</h2>
+      <p style="text-align:center;font-weight:800">${c.name.split(',')[0]} tikai izlikās – palīdzība nav vajadzīga.</p>
+      <div class="fact"><b>💡 Vai zināji?</b><br>${c.fact}</div>
+      <p style="text-align:center;font-weight:800">+${xp} XP · <span style="color:#ffd34d">+€${money}</span>${lv1 > lv0 ? ` · 🎉 ${lv1}. līmenis!` : ''}</p>
+      <button class="main red" id="nx">📞 Nākamais izsaukums</button>`);
+    const done = next => { clearTimeout(M.caughtT); if (M.state !== 'result') return; closeSheet(); M.state = 'idle'; M.route = null; setTimeout(() => { if (M.state === 'idle') newCall(); }, next ? 350 : 5000); };
+    $('nx').onclick = () => done(true); M.caughtT = setTimeout(() => done(false), 7000); return; }
   sheet(`<div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div><div class="score" style="color:${col(pct)}">${pct}%</div>
     <p style="text-align:center;font-weight:800">${pct >= 85 ? 'Izcils darbs, glābēj! 🦸' : pct >= 60 ? 'Labs darbs! 👍' : pct >= 30 ? 'Pacientam palīdzēts! Nākamreiz vēl labāk 💪' : 'Labs mēģinājums! Izlasi padomu un mēģini vēlreiz 💪'}</p>
     <div class="parts">${parts.map(([n, v]) => `<div class="part"><span style="width:150px">${n}</span><div class="pb"><i style="width:${v}%;background:${col(v)}"></i></div><em>${v}%</em></div>`).join('')}</div>

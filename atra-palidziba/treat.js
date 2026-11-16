@@ -303,7 +303,7 @@
   }
   // ---- pacients ----
   function patient(g, c, st, P) {
-    const p = c.p, skin = st.pale ? '#f3e2d6' : (p.skin || '#f2c9a0'), shirt = p.shirt, pants = p.pants, hair = p.hair, A = st.applied;
+    const p = c.p, skin = st.pale ? '#f3e2d6' : (p.skin || '#f2c9a0'), shirt = p.shirt, pants = p.pants, hair = p.hair, A = okApplied(st);
     if (A.has('shade')) { g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(240, 256, 190, 40, 0, 0, 7); g.fill(); }
     const sg = g.createRadialGradient(P.lie ? 214 : 255, P.lie ? 258 : 280, 4, P.lie ? 214 : 255, P.lie ? 258 : 280, P.lie ? 130 : 80); sg.addColorStop(0, 'rgba(0,0,0,.3)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = sg; g.beginPath(); g.ellipse(P.lie ? 214 : 260, P.lie ? 258 : 278, P.lie ? 120 : 85, P.lie ? 40 : 14, 0, 0, 7); g.fill();
@@ -332,8 +332,10 @@
     if (st.mood === 'out' && c.inj.k === 'out') { g.fillStyle = 'rgba(255,255,255,.9)'; g.font = 'bold 18px system-ui'; g.textAlign = 'center'; g.fillText('Neelpo!', P.Z.chest[0], P.Z.chest[1] - 40); }
   }
   // ---- uzliktās lietas ----
+  // uz pacienta zīmē tikai pareizi uzliktos rīkus (nepareizais rīks – tikai sarkans ✖, nevis šina uz rokas sastieptai kājai)
+  const okApplied = st => st.wrong && st.wrong.size ? new Set([...st.applied].filter(id => !st.wrong.has(id))) : st.applied;
   function applied(g, c, st, P) {
-    const Z = P.Z, at = id => Z[zoneOf(c, id)] || Z.body, A = st.applied;
+    const Z = P.Z, at = id => Z[zoneOf(c, id)] || Z.body, A = okApplied(st);
     const box = (x, y, w, h, col, rot = 0, r = 4) => { g.save(); g.translate(x, y); g.rotate(rot); g.fillStyle = col; g.beginPath(); g.roundRect(-w / 2, -h / 2, w, h, r); g.fill(); g.restore(); };
     if (A.has('plaster')) { const [x, y] = at('plaster'); box(x, y, 30, 18, '#f1d2a8', .3); box(x, y, 12, 14, '#fff3e0', .3, 2); }
     if (A.has('cold') && !A.has('splint') || A.has('cold') && zoneOf(c, 'cold') !== 'armR') { const [x, y] = at('cold'); box(x + 2, y - 4, 28, 20, '#5ab4f0', -.2, 6); g.fillStyle = '#fff'; g.font = '11px system-ui'; g.textAlign = 'center'; g.fillText('❄', x + 2, y); }
@@ -360,6 +362,13 @@
       limb(g, [[x - 12, y - 10], [x + 70, y + 30]], 2, '#c0392b'); limb(g, [[x + 18, y + 10], [x + 70, y + 30]], 2, '#c0392b'); }
     if (A.has('calm') && st.fx.calm > 0) { const [x, y] = Z.head; g.globalAlpha = Math.min(1, st.fx.calm); g.fillStyle = '#fff'; g.beginPath(); g.roundRect(x + 30, y - 66, 150, 34, 12); g.fill(); g.fillStyle = '#1b2140'; g.font = 'bold 14px system-ui'; g.textAlign = 'left'; g.fillText('Viss būs labi 🙂', x + 42, y - 44); g.globalAlpha = 1; }
   }
+  // simulētājs palīdzības solī (ja diagnoze nebija „Izliekas”) runā jautras muļķības – vēl viens pavediens
+  const FAKE_LINES = ['Ak, mana kāja… vai roka? 🤔', 'Ai-ai-ai! …Kur man sāpēja?', 'Es esmu ļoooti slims! 😖', 'Vai var ātrāk? Drīz sāksies multenes!', 'Sāp te! …Nē, te! …Visur!', 'Varbūt vienkārši iedosiet konfekti? 🍬', 'Psst… mamma neko nezina? 😬', 'Ai! Tas ir… ļoti… nopietni!'];
+  function fakeTalk(g, P, px, py, ks, c) { const k = Math.floor(T.now / 3.2), s = FAKE_LINES[(k + c.id.length) % FAKE_LINES.length], a = Math.min(1, (T.now % 3.2) * 4, (3.2 - T.now % 3.2) * 4);
+    const hx = px + (P.head[0] - px) * ks, hy = py + (P.head[1] - py) * ks; g.font = 'bold 13px system-ui'; const w = g.measureText(s).width + 22, x = Math.max(6, Math.min(474 - w, hx - w / 2)), y = Math.max(6, hy - 34 * ks - 44);
+    g.globalAlpha = a; g.fillStyle = '#fffbe6'; g.strokeStyle = '#1b2140'; g.lineWidth = 2; g.beginPath(); g.roundRect(x, y, w, 28, 12); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(hx - 6, y + 28); g.lineTo(hx + 2, y + 38); g.lineTo(hx + 8, y + 28); g.fill();
+    g.fillStyle = '#1b2140'; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(s, x + 11, y + 14.5); g.textBaseline = 'alphabetic'; g.globalAlpha = 1; }
   function effects(g, st, dt) { st.fxs = st.fxs.filter(e => (e.t -= dt) > 0);
     for (const e of st.fxs) { const a = Math.min(1, e.t * 2); g.globalAlpha = a;
       if (e.k === 'ok') { g.fillStyle = '#2ecc71'; for (let i = 0; i < 8; i++) { const an = i / 8 * 6.28 + e.t, d = 30 + (1 - e.t) * 30; g.beginPath(); g.arc(e.x + Math.cos(an) * d, e.y + Math.sin(an) * d, 3.5, 0, 7); g.fill(); } g.font = 'bold 22px system-ui'; g.textAlign = 'center'; g.fillText('✔', e.x, e.y - 30 - (1 - e.t) * 20); }
@@ -384,6 +393,7 @@
       if (st.hover) { const z = P.Z[st.hover.z] || P.Z.body; g.strokeStyle = st.hover.ok ? 'rgba(46,204,113,.95)' : 'rgba(255,211,77,.9)'; g.lineWidth = 3; g.setLineDash([6, 5]); g.beginPath(); g.arc(z[0], z[1], z[2] + 8 + Math.sin(now / 120) * 3, 0, 7); g.stroke(); g.setLineDash([]); }
       effects(g, st, dt); g.restore();
       medic.night = c.night; medic(g, P.lie ? 440 : 96, 290, P.lie ? .95 : 1.05);
+      if (c.fake && opt.interactive) fakeTalk(g, P, px, py, ks, c);
       cb.style.width = st.cond + '%'; cb.style.background = st.cond > 60 ? '#2ecc71' : st.cond > 30 ? '#ffb020' : '#ff3b4e';
       raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
