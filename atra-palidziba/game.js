@@ -188,7 +188,8 @@ function updateAmb(dt) {
   let thr = 0, ta = null, steer = 0;
   if (!ov) {
     if (window.FP && FP.on) { if (stick.on) { thr = Math.abs(stick.y) > .15 ? -stick.y : 0; steer = Math.abs(stick.x) > .12 ? stick.x : 0; } } // stūres skats: pa kreisi/labi – stūrē, augšup – gāze
-    else if (stick.on && Math.hypot(stick.x, stick.y) > .18) { thr = Math.min(1, Math.hypot(stick.x, stick.y)); ta = Math.atan2(stick.y, stick.x); }
+    else if (stick.on && Math.hypot(stick.x, stick.y) > .18) { thr = Math.min(1, Math.hypot(stick.x, stick.y)); ta = Math.atan2(stick.y, stick.x);
+      const ax = Math.round(ta / (Math.PI / 2)) * (Math.PI / 2); if (Math.abs(wrapA(ta - ax)) < .45) ta = ax; } // palīgs: gandrīz taisni → tieši pa ielu
     const up = keys.arrowup || keys.w, dn = keys.arrowdown, lf = keys.arrowleft || keys.a, rt = keys.arrowright || keys.d;
     if (up) thr = 1; if (dn) thr = -1; if (lf || rt) steer = (rt ? 1 : 0) - (lf ? 1 : 0);
   }
@@ -207,29 +208,41 @@ function updateAmb(dt) {
     if (Math.abs(d) > 1.9 && amb.v < 160) { target = 130 * thr; amb.a += clamp(d, -3.2 * dt, 3.2 * dt); } // pretējā virzienā – apgriežas uz vietas (U-pagrieziens), nevis brauc atpakaļgaitā
     else { target = MAX * thr * (Math.abs(d) > 1.1 ? .45 : 1); amb.a += clamp(d, -2.9 * dt * turnK, 2.9 * dt * turnK); if (Math.abs(d) > .55 && amb.v > 250) skid(); } }
   else { if (window.FP) FP.steer = steer; target = thr > 0 ? MAX * thr : thr < 0 ? (amb.v > 10 ? 0 : -170) : 0; amb.a += steer * 2.7 * dt * turnK * (thr < 0 && amb.v < -15 ? -1 : 1); if (Math.abs(steer) && amb.v > 300) skid(); }
+  // palīgi bērniem: 1) mašīna tieši priekšā – piebremzē pats; 2) ielas vidū turas joslā, neberž apmali
+  { const fx = Math.cos(amb.a), fy = Math.sin(amb.a);
+    for (const c of cars) { if (c.off) continue; const dx = c.x - amb.x, dy = c.y - amb.y; if (Math.abs(dx) > 180 || Math.abs(dy) > 180) continue; const fw = dx * fx + dy * fy, lat = Math.abs(-dx * fy + dy * fx);
+      if (fw > 0 && lat < 34 && fw < 170) target = Math.min(target, Math.max((c.v || 0) * .9, (fw - 55) * 2.6, 110)); // nekad pilnībā neapstājas – var lēnām apbraukt
+      // krustojumā no sāniem: ja tuvākajā ~0.8 s būsim vienā vietā – piebremzē
+      const wx = Math.cos(c.ang) * (c.v || 0) - fx * amb.v, wy = Math.sin(c.ang) * (c.v || 0) - fy * amb.v, w2 = wx * wx + wy * wy;
+      if (w2 > 100) { const tc = -(dx * wx + dy * wy) / w2; if (tc > 0 && tc < .8 && Math.hypot(dx + wx * tc, dy + wy * tc) < 50) target = Math.min(target, 120); } }
+    // māju stūri: ja priekšā (≈50 px) ir kvartāls – samazina ātrumu, lai nesatriektos
+    if (amb.v > 200) { const px = amb.x + fx * 52, py = amb.y + fy * 52; if (blocks.some(b => px > b.x0 - 18 && px < b.x1 + 18 && py > b.y0 - 18 && py < b.y1 + 18)) target = Math.min(target, 190); }
+    if (amb.v > 40) { const hz = Math.abs(fx) > .85, vt = Math.abs(fy) > .85, row = Math.round(amb.y / G) * G, col = Math.round(amb.x / G) * G;
+      if (hz && Math.abs(amb.x - col) > RW / 2 + 20) { const off = amb.y - row, lim = RW / 2 - 26; if (Math.abs(off) > lim && Math.abs(off) < RW / 2 + 10) amb.y -= Math.sign(off) * Math.min(Math.abs(off) - lim, 90 * dt); }
+      if (vt && Math.abs(amb.y - row) > RW / 2 + 20) { const off = amb.x - col, lim = RW / 2 - 26; if (Math.abs(off) > lim && Math.abs(off) < RW / 2 + 10) amb.x -= Math.sign(off) * Math.min(Math.abs(off) - lim, 90 * dt); } } }
   const acc = target > amb.v ? (amb.v < 0 ? 900 : 360) : (target === 0 ? 420 : 820);
   amb.v += clamp(target - amb.v, -acc * dt, acc * dt);
   amb.x += Math.cos(amb.a) * amb.v * dt; amb.y += Math.sin(amb.a) * amb.v * dt;
   const f0 = amb.fuel; amb.fuel = Math.max(0, amb.fuel - Math.abs(amb.v) * dt / 380); // degviela
   if (f0 >= 20 && amb.fuel < 20) toast('⛽ Maz degvielas! Brauc uz benzīntanku (⛽ kartē).'); if (f0 > 0 && amb.fuel <= 0) toast('⛽ Degviela beigusies – mašīna velkas lēni. Uz benzīntanku!');
   // sadursmes ar kvartāliem (mājas, ietves) un pilsētas malu
-  const R = 24;
+  const R = 21;
   for (const b of blocks) { if (amb.x < b.x0 - R || amb.x > b.x1 + R || amb.y < b.y0 - R || amb.y > b.y1 + R) continue;
     const ix = clamp(amb.x, b.x0 + 4, b.x1 - 4), iy = clamp(amb.y, b.y0 + 4, b.y1 - 4), dx = amb.x - ix, dy = amb.y - iy, d = Math.hypot(dx, dy);
     if (d < R) { const nx = d ? dx / d : 0, ny = d ? dy / d : -1; amb.x = ix + nx * R; amb.y = iy + ny * R;
       // slīd gar sienu: ja brauc tieši virsū – atsitas, ja slīpi – pagriežas gar to un turpina
       const hx = Math.cos(amb.a) * Math.sign(amb.v || 1), hy = Math.sin(amb.a) * Math.sign(amb.v || 1), into = -(hx * nx + hy * ny);
-      if (into > 0) { bump(Math.abs(amb.v) * into > 170); if (into > .85) amb.v = -Math.min(40, Math.abs(amb.v) * .15); else if (steer || ta !== null) amb.v *= .85; else { const tx = -ny, ty = nx, sg = (hx * tx + hy * ty) >= 0 ? 1 : -1, ta = Math.atan2(ty * sg, tx * sg) + (amb.v < 0 ? Math.PI : 0); amb.a += wrapA(ta - amb.a) * .25; amb.v *= .9; } } } }
+      if (into > 0) { bump(Math.abs(amb.v) * into > 230); if (into > .85) amb.v = -Math.min(40, Math.abs(amb.v) * .15); else if (steer || ta !== null) amb.v *= .85; else { const tx = -ny, ty = nx, sg = (hx * tx + hy * ty) >= 0 ? 1 : -1, ta = Math.atan2(ty * sg, tx * sg) + (amb.v < 0 ? Math.PI : 0); amb.a += wrapA(ta - amb.a) * .25; amb.v *= .9; } } } }
   amb.x = clamp(amb.x, -RW / 2 + R, S + RW / 2 - R); amb.y = clamp(amb.y, -RW / 2 + R, S + RW / 2 - R);
   // sadursmes ar mašīnām
   for (const c of cars) { const dx = amb.x - c.x, dy = amb.y - c.y, d = Math.hypot(dx, dy);
-    if (d < 44) { const nx = dx / (d || 1), ny = dy / (d || 1); amb.x = c.x + nx * 44; amb.y = c.y + ny * 44; c.stun = 1.2; bump(Math.abs(amb.v) > 90, true); amb.v *= -.3; } }
+    if (d < 44) { const nx = dx / (d || 1), ny = dy / (d || 1); amb.x = c.x + nx * 44; amb.y = c.y + ny * 44; c.stun = 1.2; bump(Math.abs(amb.v) > 150, true); amb.v *= -.3; } }
   amb.bumpT = Math.max(0, amb.bumpT - dt);
 }
 function skid() { if (skids.length > 500) skids.splice(0, 40); const bx = Math.cos(amb.a), by = Math.sin(amb.a), px = -by, py = bx;
   skids.push({ x: amb.x - bx * 22 + px * 13, y: amb.y - by * 22 + py * 13, a: amb.a }, { x: amb.x - bx * 22 - px * 13, y: amb.y - by * 22 - py * 13, a: amb.a }); }
-function bump(hard, car) { if (amb.bumpT > 0) return; amb.bumpT = .7; if (!hard) return; cam.shake = 9; sfx('bump'); buzz(40); walletAdd(-3); repairs += 3;
-  if (M.state === 'toPatient' || M.state === 'toHospital') { M.bumps++; if (M.state === 'toHospital') M.cond = Math.max(5, M.cond - 6); toast((car ? '💥 Avārija! Remonts −€3' : '💥 Uzmanīgi! Remonts −€3') + (wallet < 0 ? '<br><small>Tu esi mīnusos – nopelni ar izsaukumiem!</small>' : '')); } else toast('💥 Remonts −€3'); }
+function bump(hard, car) { if (amb.bumpT > 0) return; amb.bumpT = .7; if (!hard) return; cam.shake = 9; sfx('bump'); buzz(40); walletAdd(-1); repairs += 1;
+  if (M.state === 'toPatient' || M.state === 'toHospital') { M.bumps++; if (M.state === 'toHospital') M.cond = Math.max(5, M.cond - 6); toast((car ? '💥 Avārija! Remonts −€1' : '💥 Uzmanīgi! Remonts −€1') + (wallet < 0 ? '<br><small>Tu esi mīnusos – nopelni ar izsaukumiem!</small>' : '')); } else toast('💥 Remonts −€1'); }
 
 // ================= Maršruts (īsākais pa ielām, sastrēgumus apiet) =================
 function attach(px, py) { // tuvākā iela → divi krustojumi un attālumi līdz tiem
@@ -715,7 +728,7 @@ function start() { heliBtn(); if (save.fuel != null) amb.fuel = save.fuel; reque
 function intro() {
   sheet(`<div class="step">Tailers World · pilsēta</div><h2>🚑 Ātrā palīdzība 112</h2>
     <p>Tu esi ātrās palīdzības brigāde. Brauc pie pacientiem, noskaidro, kas noticis, palīdzi un, ja vajag, ved uz slimnīcu.</p>
-    <div class="fact">${isTouch ? '🕹️ Pieskaries <b>jebkur uz kartes</b> un velc pirkstu uz to pusi, kur jābrauc – tur parādās kursorsvira.' : '⌨️ Brauc ar <b>bultiņām</b> (vai W A D), <b>S</b> – sirēna, <b>E</b> – palīdzēt.'}<br>🚨 <b>Sirēna</b> – mašīnas palaiž tevi garām.<br>🟡 Dzeltenā līnija rāda ceļu. Kartē sarkanie ceļi – sastrēgumi.<br>⛽ Degviela maksā – uzpildi benzīntankā. 💥 Avārija = remonts −€3.</div>
+    <div class="fact">${isTouch ? '🕹️ Pieskaries <b>jebkur uz kartes</b> un velc pirkstu uz to pusi, kur jābrauc – tur parādās kursorsvira.' : '⌨️ Brauc ar <b>bultiņām</b> (vai W A D), <b>S</b> – sirēna, <b>E</b> – palīdzēt.'}<br>🚨 <b>Sirēna</b> – mašīnas palaiž tevi garām.<br>🟡 Dzeltenā līnija rāda ceļu. Kartē sarkanie ceļi – sastrēgumi.<br>⛽ Degviela maksā – uzpildi benzīntankā. 💥 Avārija = remonts −€1.</div>
     <button class="main red" id="st">Sākt maiņu</button>`);
   $('st').onclick = () => { audioInit(); closeSheet(); setTimeout(newCall, 300); };
 }

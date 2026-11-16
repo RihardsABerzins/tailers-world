@@ -97,7 +97,8 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Spēle ir **publiska** (sākumlapā `GAMES` sarakstā). Telefonā (<560 px) pogas labajā pusē divās rindās, lai neaizsedz kursorsviru kreisajā apakšā.
 - **Simulētāji** (`fake: true`, `mood: 'fake'`): pacients izliekas – lielāko laiku vaid, ik ~4 s pamirkšķina un pasmīn; pavedieni bildē ir rekvizīti (`test` – kontroldarbs, `ketchup` – kečupa pudele + telefons REC, `icecream` – saldējums “lauztajā” rokā). Pareizā diagnoze „Izliekas…”, vajag tikai nomierināt, uz slimnīcu nevest; fakts par viltus 112 zvaniem.
 - **🚁 Helikopters** (`save.heli`): pērk par €10000 no kopējā maciņa (poga 🚁 virs darbības pogas vai H). Pēc tam ar to pašu pogu pārslēdz mašīna ↔ helikopters (jāapstājas; nolaisties var tikai uz ielas). Lido virs mājām uz kursorsviras pusi (ekrāna virzieni), bez sadursmēm, maršruts – taisna līnija (`routeTo`), satiksme uz to nereaģē, nolaišanās rādiuss lielāks, degviela tērējas ātrāk; stūres skats tikai mašīnai.
-- Nauda: kopīgais maciņš; tēriņi – degviela (pilna bāka €20, benzīntankā), avārija = remonts −€3.
+- Nauda: kopīgais maciņš; ienākumi par izsaukumu €8 + rezultāts%/4 (naktī ×1.5); tēriņi – degviela (pilna bāka €20, benzīntankā), avārija = remonts −€1 (tikai stiprs trieciens: siena v·leņķis>230, mašīna v>150).
+- Braukšanas palīgi bērniem: kursorsviras virziens ±26° pievelkas pie ielas ass; mašīna priekšā vai no sāniem (laiks līdz sadursmei <0.8 s) – piebremzē (līdz ~110, var apbraukt); pirms mājas stūra ātrumā >200 – piebremzē; pie apmales viegli pabīda atpakaļ uz ielas.
 - Teksti rakstīti latviski uzreiz (bez lang.js). Saglabāšana `ap/saves/{uid}`, medaļas grupa `ap` (apCalls, apSaved, apCpr, apPerfect, apLevel), mediķis zīmēts pēc `users/{uid}/look`.
 - Kešatmiņa: mainot style.css/game.js/cases.js, palielini `?v=` atra-palidziba/index.html.
 
