@@ -3,7 +3,7 @@
 // Teksti latviski. Dati Firebase: rampa/saves/{uid}; medaļas – grupa 'rampa'; tēls – users/{uid}/look.
 'use strict';
 const $ = id => document.getElementById(id);
-const T3 = THREE, { VEH, RAMPS, Sim, stats, rampProfile, rampAt, surfAt, indexWorld, DT, D2R, clamp, wrap } = RP;
+const T3 = THREE, { VEH, RAMPS, Sim, stats, rampProfile, rampAt, surfAt, roofH, inside, indexWorld, DT, D2R, clamp, wrap } = RP;
 const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const levelOf = xp => { let l = 1, need = 120; while (xp >= need) { xp -= need; l++; need = 120 + 60 * (l - 1); } return { l, cur: xp, need }; };
@@ -33,11 +33,10 @@ function genCity() {
       const onPath = L.x0 < 1.5 && L.x1 > -1.5;
       if (onPath && k < 30) h = Math.min(h, 14 + k * 1.2);
       L.h = h;
-      if (onPath && L.z1 - L.z0 >= 18 && R() < .24) { const w = Math.min(h * .55, (L.z1 - L.z0) * tan26); if (h - w >= 4) L.w = w; }
-      lots.push(L); if (onPath) obs.push(L);
+      if (Math.abs(cx) <= 140 && L.z1 - L.z0 >= 18 && R() < .2) { const w = Math.min(h * .55, (L.z1 - L.z0) * tan26); if (h - w >= 4) L.w = w; }
+      L.roof = R(); lots.push(L); obs.push(L);
     }
   }
-  obs.sort((a, b) => a.z0 - b.z0);
   const landing = { z0: 3, z1: 3 + 22 / Math.tan(28 * D2R), h: 22, landing: true };
   return { lots, parks, world: indexWorld({ obs, landing }) };
 }
@@ -69,11 +68,23 @@ function buildCity() {
     s.fragmentShader = 'varying vec3 vWp; varying float vNy;\n' + s.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       if (vNy < .5 && vWp.y > 1.2) { vec2 c = vec2(fract((vWp.x + vWp.z) / 3.6), fract(vWp.y / 3.3)); float w = step(.2, c.x) * step(c.x, .8) * step(.28, c.y) * step(c.y, .86);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.42, .55, .68) + .12 * fract(sin(dot(floor(vWp.xy / 3.4), vec2(12.9, 78.2))) * 437.5), w * .9); }
-      if (vNy > .5) diffuseColor.rgb *= .78;`); };
+      if (vNy > .5) diffuseColor.rgb *= .78; else diffuseColor.rgb *= mix(.62, 1., smoothstep(0., 7., vWp.y));`); };
   const box = new T3.BoxGeometry(1, 1, 1).translate(0, .5, .5);
   const L = CITY.lots, bI = new T3.InstancedMesh(box, bm, L.length);
   L.forEach((b, i) => { bI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, 0, b.z0), q0, new T3.Vector3(b.x1 - b.x0, b.h - (b.w || 0), b.z1 - b.z0))); bI.setColorAt(i, col.set(b.col)); });
   scene.add(bI);
+  // jumta mala (dzega) un jumta detaļas – kondicionieri, ūdens tvertnes, izejas būdiņas
+  const flat = L.filter(b => !b.w), cI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, .5), mat(0xf4f1ea), flat.length);
+  flat.forEach((b, i) => cI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, b.h - .15, b.z0 - .35), q0, new T3.Vector3(b.x1 - b.x0 + .7, .55, b.z1 - b.z0 + .7)))); scene.add(cI);
+  const RR = mulberry(31), ac = [], tank = [];
+  flat.forEach(b => { if (b.roof < .55) for (let n = 0; n < 1 + Math.floor(RR() * 3); n++) ac.push([b.x0 + 2 + RR() * (b.x1 - b.x0 - 4), b.h, b.z0 + 2 + RR() * (b.z1 - b.z0 - 4), 1 + RR() * 2.2, .8 + RR() * 1.6]);
+    else if (b.roof < .75 && b.h > 14) tank.push([b.x0 + 3 + RR() * (b.x1 - b.x0 - 6), b.h, b.z0 + 3 + RR() * (b.z1 - b.z0 - 6), 1.4 + RR()]); });
+  const aI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, 0), mat(0xb7bcc4), ac.length);
+  ac.forEach(([x, y, z, s, h], i) => aI.setMatrixAt(i, m4.compose(v3.set(x, y, z), q0, new T3.Vector3(s, h, s * .8)))); scene.add(aI);
+  const tI = new T3.InstancedMesh(new T3.CylinderGeometry(1, 1, 2.2, 12).translate(0, 2.6, 0), mat(0x8d6e63), tank.length), tL = new T3.InstancedMesh(new T3.CylinderGeometry(.08, .08, 1.6, 4).translate(0, .8, 0), mat(0x555a63), tank.length * 3);
+  const tC = new T3.InstancedMesh(new T3.ConeGeometry(1.1, .8, 12).translate(0, 4.1, 0), mat(0x6d4c41), tank.length);
+  tank.forEach(([x, y, z, s], i) => { m4.compose(v3.set(x, y, z), q0, new T3.Vector3(s, 1, s)); tI.setMatrixAt(i, m4); tC.setMatrixAt(i, m4); for (let k = 0; k < 3; k++) tL.setMatrixAt(i * 3 + k, m4.compose(v3.set(x + Math.cos(k * 2.1) * s * .7, y, z + Math.sin(k * 2.1) * s * .7), q0, new T3.Vector3(1, 1, 1))); });
+  scene.add(tI); scene.add(tC); scene.add(tL);
   // slīpie jumti (nolaišanās rampas uz jumtiem) un lielā nolaišanās rampa
   const wedge = wedgeGeo(), wl = L.filter(b => b.w), wI = new T3.InstancedMesh(wedge, new T3.MeshLambertMaterial({ map: rampTex() }), wl.length + 1);
   wl.forEach((b, i) => wI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, b.h - b.w, b.z0), q0, new T3.Vector3(b.x1 - b.x0, b.w, b.z1 - b.z0))));
@@ -83,16 +94,20 @@ function buildCity() {
   P.forEach((p, i) => { pI.setMatrixAt(i, m4.compose(v3.set((p.x0 + p.x1) / 2, .15, (p.z0 + p.z1) / 2), q0, new T3.Vector3(p.x1 - p.x0, 1, p.z1 - p.z0)));
     for (let n = 0; n < 9; n++) trees.push([p.x0 + 3 + R() * (p.x1 - p.x0 - 6), p.z0 + 3 + R() * (p.z1 - p.z0 - 6), 2.5 + R() * 2.5, R()]); });
   scene.add(pI);
-  const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 0), mat(0xffffff), trees.length);
+  const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 1), mat(0xffffff), trees.length);
   trees.forEach(([x, z, r, t], i) => { tr.setMatrixAt(i, m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1))); cr.setMatrixAt(i, m4.compose(v3.set(x, 3 + r * .8, z), q0, new T3.Vector3(r, r * 1.2, r))); cr.setColorAt(i, col.set(t < .5 ? 0x4a9a3c : 0x5d8f2f)); });
   scene.add(tr); scene.add(cr);
   // mašīnas ielās
   const RC = mulberry(5), cars = []; for (let i = 0; i < 600; i++) { const along = RC() < .5, lane = RC() < .5 ? -3.5 : 3.5; let x, z, ry;
     if (along) { x = (Math.floor(RC() * 20) - 10) * BLK + BLK / 2 + lane; z = -500 + RC() * (CITY_Z + 500); ry = 0; } else { x = (RC() - .5) * 1400; z = Math.floor(RC() * NZ) * BLK + lane; ry = Math.PI / 2; }
     cars.push([x, z, ry, pick([0xe53935, 0x1e88e5, 0xfdd835, 0xffffff, 0x37474f, 0x43a047, 0xfb8c00])]); }
-  const cb = new T3.InstancedMesh(new T3.BoxGeometry(1.8, .9, 4.2).translate(0, .75, 0), mat(0xffffff), cars.length), cc = new T3.InstancedMesh(new T3.BoxGeometry(1.6, .6, 2.2).translate(0, 1.5, -.2), mat(0x2b3440), cars.length);
-  const qy = new T3.Quaternion(); cars.forEach(([x, z, ry, c], i) => { qy.setFromAxisAngle(new T3.Vector3(0, 1, 0), ry); m4.compose(v3.set(x, 0, z), qy, new T3.Vector3(1, 1, 1)); cb.setMatrixAt(i, m4); cc.setMatrixAt(i, m4); cb.setColorAt(i, col.set(c)); });
-  scene.add(cb); scene.add(cc);
+  // stāvošās mašīnas – tas pats Blendera modelis, kas spēlētāja mašīnai (instancēts)
+  const gB = geoOf('CBody', 'paint') || new T3.BoxGeometry(1.8, .9, 4.2).translate(0, .75, 0), gC = geoOf('CCabin', 'glass') || new T3.BoxGeometry(1.6, .6, 2.2).translate(0, 1.5, -.2), gD = geoOf('CBody', 'dark');
+  const cb = new T3.InstancedMesh(gB, mat(0xffffff), cars.length), cc = new T3.InstancedMesh(gC, mat(0x3a4a5c), cars.length), cd = gD && new T3.InstancedMesh(gD, mat(0x222222), cars.length);
+  const cw = new T3.InstancedMesh(new T3.CylinderGeometry(.36, .36, .3, 10).rotateZ(Math.PI / 2).translate(0, .36, 0), mat(0x1d1d1d), cars.length * 4);
+  const qy = new T3.Quaternion(), wv = new T3.Vector3(); cars.forEach(([x, z, ry, c], i) => { qy.setFromAxisAngle(new T3.Vector3(0, 1, 0), ry); m4.compose(v3.set(x, 0, z), qy, new T3.Vector3(1, 1, 1)); cb.setMatrixAt(i, m4); cc.setMatrixAt(i, m4); if (cd) cd.setMatrixAt(i, m4); cb.setColorAt(i, col.set(c));
+    [[-.86, -1.3], [.86, -1.3], [-.86, 1.3], [.86, 1.3]].forEach(([wx, wz], k) => { wv.set(wx, 0, wz).applyQuaternion(qy); cw.setMatrixAt(i * 4 + k, m4.compose(v3.set(x + wv.x, 0, z + wv.z), qy, new T3.Vector3(1, 1, 1))); }); });
+  scene.add(cb); scene.add(cc); scene.add(cw); if (cd) scene.add(cd);
   // mākoņi
   const cl = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 1), new T3.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9aa7b5 }), 70), RM = mulberry(9);
   for (let i = 0; i < 70; i++) { const s = 18 + RM() * 30; cl.setMatrixAt(i, m4.compose(v3.set((RM() - .5) * 1600, 160 + RM() * 160, -300 + RM() * (CITY_Z + 600)), q0, new T3.Vector3(s * 2, s * .55, s * 1.4))); }
@@ -114,7 +129,7 @@ let RTEX = null;
 function rampTex() { return RTEX || (RTEX = tex(128, 256, (g, w, h) => { g.fillStyle = '#c9a272'; g.fillRect(0, 0, w, h); g.strokeStyle = '#9c784a99'; g.lineWidth = 2;
   for (let y = 0; y < h; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
   g.fillStyle = '#00000014'; for (let i = 0; i < 40; i++) g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 8 + Math.random() * 30);
-  g.fillStyle = '#ffffff55'; g.fillRect(w / 2 - 2, 0, 4, h); }, true)); }
+  g.fillStyle = '#ffffff88'; for (let y = 0; y < h; y += 64) g.fillRect(w / 2 - 2, y, 4, 36); g.fillStyle = '#ffd34dcc'; g.fillRect(w * .31, 0, 3, h); g.fillRect(w * .69 - 3, 0, 3, h); }, true)); }
 
 // ---- milzu rampa (U formas šķērsgriezums) ----
 let RAMP = null, rampGroup = null, GATE = null, gateA = 0, leverK = 0;
@@ -124,7 +139,7 @@ function buildRamp(H) {
   const cs = []; const FW = 5, RR = 8; cs.push([-FW - RR - 1.6, RR]); cs.push([-FW - RR, RR]);
   for (let i = 0; i <= 8; i++) { const a = Math.PI / 2 * (1 - i / 8); cs.push([-FW - RR * Math.cos(Math.PI / 2 - a) + 0 * a, RR - RR * Math.sin(Math.PI / 2 - a)]); }
   // pārrēķina: ceturtdaļaplis no sienas augšas līdz grīdai
-  cs.length = 0; cs.push([-FW - RR - 1.6, RR]); for (let i = 0; i <= 8; i++) { const a = i / 8 * Math.PI / 2; cs.push([-FW - RR * Math.cos(a), RR - RR * Math.sin(a)]); }
+  cs.length = 0; cs.push([-FW - RR - 1.6, RR]); for (let i = 0; i <= 14; i++) { const a = i / 14 * Math.PI / 2; cs.push([-FW - RR * Math.cos(a), RR - RR * Math.sin(a)]); }
   const half = cs.slice(), full = half.concat(half.slice().reverse().map(([x, y]) => [-x, y]));
   const pts = RAMP.pts.filter((p, i) => i % 3 === 0 || i === RAMP.pts.length - 1), pos = [], uv = [], idx = [], n = full.length;
   let ux = [0]; for (let j = 1; j < n; j++) ux.push(ux[j - 1] + Math.hypot(full[j][0] - full[j - 1][0], full[j][1] - full[j - 1][1]));
@@ -132,6 +147,14 @@ function buildRamp(H) {
   for (let i = 0; i < pts.length - 1; i++) for (let j = 0; j < n - 1; j++) { const a = i * n + j, b = a + 1, c = a + n, d = c + 1; idx.push(a, c, b, b, c, d); }
   const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
   const rt = rampTex(); const rm = new T3.MeshLambertMaterial({ map: rt, side: T3.DoubleSide }); rampGroup.add(new T3.Mesh(g, rm));
+  // margas pa malām (gludas caurules) + apakšpuse tumšāka
+  const rail = pts.filter((p, i) => i % 2 === 0).map(p => new T3.Vector3(0, p.y + RR + 1.05, p.z));
+  [-1, 1].forEach(sx => { const c = new T3.CatmullRomCurve3(rail.map(v => new T3.Vector3(sx * (FW + RR + 1.1), v.y, v.z)));
+    rampGroup.add(new T3.Mesh(new T3.TubeGeometry(c, Math.min(400, rail.length * 2), .16, 6, false), mat(0xd9dde3)));
+    const posts = rail.filter((v, i) => i % 3 === 0), pI = new T3.InstancedMesh(new T3.CylinderGeometry(.07, .07, 1.05, 5).translate(0, -.52, 0), mat(0x9aa0aa), posts.length);
+    posts.forEach((v, i) => pI.setMatrixAt(i, m4.compose(v3.set(sx * (FW + RR + 1.1), v.y, v.z), q0, new T3.Vector3(1, 1, 1)))); rampGroup.add(pI); });
+  const under = new T3.Mesh(g, new T3.MeshLambertMaterial({ color: 0x6f5a40, side: T3.BackSide })); under.position.y = -.25; rampGroup.add(under);
+  rm.side = T3.FrontSide;
   // balsti
   const sup = pts.filter((p, i) => i % 4 === 0), sI = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1).translate(0, .5, 0), mat(0x8a8f99), sup.length * 2);
   sup.forEach((p, i) => [-11, 11].forEach((x, k) => sI.setMatrixAt(i * 2 + k, m4.compose(v3.set(x, 0, p.z), q0, new T3.Vector3(1.1, Math.max(.1, p.y - .3), 1.1))))); rampGroup.add(sI);
@@ -150,7 +173,22 @@ function buildRamp(H) {
 
 // ================= Braucamrīki un tēls =================
 const LOOKC = () => ({ skin: LOOK.skin || '#f2c9a0', body: LOOK.hood && LOOK.hood !== 'auto' ? LOOK.hood : '#e53935', pants: LOOK.pants || '#2b3a67', helm: LOOK.hood && LOOK.hood !== 'auto' && LOOK.hood !== '#eceff1' ? '#f5f5f5' : '#ffd34d', stripe: LOOK.cap || '#1b1b1f' });
-function makePerson(pose) { const c = LOOKC(), g = new T3.Group(), B = (w, h, d) => new T3.BoxGeometry(w, h, d);
+// ---- Blendera modeļi (models.glb; avots models_src.blend): katrs objekts – atsevišķa daļa, materiālu nosaukumi nosaka krāsu ----
+const MODELS = {};
+function loadModels(cb) {
+  const go2 = () => { try { new T3.GLTFLoader().load('models.glb?v=1', g => { g.scene.children.forEach(o => { MODELS[o.name] = o; }); cb(); }, undefined, () => cb()); } catch (e) { cb(); } };
+  if (T3.GLTFLoader) return go2();
+  const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'; s.onload = go2; s.onerror = () => cb(); document.head.appendChild(s);
+}
+const GLASS = {};
+// klons ar Lambert materiāliem; tint – { materiāla_nosaukums: krāsa }
+function mdl(name, tint) { const src = MODELS[name]; if (!src) return null; const o = src.clone(true);
+  o.traverse(m => { if (!m.isMesh) return; const mm = m.material, nm = mm.name, c = tint && tint[nm] != null ? tint[nm] : mm.color.getHex();
+    if (nm === 'glass') m.material = GLASS[c] || (GLASS[c] = new T3.MeshLambertMaterial({ color: c, transparent: true, opacity: .55, depthWrite: false }));
+    else m.material = mat(c); });
+  return o; }
+function geoOf(name, matName) { const src = MODELS[name]; if (!src) return null; let g = null; src.traverse(m => { if (m.isMesh && m.material.name === matName && !g) g = m.geometry.clone().applyMatrix4(new T3.Matrix4().makeTranslation(...src.position.toArray())); }); return g; }
+function makePerson(pose) { if (MODELS.Torso) return makePerson2(pose); const c = LOOKC(), g = new T3.Group(), B = (w, h, d) => new T3.BoxGeometry(w, h, d);
   const legs = new T3.Group(); [-.1, .1].forEach(x => { const l = new T3.Mesh(B(.16, .6, .18).translate(0, -.3, 0), mat(c.pants)); l.position.x = x; legs.add(l); }); legs.position.y = .6; g.add(legs);
   const torso = new T3.Mesh(B(.44, .52, .28).translate(0, .26, 0), mat(c.body)); torso.position.y = .6; g.add(torso);
   const arms = []; [-.29, .29].forEach(x => { const a = new T3.Mesh(B(.12, .46, .14).translate(0, -.23, 0), mat(c.body)); a.position.set(x, 1.08, 0); g.add(a); arms.push(a); });
@@ -160,98 +198,112 @@ function makePerson(pose) { const c = LOOKC(), g = new T3.Group(), B = (w, h, d)
   const visor = new T3.Mesh(new T3.BoxGeometry(.3, .07, .06), mat(0x223047)); visor.position.set(0, 1.36, .17); g.add(visor);
   g.userData = { legs, torso, arms, head };
   setPose(g, pose); return g; }
+function makePerson2(pose) { const c = LOOKC(), t = { skin: c.skin, body: c.body, pants: c.pants, helm: c.helm }, g = new T3.Group();
+  const legs = new T3.Group(); legs.position.y = .6; g.add(legs); ['LegL', 'LegR'].forEach(n => { const l = mdl(n, t); l.position.y = 0; legs.add(l); });
+  const torso = mdl('Torso', t); g.add(torso); const arms = ['ArmL', 'ArmR'].map(n => { const a = mdl(n, t); g.add(a); return a; });
+  const head = mdl('Head', t); g.add(head); const helm = mdl('Helmet', t); g.add(helm);
+  g.userData = { legs, torso, arms, head }; setPose(g, pose); return g; }
 function setPose(p, pose) { const u = p.userData; u.legs.rotation.x = pose === 'sit' ? -Math.PI / 2 : 0; u.legs.position.y = pose === 'sit' ? .62 : .6; u.torso.rotation.x = pose === 'crouch' ? .45 : 0;
   u.arms.forEach(a => { a.rotation.x = pose === 'sit' ? -1.1 : pose === 'crouch' ? -1.2 : pose === 'wave' ? 0 : -.3; a.rotation.z = pose === 'wave' ? (a.position.x > 0 ? -2.6 : .2) : pose === 'chute' ? (a.position.x > 0 ? -2.8 : 2.8) : 0; });
   if (pose === 'crouch') { u.legs.scale.y = .8; } else u.legs.scale.y = 1; }
 
 const WING_C = [0, 0xc9a26b, 0xe0c08a, 0xff6b8a, 0x4fc3f7, 0xffffff];
-// braucamrīks no atsevišķām daļām (avārijā katra daļa lido pati); seeds – gaisa strīpu sākumpunkti
-function buildVehicle(vid, sel, st) {
-  const g = new T3.Group(), parts = [], add = (geo, m, x, y, z, kind) => { const o = new T3.Mesh(geo, m); o.position.set(x, y, z); g.add(o); parts.push(o); o.userData.kind = kind || 'p'; return o; };
-  const V = { g, parts, seeds: [], tips: null, spin: null, flames: [], pilot: null, body: null, len: 4 };
-  const Cyl = (r1, r2, h, n) => new T3.CylinderGeometry(r1, r2, h, n || 10), B = (w, h, d) => new T3.BoxGeometry(w, h, d);
+// ---- braucamrīki no Blendera modeļiem: katra daļa atsevišķi (avārijā lido pati) ----
+function buildVehicle2(vid, sel, st) {
+  const g = new T3.Group(), parts = [], V = { g, parts, spin: null, flames: [], pilot: null, body: null, len: 4 }; g.rotation.order = 'YXZ';
+  const put = (o, x, y, z, kind) => { if (!o) return null; o.position.x += x; o.position.y += y; o.position.z += z; g.add(o); parts.push(o); o.userData.kind = kind || 'p'; return o; };
+  const add = (geo, m, x, y, z, kind) => put(new T3.Mesh(geo, m), x, y, z, kind), Cyl = (r1, r2, h, n) => new T3.CylinderGeometry(r1, r2, h, n || 16);
   if (vid === 'plane') {
-    const hb = sel.wheel ? .78 : .45;
-    V.body = add(Cyl(.42, .28, 3.4).rotateX(Math.PI / 2), mat(0xe8483e), 0, hb, 0, 'body');
-    add(new T3.ConeGeometry(.42, .7, 10).rotateX(Math.PI / 2), mat(0xf5f5f5), 0, hb, 2.05);
-    add(B(.06, .78, .62), mat(0xe8483e), 0, hb + .45, -1.45); add(B(1.7, .05, .46), mat(0xf5f5f5), 0, hb + .08, -1.5);
-    const wc = mat(WING_C[sel.wing || 0] || 0xffffff);
-    if (st.S) { const b = st.span, c = st.chord; [-1, 1].forEach(s => { const w = add(B(b / 2, .07, c), wc, s * (b / 4 + .2), hb + .05, .35, 'wing'); w.rotation.z = s * .05; });
-      V.tips = [[-b / 2 - .2, hb + .1, .35 - c / 2], [b / 2 + .2, hb + .1, .35 - c / 2]];
-      for (let i = 0; i < 7; i++) { const x = (i / 6 - .5) * b * .9; if (Math.abs(x) < .5) continue; V.seeds.push({ x, y: hb + .22, sev: .05, amp: .08, zc: .35, len: c, down: 1 }, { x, y: hb - .14, sev: .08, amp: -.05, zc: .35, len: c, down: 1 }); } }
-    if (sel.wheel) { const wr = .2 + sel.wheel * .02; [-.5, .5].forEach(x => { add(Cyl(wr, wr, .14, 12).rotateZ(Math.PI / 2), mat(0x222222), x, wr, .55); add(B(.05, hb - wr, .05), mat(0x777777), x, wr + (hb - wr) / 2, .55); }); add(Cyl(.1, .1, .08, 8).rotateZ(Math.PI / 2), mat(0x222222), 0, .1, -1.55); }
+    const hb = sel.wheel ? .84 : .53, pc = 0xe8483e;
+    V.body = put(mdl('Body', { paint: pc }), 0, hb, 0, 'body'); put(mdl('Nose'), 0, hb, 0); put(mdl('Canopy'), 0, hb, 0); put(mdl('Fin', { paint: pc }), 0, hb, 0); put(mdl('HStab'), 0, hb, 0);
+    if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing || 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
+    if (sel.wheel) { const wr = .2 + sel.wheel * .025; [-.55, .55].forEach(x => { const w = put(mdl('Wheel'), x, wr, .45); w.scale.setScalar(wr); add(Cyl(.035, .035, hb - wr - .2, 6), mat(0x9aa0aa), x * .8, wr + (hb - wr - .2) / 2, .45); });
+      const tw = put(mdl('Wheel'), 0, .1, -1.55); tw.scale.setScalar(.1); }
     const e = sel.eng || 0;
-    if (e === 1 || e === 2) { const sp = new T3.Group(); sp.position.set(0, hb, 2.42); g.add(sp); const len = e === 1 ? .7 : 1.7; [0, 1].forEach(k => { const bl = new T3.Mesh(B(len, .12, .04), mat(e === 1 ? 0x9fd8ff : 0x5a3a22)); bl.rotation.z = k * Math.PI / 2 * (e === 1 ? 1 : 2); sp.add(bl); }); if (e === 1) { const ring = new T3.Mesh(new T3.TorusGeometry(.42, .04, 6, 16), mat(0xdddddd)); sp.add(ring); } V.spin = sp; parts.push(sp); sp.userData.kind = 'p'; }
-    if (e === 3) { add(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c), 0, hb - .48, -.4); V.flames.push([0, hb - .48, -1.05, .5]); }
-    if (e === 4) { add(Cyl(.3, .24, 1.7).rotateX(Math.PI / 2), mat(0x8c939e), 0, hb + .58, -.7); V.flames.push([0, hb + .58, -1.6, .7]); }
-    const p = makePerson('sit'); p.scale.setScalar(.75); p.position.set(0, hb - .1, .35); g.add(p); V.pilot = p;
-    V.seeds.push(...[[-.35, hb + .1], [.35, hb + .1], [0, hb + .45], [0, hb - .4], [-.2, hb + .3], [.2, hb - .25]].map(([x, y]) => ({ x, y, sev: st.S ? .35 : .45, amp: Math.sign(y - hb) * .3 || .3, zc: 1.8, len: 1.2, down: 0, side: x })));
-    V.seeds.push({ x: 0, y: hb + 1.05, sev: .55, amp: .25, zc: .4, len: .5, down: 0 }); // galva ar ķiveri
-    V.len = 4.2;
+    if (e === 1 || e === 2) { const pr = put(mdl('Prop'), 0, hb, 0); pr.scale.setScalar(e === 1 ? .42 : .95); V.spin = pr; if (e === 1) add(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd), 0, hb, 2.36); }
+    if (e === 3) { add(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c), 0, hb - .5, -.3); add(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5), 0, hb - .5, .47); V.flames.push([0, hb - .5, -.95, .5]); }
+    if (e === 4) { add(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e), 0, hb + .62, -.6); add(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63), 0, hb + .62, .25); V.flames.push([0, hb + .62, -1.5, .7]); }
+    const p = makePerson('sit'); p.scale.setScalar(.72); p.position.set(0, hb - .3, .32); g.add(p); V.pilot = p;
+    V.len = 4.7; V.flow = { ax: .55, ay: .55, az: 2.3, cy: hb + .05, cz: 0, blunt: st.S ? .3 : .45, drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
   } else if (vid === 'scoot') {
     const wr = .11 + (sel.wheel || 0) * .012;
-    V.body = add(B(.2, .06, .95), mat(0x26c6da), 0, wr + .05, 0, 'body');
-    [-.44, .44].forEach(z => add(Cyl(wr, wr, .07, 12).rotateZ(Math.PI / 2), mat(0x222222), 0, wr, z));
-    const stem = add(Cyl(.025, .025, .95, 6), mat(0xb0bec5), 0, .58, .43); stem.rotation.x = -.12; add(B(.52, .04, .04), mat(0x333333), 0, 1.05, .48);
-    const aero = sel.aero || 0, p = makePerson(aero ? 'crouch' : 'stand'); p.position.set(0, wr + .08, -.08); g.add(p); V.pilot = p;
-    if (sel.eng) { add(Cyl(.09, .09, .5), mat(0xd23c2c), -.12, wr + 1.05 - aero * .08, -.3); add(Cyl(.09, .09, .5), mat(0xd23c2c), .12, wr + 1.05 - aero * .08, -.3); V.flames.push([-.12, wr + .75, -.3, .35, true], [.12, wr + .75, -.3, .35, true]); }
-    const sev = clamp((st.cda - .1) / .22, 0, 1);
-    for (let i = 0; i < 9; i++) { const y = .35 + i * .14; V.seeds.push({ x: (i % 2 ? -1 : 1) * (.15 + (i % 3) * .1), y, sev: sev * (y > .9 ? 1 : .8), amp: .25, zc: 0, len: .5, down: 0, side: 1 }); }
-    V.len = 1.2;
+    V.body = put(mdl('SDeck'), 0, wr - .11, 0, 'body'); put(mdl('SStem'), 0, wr - .11, 0);
+    [-.42, .42].forEach(z => { const w = put(mdl('Wheel'), 0, wr, z); w.scale.setScalar(wr); });
+    const aero = sel.aero || 0, p = makePerson(aero ? 'crouch' : 'stand'); p.position.set(0, wr + .08, -.06); g.add(p); V.pilot = p;
+    if (sel.eng) { [-.12, .12].forEach(x => add(Cyl(.09, .09, .5), mat(0xd23c2c), x, wr + 1.05 - aero * .08, -.3)); V.flames.push([-.12, wr + .75, -.3, .35, true], [.12, wr + .75, -.3, .35, true]); }
+    V.len = 1.4; V.flow = { ax: .35, ay: .8, az: .45, cy: .95, cz: 0, blunt: clamp((st.cda - .1) / .22, 0, 1), drag: clamp(st.cda / .3, .4, 1), wing: null };
   } else {
-    const wr = .36 + (sel.wheel || 0) * .07, lift = wr - .36;
-    V.body = add(B(1.8, .56, 4).translate(0, 0, 0), mat(0x1e88e5), 0, .62 + lift, 0, 'body');
-    add(B(1.55, .5, 2).translate(0, 0, 0), mat(0x2b3440), 0, 1.15 + lift, -.25); add(B(1.6, .07, 1.8), mat(0x1e88e5), 0, 1.42 + lift, -.3);
-    [-1, 1].forEach(sx => [-1.3, 1.3].forEach(z => add(Cyl(wr, wr, .32, 12).rotateZ(Math.PI / 2), mat(0x1d1d1d), sx * .86, wr, z)));
-    add(B(.5, .14, .06), mat(0xfff3b0), -.55, .72 + lift, 2.02); add(B(.5, .14, .06), mat(0xfff3b0), .55, .72 + lift, 2.02);
-    if (sel.aero >= 1) { add(B(1.75, .06, .38), mat(0x111111), 0, 1.3 + lift, -1.9); add(B(.06, .3, .1), mat(0x111111), -.6, 1.12 + lift, -1.9); add(B(.06, .3, .1), mat(0x111111), .6, 1.12 + lift, -1.9); }
-    if (sel.aero >= 2) { add(B(1.86, .12, 4.05), mat(0x111111), 0, .32 + lift, 0); }
-    if (sel.eng) { [-.5, .5].forEach(x => { add(Cyl(.12, .12, .5).rotateX(Math.PI / 2), mat(0x8c939e), x, .45 + lift, -2.1); V.flames.push([x, .45 + lift, -2.45, .5]); }); }
-    const p = makePerson('sit'); p.scale.setScalar(.85); p.position.set(-.4, .35 + lift, -.1); g.add(p); V.pilot = p;
-    const sev = clamp((st.cda - .4) / .45, 0, 1);
-    for (let i = 0; i < 10; i++) { const front = i < 6; V.seeds.push(front ? { x: (i - 2.5) * .32, y: .5 + lift + (i % 2) * .25, sev: .55 + sev * .45, amp: .6, zc: 2, len: .8, down: 0 } : { x: (i - 7.5) * .45, y: 1.5 + lift, sev: .2 + sev * .4, amp: .15, zc: 0, len: 1.5, down: 0 }); }
-    V.len = 4.4;
+    const wr = .36 + (sel.wheel || 0) * .07, lift = wr - .36, cc = 0x1e88e5;
+    V.body = put(mdl('CBody', { paint: cc }), 0, lift, 0, 'body'); put(mdl('CCabin', { paint: cc }), 0, lift, 0);
+    [-1, 1].forEach(sx => [-1.3, 1.3].forEach(z => { const w = put(mdl('Wheel'), sx * .84, wr, z); w.scale.setScalar(wr); }));
+    if (sel.aero >= 1) { add(new T3.BoxGeometry(1.75, .06, .38), mat(0x111111), 0, 1.45 + lift, -1.85); [-.6, .6].forEach(x => add(new T3.BoxGeometry(.06, .3, .1), mat(0x111111), x, 1.28 + lift, -1.85)); }
+    if (sel.aero >= 2) add(new T3.BoxGeometry(1.86, .12, 4.0), mat(0x111111), 0, .3 + lift, 0);
+    if (sel.eng) { [-.5, .5].forEach(x => { add(Cyl(.12, .12, .5).rotateX(Math.PI / 2), mat(0x8c939e), x, .45 + lift, -2.15); V.flames.push([x, .45 + lift, -2.5, .5]); }); }
+    const p = makePerson('sit'); p.scale.setScalar(.85); p.position.set(-.38, .22 + lift, .15); g.add(p); V.pilot = p;
+    V.len = 4.4; V.flow = { ax: .95, ay: .7, az: 2.1, cy: .85 + lift, cz: 0, blunt: clamp((st.cda - .3) / .5, 0, 1), drag: clamp(st.cda / .8, .4, 1), wing: null };
   }
-  // liesmas (turbo)
-  V.flameM = V.flames.map(([x, y, z, s, down]) => { const f = new T3.Mesh(new T3.ConeGeometry(.16 * s / .5, 1.2 * s / .5, 8).rotateX(down ? Math.PI : -Math.PI / 2), new T3.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: .9 })); f.position.set(x, down ? y - .35 : y, down ? z : z - .5 * s / .5); f.visible = false; g.add(f); return f; });
+  V.flameM = V.flames.map(([x, y, z, s, down]) => { const f = new T3.Mesh(new T3.ConeGeometry(.16 * s / .5, 1.2 * s / .5, 12).rotateX(down ? Math.PI : -Math.PI / 2), new T3.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: .9 })); f.position.set(x, down ? y - .35 : y, down ? z : z - .5 * s / .5); f.visible = false; g.add(f); return f; });
   return V;
 }
 
-// ================= Gaisa strīpas =================
-// Strīpas plūst garām braucamrīkam (grupa pagriezta pa ātruma virzienu). Krāsa: balta – gaiss plūst viegli, oranža/sarkana – liela pretestība.
-const STRK = { mesh: null, parts: [], max: 90 };
+// ================= Gaisa plūsmas līnijas (kā vēja tunelī) =================
+// Līnijas aprēķina katrā kadrā no vienkārša plūsmas lauka ap braucamrīku (elipsoīds + spārns + virpuļi + turbulenta vaga).
+// Krāsa: gaiši dzeltena – brīva plūsma, balta – gaiss paātrinās (pāri spārnam), oranža/sarkana – sitas pret neveiklu priekšgalu, zilganā – virpuļojoša vaga.
+// Pa līnijām skrien „komētas” (tekstūra slīd), ātrumā garākas un ātrākas. Bez spēku bultām.
+const STRK = { grp: null, mesh: null, N: 60, K: 28, t: 0, seeds: [] };
 function initStreaks() {
-  const n = STRK.max * 3 * 2 * 6, g = new T3.BufferGeometry();
-  g.setAttribute('position', new T3.BufferAttribute(new Float32Array(n * 3), 3)); g.setAttribute('color', new T3.BufferAttribute(new Float32Array(n * 3), 3));
-  STRK.mesh = new T3.Mesh(g, new T3.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .8, side: T3.DoubleSide, depthWrite: false, fog: false })); STRK.mesh.frustumCulled = false;
-  STRK.grp = new T3.Group(); STRK.grp.add(STRK.mesh);
+  const { N, K } = STRK, nv = N * K * 2, g = new T3.BufferGeometry(), idx = [];
+  g.setAttribute('position', new T3.BufferAttribute(new Float32Array(nv * 3), 3)); g.setAttribute('color', new T3.BufferAttribute(new Float32Array(nv * 4), 4)); g.setAttribute('uv', new T3.BufferAttribute(new Float32Array(nv * 2), 2));
+  for (let i = 0; i < N; i++) for (let k = 0; k < K - 1; k++) { const a = (i * K + k) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  g.setIndex(idx);
+  const dash = tex(128, 16, (c, w, h) => { const gr = c.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.7, 'rgba(255,255,255,.95)'); gr.addColorStop(.78, 'rgba(255,255,255,1)'); gr.addColorStop(.8, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = gr; c.fillRect(0, 3, w, h - 6); c.globalAlpha = .5; c.fillRect(0, 1, w, 2); c.fillRect(0, h - 3, w, 2); }, true);
+  STRK.mat = new T3.MeshBasicMaterial({ map: dash, vertexColors: true, transparent: true, opacity: .9, depthWrite: false, side: T3.DoubleSide, fog: false });
+  STRK.mesh = new T3.Mesh(g, STRK.mat); STRK.mesh.frustumCulled = false; STRK.grp = new T3.Group(); STRK.grp.add(STRK.mesh);
 }
-const SC = [new T3.Color(0xffffff), new T3.Color(0xffd27a), new T3.Color(0xff8a2a), new T3.Color(0xff2a1a)];
-function sevCol(s) { s = clamp(s, 0, 1) * 3; const i = Math.min(2, Math.floor(s)); return col.copy(SC[i]).lerp(SC[i + 1], s - i); }
-function streakPos(sd, u, V, out, cl) { const zf = V.len * .75 + 1.5, zb = V.len * .9 + 3.5, z = zf - u * (zf + zb), e = Math.exp(-(((z - sd.zc) / sd.len) ** 2));
-  out[0] = sd.x + (sd.side ? Math.sign(sd.x) * Math.abs(sd.amp) * .6 * e : 0); out[1] = sd.y + sd.amp * e - (sd.down ? Math.max(0, sd.zc - z) * .12 * cl : 0); out[2] = z; return out; }
+function streakSeeds(V) { const F = V.flow, R = mulberry(11), S = []; const wx = F.wing ? F.wing.b / 2 + 1.2 : F.ax + 1.6, hy = F.ay + 1.3;
+  for (let i = 0; i < STRK.N; i++) { const near = i < STRK.N * .45; S.push({ x: (R() * 2 - 1) * (near ? F.ax + .6 : wx), y: F.cy + (R() * 2 - 1) * (near ? F.ay + .5 : hy), ph: R(), sp: .8 + R() * .5 }); }
+  STRK.seeds = S; }
+const CF = [new T3.Color(0xffe066), new T3.Color(0xffffff), new T3.Color(0xff7a1a), new T3.Color(0xff2a14), new T3.Color(0x5fe3ff)];
+const fu = [0, 0, 0];
+function flowAt(F, x, y, z, t, cl, out) {
+  const qx = x / F.ax, qy = (y - F.cy) / F.ay, qz = (z - F.cz) / F.az, r2 = Math.max(1, qx * qx + qy * qy + qz * qz), r = Math.sqrt(r2), k = .5 / (r2 * r);
+  let ux = 3 * k * qz * qx / r2, uy = 3 * k * qz * qy / r2, uz = -(1 + k) + 3 * k * qz * qz / r2;
+  // vaga aiz braucamrīka: lēnāka un virpuļojoša (jo neveiklāks, jo platāka)
+  const wk = clamp((-qz - .7) / .8, 0, 1) * Math.exp(-(qx * qx + qy * qy) / (1 + Math.max(0, -qz - 1) * .35)) * F.drag;
+  if (wk > .01) { uz *= 1 - .35 * wk; ux += wk * .32 * Math.sin(z * 1.7 + t * 7 + y * 2.3); uy += wk * .32 * Math.cos(z * 1.3 - t * 6 + x * 2.1); }
+  let fast = 0;
+  if (F.wing && cl) { const W = F.wing, dz = z - W.z, dy = y - W.y, ax = Math.abs(x), m = clamp((W.b / 2 + .3 - ax) / .6, 0, 1);
+    if (m > 0) { const ny = Math.exp(-(dy * dy) / (W.c * W.c * .5)); uy += cl * .45 * m * ny * (Math.exp(-(((dz - W.c * .7) / W.c) ** 2)) - (dz < 0 ? .8 * Math.exp(dz / (5 * W.c)) : 0));
+      if (Math.abs(dz) < W.c * .8) { fast = m * ny * (dy > 0 ? 1 : .3) * Math.min(1, Math.abs(cl)); uz *= 1 + .35 * fast; } }
+    // spārnu galu virpuļi (ārpusē augšup, iekšpusē lejup)
+    if (dz < -W.c * .4) for (const s of [-1, 1]) { const dx = x - s * W.b / 2, dyy = y - W.y + dz * .03, rr = dx * dx + dyy * dyy + .04, G2 = s * cl * W.c * .35 * Math.min(1, -dz / 2);
+      ux += -G2 * dyy / rr; uy += G2 * dx / rr; } }
+  out[0] = ux; out[1] = uy; out[2] = uz; out[3] = Math.hypot(ux, uy, uz); out[4] = wk; out[5] = fast; out[6] = qz > 0 ? clamp(1 - out[3] / .85, 0, 1) * F.blunt * Math.exp(-(qx * qx + qy * qy) * .8) : 0; return out;
+}
+const tc = new T3.Vector3(), ftmp = [0, 0, 0, 0, 0, 0, 0];
 function updateStreaks(V, dt, sp, alpha, cl, on) {
-  const pos = STRK.mesh.geometry.attributes.position.array, cc = STRK.mesh.geometry.attributes.color.array; let k = 0;
-  if (!on || sp < 4) { STRK.mesh.geometry.setDrawRange(0, 0); return; }
-  STRK.grp.rotation.x = alpha; // pagriež atpakaļ pa ātruma virzienu
-  const seeds = V.seeds, per = Math.max(1, Math.floor((STRK.max - (V.tips ? 20 : 0)) / Math.max(1, seeds.length)));
-  while (STRK.parts.length < STRK.max) STRK.parts.push({ i: STRK.parts.length, t: Math.random() });
-  const lu = clamp(sp * .009, .06, .42), vel = Math.min(sp, 14) / (V.len * 2 + 6), w = .045 + Math.min(.05, sp * .0012), a = [0, 0, 0], b = [0, 0, 0];
-  const quad = (p, q, c, wx, wy) => { // divas krusteniskas lentes
-    for (const [dx, dy] of [[wx, 0], [0, wy]]) { const vs = [[p[0] - dx, p[1] - dy, p[2]], [p[0] + dx, p[1] + dy, p[2]], [q[0] + dx, q[1] + dy, q[2]], [p[0] - dx, p[1] - dy, p[2]], [q[0] + dx, q[1] + dy, q[2]], [q[0] - dx, q[1] - dy, q[2]]];
-      for (const v of vs) { pos[k * 3] = v[0]; pos[k * 3 + 1] = v[1]; pos[k * 3 + 2] = v[2]; cc[k * 3] = c.r; cc[k * 3 + 1] = c.g; cc[k * 3 + 2] = c.b; k++; } } };
-  let used = 0;
-  for (let si = 0; si < seeds.length && used < STRK.max - (V.tips ? 20 : 0); si++) for (let j = 0; j < per; j++, used++) {
-    const P = STRK.parts[used]; P.t += dt * vel * (1 + j * .13); if (P.t > 1) P.t -= 1 + Math.random() * .2;
-    const sd = seeds[si], c = sevCol(sd.sev); if (P.t < 0) continue;
-    for (let s = 0; s < 3; s++) { const u0 = P.t + lu * s / 3, u1 = P.t + lu * (s + 1) / 3; if (u1 > 1) break; streakPos(sd, u0, V, a, cl); streakPos(sd, u1, V, b, cl); quad(a, b, c, w, w); }
-  }
-  // virpuļi aiz spārnu galiem – stiprāki, kad liels cēlējspēks (inducētā pretestība)
-  if (V.tips && Math.abs(cl) > .15) { const r = .12 + Math.min(.5, Math.abs(cl) * .35), wc = col.set(0xffffff).clone();
-    for (let ti = 0; ti < 2; ti++) for (let j = 0; j < 10; j++, used++) { const P = STRK.parts[used]; P.t += dt * vel * .7; if (P.t > 1) P.t -= 1;
-      const tip = V.tips[ti], sgn = ti ? -1 : 1, f = u => { const z = tip[2] - u * (4 + sp * .08), an = sgn * (u * 14 + performance.now() / 120); return [tip[0] + Math.cos(an) * r * Math.min(1, u * 4), tip[1] + Math.sin(an) * r * Math.min(1, u * 4), z]; };
-      const u0 = P.t, u1 = Math.min(1, P.t + .08); quad(f(u0), f(u1), wc, w * .8, w * .8); } }
-  STRK.mesh.geometry.setDrawRange(0, k); STRK.mesh.geometry.attributes.position.needsUpdate = true; STRK.mesh.geometry.attributes.color.needsUpdate = true;
+  const geo = STRK.mesh.geometry; if (!on || sp < 3 || !V.flow) { geo.setDrawRange(0, 0); return; }
+  if (STRK.vref !== V) { streakSeeds(V); STRK.vref = V; }
+  STRK.grp.rotation.x = alpha; STRK.t += dt; STRK.mat.map.offset.x -= dt * Math.min(sp, 40) * .09; STRK.mat.opacity = clamp((sp - 3) / 10, 0, 1);
+  const F = V.flow, { N, K } = STRK, pos = geo.attributes.position.array, cc = geo.attributes.color.array, uv = geo.attributes.uv.array, t = STRK.t;
+  const zf = F.az + 2.5 + V.len * .25 + Math.min(3, sp * .05), zb = -(F.az + 2.5 + Math.min(5, sp * .1)), h = (zf - zb) / (K - 1);
+  STRK.grp.updateMatrixWorld(); tc.copy(camera.position); STRK.grp.worldToLocal(tc);
+  const P = [], wd = .055 + Math.min(.06, sp * .0014);
+  for (let i = 0; i < N; i++) { const s = STRK.seeds[i]; let x = s.x + Math.sin(t * .9 + s.ph * 9) * .06, y = s.y + Math.cos(t * .7 + s.ph * 7) * .06, z = zf; let L = s.ph * 6;
+    for (let k = 0; k < K; k++) { const f = flowAt(F, x, y, z, t, cl, ftmp), b = (i * K + k);
+      P[k * 3] = x; P[k * 3 + 1] = y; P[k * 3 + 2] = z;
+      // krāsa
+      col.copy(CF[0]); if (f[5] > 0) col.lerp(CF[1], Math.min(1, f[5] * 1.2)); if (f[6] > 0) col.lerp(f[6] > .5 ? CF[3] : CF[2], Math.min(1, f[6] * 2.2)); if (f[4] > 0) col.lerp(CF[4], Math.min(1, f[4] * 1.4));
+      const fade = Math.sin(Math.PI * k / (K - 1)) ** .7; cc[b * 8] = cc[b * 8 + 4] = col.r; cc[b * 8 + 1] = cc[b * 8 + 5] = col.g; cc[b * 8 + 2] = cc[b * 8 + 6] = col.b; cc[b * 8 + 3] = cc[b * 8 + 7] = fade;
+      uv[b * 4] = uv[b * 4 + 2] = L * s.sp / 2.2; uv[b * 4 + 1] = 0; uv[b * 4 + 3] = 1;
+      const iz = 1 / Math.max(.35, -f[2]); x += clamp(f[0] * iz, -.7, .7) * h; y += clamp(f[1] * iz, -.7, .7) * h; z -= h; L += h; }
+    // lente pret kameru
+    for (let k = 0; k < K; k++) { const a = Math.max(0, k - 1), c2 = Math.min(K - 1, k + 1), tx = P[c2 * 3] - P[a * 3], ty = P[c2 * 3 + 1] - P[a * 3 + 1], tz = P[c2 * 3 + 2] - P[a * 3 + 2];
+      const vx = tc.x - P[k * 3], vy = tc.y - P[k * 3 + 1], vz = tc.z - P[k * 3 + 2]; let sx = ty * vz - tz * vy, sy = tz * vx - tx * vz, sz = tx * vy - ty * vx; const sl = Math.hypot(sx, sy, sz) || 1, w = wd * (.5 + .5 * Math.sin(Math.PI * k / (K - 1)));
+      sx *= w / sl; sy *= w / sl; sz *= w / sl; const b = (i * K + k) * 6;
+      pos[b] = P[k * 3] - sx; pos[b + 1] = P[k * 3 + 1] - sy; pos[b + 2] = P[k * 3 + 2] - sz; pos[b + 3] = P[k * 3] + sx; pos[b + 4] = P[k * 3 + 1] + sy; pos[b + 5] = P[k * 3 + 2] + sz; } }
+  geo.setDrawRange(0, N * (K - 1) * 6); geo.attributes.position.needsUpdate = geo.attributes.color.needsUpdate = geo.attributes.uv.needsUpdate = true;
 }
 
 // ================= Efekti: dzirksteles, dūmi, putekļi, stikli, dakstiņi =================
@@ -262,22 +314,26 @@ const SPK = { n: 260, pos: new Float32Array(260 * 3) }; { const g = new T3.Buffe
 const BITS = new T3.InstancedMesh(new T3.BoxGeometry(1, 1, 1), new T3.MeshLambertMaterial({ color: 0xffffff }), 220); BITS.count = 0; BITS.frustumCulled = false; scene.add(BITS);
 function puff(p, kind, n) { for (let i = 0; i < n; i++) { const s = spPool.find(x => !x.visible); if (!s) return; s.visible = true; s.position.set(p.x + rnd(-1, 1), p.y + rnd(0, 1), p.z + rnd(-1, 1));
   const c = kind === 'smoke' ? [.35, .36, .4] : kind === 'dust' ? [.78, .7, .58] : [.95, .95, .95]; s.material.color.setRGB(...c); s.material.opacity = kind === 'smoke' ? .75 : .8;
-  FX.puffs.push({ s, v: new T3.Vector3(rnd(-2, 2), kind === 'smoke' ? rnd(1.5, 3.5) : rnd(.3, 2.5), rnd(-2, 2)), life: 0, max: kind === 'smoke' ? rnd(2.5, 4) : rnd(1.2, 2.2), s0: kind === 'smoke' ? 1.2 : 1.6, grow: kind === 'smoke' ? 2.2 : 3, op: s.material.opacity }); } }
+  const tr = kind === 'trail'; if (tr) { s.material.color.setRGB(.3, .3, .33); s.material.opacity = .6; }
+  FX.puffs.push({ s, v: tr ? new T3.Vector3(rnd(-.3, .3), rnd(.2, .6), rnd(-.3, .3)) : new T3.Vector3(rnd(-2, 2), kind === 'smoke' ? rnd(1.5, 3.5) : rnd(.3, 2.5), rnd(-2, 2)), life: 0, max: tr ? rnd(1.2, 1.8) : kind === 'smoke' ? rnd(2.5, 4) : rnd(1.2, 2.2), s0: tr ? .35 : kind === 'smoke' ? 1.2 : kind === 'white' ? .5 : 1.6, grow: tr ? .9 : kind === 'smoke' ? 2.2 : kind === 'white' ? .8 : 3, op: s.material.opacity }); } }
 function sparks(p, n, v) { for (let i = 0; i < n && FX.sparks.length < SPK.n; i++) FX.sparks.push({ p: p.clone(), v: new T3.Vector3(rnd(-6, 6), rnd(2, 10), (v || 0) * rnd(.1, .5) + rnd(-5, 5)), life: rnd(.4, 1) }); }
-function bits(p, n, kind, v) { for (let i = 0; i < n && FX.bits.length < 220; i++) { const glass = kind === 'glass';
+function bits(p, n, kind, v) { for (let i = 0; i < n && FX.bits.length < 220; i++) { const glass = kind === 'glass', fe = kind === 'feather';
+  if (fe) { FX.bits.push({ p: p.clone().add(new T3.Vector3(rnd(-.5, .5), rnd(-.3, .3), rnd(-.5, .5))), v: new T3.Vector3(rnd(-2, 2), rnd(0, 2), rnd(-2, 2)), r: new T3.Euler(rnd(0, 6), rnd(0, 6), 0), rv: rnd(-4, 4), s: new T3.Vector3(.08, .015, .26), c: 0xffffff, life: 0, rest: false, fl: true }); continue; }
   FX.bits.push({ p: p.clone().add(new T3.Vector3(rnd(-1.5, 1.5), rnd(-1, 1), 0)), v: new T3.Vector3(rnd(-5, 5), rnd(1, 7), (v || 0) * rnd(-.2, .25) + rnd(-3, 1)), r: new T3.Euler(rnd(0, 6), rnd(0, 6), 0), rv: rnd(-9, 9),
     s: glass ? new T3.Vector3(rnd(.15, .4), rnd(.15, .4), .03) : new T3.Vector3(.5, .08, .35), c: glass ? 0xbfe6ff : pick([0xa34a2a, 0x8c3b22, 0xb85a35]), life: 0, rest: false }); } }
-function decal(b, y) { const d = new T3.Mesh(new T3.PlaneGeometry(2.6, 2.2), new T3.MeshBasicMaterial({ color: 0x1d232c })); d.position.set(rnd(-1, 1), y, b.z0 - .06); d.rotation.y = Math.PI; scene.add(d); FX.decals.push(d);
-  const cr = new T3.Mesh(new T3.PlaneGeometry(4.5, .25), new T3.MeshBasicMaterial({ color: 0x2a2a2a })); cr.position.set(d.position.x + .4, y + .9, b.z0 - .07); cr.rotation.set(0, Math.PI, .5); scene.add(cr); FX.decals.push(cr); }
+function decal(b, y, x, z) { // logu caurums uz tās sienas, kurai trāpīja
+  let px = x, pz = z, ry = 0; if (z <= b.z0 + .1) { pz = b.z0 - .06; ry = Math.PI; } else if (z >= b.z1 - .1) { pz = b.z1 + .06; } else if (x <= b.x0 + .1) { px = b.x0 - .06; ry = -Math.PI / 2; } else { px = b.x1 + .06; ry = Math.PI / 2; }
+  const d = new T3.Mesh(new T3.PlaneGeometry(2.6, 2.2), new T3.MeshBasicMaterial({ color: 0x1d232c })); d.position.set(px, y, pz); d.rotation.y = ry; scene.add(d); FX.decals.push(d);
+  const cr = new T3.Mesh(new T3.PlaneGeometry(4.5, .25), new T3.MeshBasicMaterial({ color: 0x2a2a2a })); cr.position.set(px, y + .9, pz); cr.position.x += Math.sin(ry) * .01; cr.rotation.set(0, ry, .5); scene.add(cr); FX.decals.push(cr); }
 function clearFX() { FX.puffs.forEach(f => f.s.visible = false); FX.puffs = []; FX.sparks = []; FX.bits = []; BITS.count = 0; FX.decals.forEach(d => scene.remove(d)); FX.decals = []; }
 const GR = 9.81, dq = new T3.Quaternion(), de = new T3.Euler();
-function floorAt(x, z) { return Math.abs(x) < 2.2 ? surfAt(WORLD, z).h : 0; }
+function floorAt(x, z) { return surfAt(WORLD, x, z).h; }
 function updateFX(dt) {
   for (let i = FX.puffs.length - 1; i >= 0; i--) { const f = FX.puffs[i]; f.life += dt; const k = f.life / f.max; if (k >= 1) { f.s.visible = false; FX.puffs.splice(i, 1); continue; }
     f.s.position.addScaledVector(f.v, dt); f.v.multiplyScalar(1 - dt * .8); const sc = f.s0 + f.grow * Math.sqrt(k) * 2; f.s.scale.set(sc, sc, 1); f.s.material.opacity = f.op * (1 - k); }
   let n = 0; for (let i = FX.sparks.length - 1; i >= 0; i--) { const s = FX.sparks[i]; s.life -= dt; if (s.life <= 0) { FX.sparks.splice(i, 1); continue; } s.v.y -= GR * dt; s.p.addScaledVector(s.v, dt); const fl = floorAt(s.p.x, s.p.z); if (s.p.y < fl) { s.p.y = fl; s.v.y *= -.4; s.v.x *= .6; s.v.z *= .6; } }
   FX.sparks.forEach(s => { SPK.pos[n * 3] = s.p.x; SPK.pos[n * 3 + 1] = s.p.y; SPK.pos[n * 3 + 2] = s.p.z; n++; }); SPK.pts.geometry.setDrawRange(0, n); SPK.pts.geometry.attributes.position.needsUpdate = true;
-  FX.bits.forEach((b, i) => { if (!b.rest) { b.v.y -= GR * dt; b.p.addScaledVector(b.v, dt); b.r.x += b.rv * dt; b.r.y += b.rv * .7 * dt; const fl = floorAt(b.p.x, b.p.z) + .03;
+  FX.bits.forEach((b, i) => { if (!b.rest) { if (b.fl) { b.v.multiplyScalar(1 - dt * 2); b.v.y -= GR * .08 * dt; b.r.z = Math.sin(performance.now() / 300 + i) * .6; } else b.v.y -= GR * dt; b.p.addScaledVector(b.v, dt); b.r.x += b.rv * dt; b.r.y += b.rv * .7 * dt; const fl = floorAt(b.p.x, b.p.z) + .03;
       if (b.p.y < fl) { b.p.y = fl; b.v.multiplyScalar(.35); b.v.y = Math.abs(b.v.y) * .3; b.rv *= .5; if (b.v.length() < .4) { b.rest = true; b.r.x = Math.PI / 2; } } }
     BITS.setMatrixAt(i, m4.compose(b.p, dq.setFromEuler(b.r), b.s)); BITS.setColorAt(i, col.set(b.c)); });
   BITS.count = FX.bits.length; BITS.instanceMatrix.needsUpdate = true; if (BITS.instanceColor) BITS.instanceColor.needsUpdate = true;
@@ -285,24 +341,53 @@ function updateFX(dt) {
 
 // ---- avārijas daļas ----
 let DEB = [];
-function crumple(mesh, k) { const g = mesh.geometry.clone(), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const z = p.getZ(i), f = clamp((z + .5) / 2, 0, 1) * k;
+function crumple(o, k) { o.traverse(m => { if (m.isMesh) crumple1(m, k); }); }
+function crumple1(mesh, k) { const g = mesh.geometry.clone(), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const z = p.getZ(i), f = clamp((z + .5) / 2, 0, 1) * k;
   p.setXYZ(i, p.getX(i) * (1 + rnd(-.15, .15) * f), p.getY(i) * (1 - .35 * f) + rnd(-.05, .05) * f, z * (1 - .3 * f)); } g.computeVertexNormals(); mesh.geometry = g; }
 function breakApart(V, vel, wall) {
   DEB = []; const parts = V.parts.slice();
   parts.forEach((o, i) => { scene.attach(o); const main = o === V.body, keep = main ? (wall ? -.12 : .55) : (wall ? rnd(-.25, .15) : rnd(.25, .75));
-    if (main && o.isMesh) crumple(o, wall ? 1 : .6);
-    else if (o.userData.kind === 'wing' && o.isMesh) { o.rotation.z += rnd(-.6, .6); o.rotation.x += rnd(-.4, .4); }
-    DEB.push({ o, v: new T3.Vector3(rnd(-3, 3) * (main ? .3 : 1), Math.abs(vel.y) * .2 + rnd(main ? 1 : 2, main ? 3 : 8), vel.z * keep), w: new T3.Vector3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6)).multiplyScalar(main ? .4 : 1), main, r: main ? .5 : .2, rest: 0 }); });
+    if (main) crumple(o, wall ? 1 : .6);
+    else if (o.userData.kind === 'wing') { o.rotation.z += rnd(-.6, .6); o.rotation.x += rnd(-.4, .4); }
+    DEB.push({ o, v: new T3.Vector3(vel.x * keep + rnd(-3, 3) * (main ? .3 : 1), Math.abs(vel.y) * .2 + rnd(main ? 1 : 2, main ? 3 : 8), vel.z * keep), w: new T3.Vector3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6)).multiplyScalar(main ? .4 : 1), main, r: main ? .5 : .2, rest: 0 }); });
   V.flameM.forEach(f => f.visible = false);
 }
 function updateDebris(dt) {
   for (const d of DEB) { if (d.rest > 1) continue; d.v.y -= GR * dt; d.o.position.addScaledVector(d.v, dt); d.o.rotation.x += d.w.x * dt; d.o.rotation.y += d.w.y * dt; d.o.rotation.z += d.w.z * dt;
-    const s = surfAt(WORLD, d.o.position.z), fl = Math.abs(d.o.position.x) < 2.2 ? s.h : 0;
-    if (Math.abs(d.o.position.x) < 2.2 && s.b && !s.b.landing && d.o.position.y < s.b.h - .5 && d.v.z > 0 && d.o.position.z - d.v.z * dt < s.b.z0) { d.o.position.z = s.b.z0 - .3; d.v.z *= -.25; }
+    const op = d.o.position, s = surfAt(WORLD, op.x, op.z), fl = s.h;
+    if (s.b && !s.b.landing && op.y < roofH(s.b, op.z) - .5) { const px = op.x - d.v.x * dt, pz = op.z - d.v.z * dt; if (!inside(s.b, px, op.z)) d.v.x *= -.25; if (!inside(s.b, op.x, pz)) d.v.z *= -.25; op.x = px; op.z = pz; continue; }
     if (d.o.position.y < fl + d.r) { d.o.position.y = fl + d.r; const hard = Math.abs(d.v.y) + Math.abs(d.v.z) * .3; if (hard > 6 && FX.sparks.length < 200) sparks(d.o.position, 4, d.v.z);
       d.v.y = Math.abs(d.v.y) * (d.main ? .15 : .3); d.v.x *= .7; d.v.z *= d.main ? .82 : .7; d.w.multiplyScalar(.6); if (d.v.length() < .6) { d.rest += dt * 4; if (d.rest > 1) { d.v.set(0, 0, 0); d.o.rotation.x = Math.round(d.o.rotation.x / Math.PI) * Math.PI * (d.main ? 1 : 0) || d.o.rotation.x; } } } }
 }
 function disposeDebris() { DEB.forEach(d => { scene.remove(d.o); }); DEB = []; }
+
+// ---- putni (kaijas) – lido bariņos pa ceļam; ja ietriecas, putns apjūk, nobirst spalvas un tas aizlido (nekas ļauns).
+// Ja putns trāpa dzinējā – dzinējs apstājas (dūmo), turbo vairs nedarbojas.
+const BIRDS = []; let birdsHit = 0;
+function makeBird() { const g = new T3.Group(), b = mdl('BBody'), wl = mdl('BWingL'), wr = mdl('BWingR');
+  if (b) { b.position.set(0, 0, 0); wl.position.set(-.06, .03, 0); wr.position.set(.06, .03, 0); g.add(b, wl, wr); }
+  else { g.add(new T3.Mesh(new T3.SphereGeometry(.15, 8, 6), mat(0xffffff))); }
+  g.scale.setScalar(1.7); g.visible = false; scene.add(g); return { g, wl, wr, p: g.position, v: new T3.Vector3(), ph: Math.random() * 6, hit: 0, on: false }; }
+function resetBirds() { if (!BIRDS.length) for (let i = 0; i < 15; i++) BIRDS.push(makeBird()); BIRDS.forEach(b => { b.on = false; b.g.visible = false; b.hit = 0; }); birdsHit = 0; }
+function spawnFlock(i0) { const hx = Math.sin(sim.psi), hz = Math.cos(sim.psi), d = rnd(140, 380), lat = rnd(-30, 30), y = clamp(sim.y + rnd(-14, 22), 14, 220), dir = rnd(0, Math.PI * 2), sp = rnd(4, 8);
+  for (let k = 0; k < 3; k++) { const b = BIRDS[i0 + k]; if (!b) return; b.on = true; b.hit = 0; b.g.visible = true; b.done = false;
+    b.p.set(sim.x + hx * d + hz * lat + rnd(-3, 3), y + rnd(-1.5, 1.5), sim.z + hz * d - hx * lat + rnd(-3, 3)); b.v.set(Math.sin(dir) * sp, 0, Math.cos(dir) * sp); b.g.rotation.set(0, dir, 0); } }
+function updateBirds(dt) {
+  if (!BIRDS.length || !sim) return; const t = performance.now() / 1000, hx = Math.sin(sim.psi), hz = Math.cos(sim.psi), P = VEHM.g.position;
+  for (let i = 0; i < BIRDS.length; i += 3) { const b = BIRDS[i]; const rel = b.on ? (b.p.x - P.x) * hx + (b.p.z - P.z) * hz : -1e9;
+    if (sim.mode !== 'ramp' && sim.air > 1.2 && (!b.on || rel < -40 || rel > 600)) spawnFlock(i); }
+  const span = ST.S ? ST.span / 2 + .3 : VEHM.len < 2 ? .5 : .95, cy = P.y + (VEHM.flow ? VEHM.flow.cy : 1);
+  for (const b of BIRDS) { if (!b.on) continue;
+    if (b.hit > 0) { b.hit -= dt; b.v.y -= 4 * dt; b.g.rotation.x += dt * 9; b.g.rotation.z += dt * 6; if (b.hit <= 0) { b.v.set(rnd(-6, 6), 7, rnd(-6, 6)); b.g.rotation.set(-.4, Math.atan2(b.v.x, b.v.z), 0); b.done = true; } }
+    b.p.addScaledVector(b.v, dt); const f = Math.sin(t * (b.hit > 0 ? 25 : b.done ? 18 : 9) + b.ph) * .7; if (b.wl) { b.wl.rotation.z = -f; b.wr.rotation.z = f; }
+    if (b.hit > 0 || b.done || sim.mode === 'ramp') continue;
+    const dx = b.p.x - P.x, dy = b.p.y - cy, dz = b.p.z - P.z, fwd = dx * hx + dz * hz, lat = dx * hz - dz * hx;
+    if (Math.abs(fwd) < VEHM.len / 2 + .5 && Math.abs(dy) < 1.1 && Math.abs(lat) < span) birdHit(b, fwd > 0 && Math.abs(lat) < .8);
+  }
+}
+function birdHit(b, front) { const engine = front && ST.T && !sim.engDead; sim.birdHit(engine); birdsHit++;
+  b.hit = 1.3; b.v.set(Math.sin(sim.psi) * sim.speed * .4, 3, Math.cos(sim.psi) * sim.speed * .4); bits(b.p, 14, 'feather', 0); puff(b.p, 'white', 2); camShake = .4; sfx('bird');
+  if (engine) { toast('🐦💥 Putns dzinējā! Dzinējs apstājās'); sfx('sputter'); $('turbo').classList.remove('on'); inp.turbo = false; } else toast('🐦 Bonk! Putns!'); }
 
 // ---- izpletnis ----
 function makeChute() { const g = new T3.Group(), cols = [0xff5a5a, 0xffffff, 0xffd34d, 0x3d8bff];
@@ -312,7 +397,7 @@ function makeChute() { const g = new T3.Group(), cols = [0xff5a5a, 0xffffff, 0xf
 let PIL = null; // { o, v, chute, t, landed }
 
 // ================= Spēles stāvoklis =================
-let state = 'boot', sim = null, VEHM = null, ST = null, prev = null, acc = 0, crashT = 0, runT = 0, endInfo = null, inp = { pitch: 0, turbo: false }, lastT = performance.now(), shopT = 0, camShake = 0;
+let state = 'boot', sim = null, VEHM = null, ST = null, prev = null, acc = 0, crashT = 0, runT = 0, endInfo = null, inp = { pitch: 0, roll: 0, turbo: false }, lastT = performance.now(), shopT = 0, camShake = 0;
 const shadow = new T3.Mesh(new T3.CircleGeometry(1, 20).rotateX(-Math.PI / 2), new T3.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .28, depthWrite: false })); scene.add(shadow);
 const own = vid => save.own[vid];
 const selOf = vid => Object.assign({ wheel: 0, wing: 0, eng: 0, aero: 0, long: 0 }, own(vid) || {});
@@ -324,7 +409,7 @@ function placeBest() { if (BEST) { scene.remove(BEST); BEST = null; } const b = 
 function setVehicle() {
   if (VEHM) { scene.remove(VEHM.g); }
   disposeDebris(); if (PIL) { scene.remove(PIL.o); if (PIL.chute) scene.remove(PIL.chute); PIL = null; }
-  const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle(vid, sel, ST); scene.add(VEHM.g); VEHM.g.add(STRK.grp);
+  const vid = save.veh, sel = selOf(vid); ST = stats(vid, sel); VEHM = buildVehicle2(vid, sel, ST); scene.add(VEHM.g); VEHM.g.add(STRK.grp);
   const p = RAMP.pts[0]; VEHM.g.position.set(0, p.y, p.z); VEHM.g.rotation.set(0, 0, 0); placeBest();
 }
 function resize() { W = innerWidth; H = innerHeight; renderer.setSize(W, H, false); camera.aspect = W / H; camera.fov = W < H ? 72 : 58; camera.updateProjectionMatrix(); viewOffset(); }
@@ -337,22 +422,22 @@ addEventListener('resize', () => { resize(); });
 function go() {
   if (state !== 'shop' && state !== 'end') return;
   audioInit(); closeSheet(); $('shop').classList.remove('on'); setVehicle(); clearFX();
-  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, phi: sim.phi }; acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
+  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0 }; camPsi = 0; resetBirds(); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
   gateA = 0; leverK = 0; setLever(0); $('lever').classList.add('on'); $('dist').classList.add('on'); $('dM').textContent = '0 m'; $('dSub').textContent = VEH[save.veh].i + ' ' + VEH[save.veh].n;
   if (save.flights < 3) banner('⬇ Novelc sviru lejā, lai atvērtu barjeru!', 3.5);
 }
 // svira: velc rokturi lejā līdz galam → barjera atveras un brauciens sākas
 function setLever(k) { leverK = k; $('knob').style.transform = `translateY(${k * 128}px)`; $('lever').style.setProperty('--k', k); }
-function release() { if (state !== 'ready') return; state = 'run'; setLever(1); setTimeout(() => $('lever').classList.remove('on'), 350); sfx('clunk'); setTimeout(() => sfx('go'), 150);
+function release() { if (state !== 'ready') return; state = 'run'; setLever(1); $('lever').classList.remove('on'); sfx('clunk'); setTimeout(() => sfx('go'), 150);
   $('turbo').classList.toggle('on', !!ST.T); hints(save.flights < 3); if (navigator.vibrate) navigator.vibrate(30);
-  if (save.flights === 0) banner(ST.S ? '⬅ Turi kreisajā pusē – deguns augšup, labajā – lejup ➡' : '⬅ Turi kreisajā vai labajā pusē, lai grieztos ➡', 4.5); }
+  if (save.flights === 0) banner(ST.S ? '🕹 Velc pirkstu: ⬆ deguns augšup, ⬇ lejup, ⬅➡ stūrē' : '🕹 Velc pirkstu ⬆⬇, lai grieztos', 4.5); }
 { const kn = $('knob'); let drag = null;
   kn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); if (state !== 'ready') return; drag = { y: e.clientY, k: leverK }; try { kn.setPointerCapture(e.pointerId); } catch (x) {} sfx('tick'); });
   kn.addEventListener('pointermove', e => { if (!drag || state !== 'ready') return; const k = clamp(drag.k + (e.clientY - drag.y) / 128, 0, 1); setLever(k); if (k > .92) { drag = null; release(); } });
   const up = () => { if (!drag) return; drag = null; if (state === 'ready') { const k0 = leverK, t0 = performance.now(); const back = () => { const f = Math.min(1, (performance.now() - t0) / 200); if (state === 'ready') { setLever(k0 * (1 - f)); if (f < 1) requestAnimationFrame(back); } }; back(); } };
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => kn.addEventListener(ev, up)); }
-function hints(on) { $('hintL').classList.toggle('on', on); $('hintR').classList.toggle('on', on);
-  const fl = ST && !ST.S; $('hintL').innerHTML = fl ? '↺<small>Turi – griezies atpakaļ</small>' : '⬆<small>Turi – deguns augšup</small>'; $('hintR').innerHTML = fl ? '↻<small>Turi – griezies uz priekšu</small>' : '⬇<small>Turi – deguns lejup</small>'; }
+function hints(on) { const el = $('hintJ'); el.classList.toggle('on', on);
+  el.innerHTML = ST && ST.S ? '🕹<small>Velc pirkstu: ⬆ deguns augšup · ⬇ lejup · ⬅➡ stūrē</small>' : '🕹<small>Velc pirkstu ⬆⬇ – griezies, ⬆ salto atpakaļ</small>'; }
 function handleEvents() {
   for (const e of sim.ev) { const k = e[0];
     if (k === 'launch') { sfx('whoosh'); if (save.flights < 3) setTimeout(() => hints(false), 6000); }
@@ -366,13 +451,12 @@ function handleEvents() {
   sim.ev.length = 0;
 }
 function startCrash(kind, v) {
-  state = 'crash'; crashT = 0; camShake = 1; $('turbo').classList.remove('on'); hints(false); inp.turbo = false; const p = VEHM.g.position.clone(), vel = new T3.Vector3(0, sim.vy, sim.vz), wall = kind === 'wall', b = wall ? sim.wall : surfAt(WORLD, sim.z).b;
-  if (VEHM.spin) VEHM.spin.rotation.z += 0;
+  state = 'crash'; crashT = 0; camShake = 1; joyReset(); $('turbo').classList.remove('on'); hints(false); inp.turbo = false; const p = VEHM.g.position.clone(), vel = new T3.Vector3(Math.sin(sim.psi) * sim.vz, sim.vy, Math.cos(sim.psi) * sim.vz), wall = kind === 'wall', b = wall ? sim.wall : surfAt(WORLD, sim.x, sim.z).b;
   // tēls izlec ar izpletni
-  const pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); PIL = { o: pil, v: new T3.Vector3(rnd(-1, 1), 13 + Math.min(8, Math.abs(sim.vz) * .1), wall ? -2 : Math.max(2, sim.vz * .35)), t: 0, chute: null, landed: false, spin: rnd(-4, 4) };
+  const pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); const fw = wall ? -.08 : .35; PIL = { o: pil, v: new T3.Vector3(vel.x * fw + rnd(-1, 1), 13 + Math.min(8, Math.abs(sim.vz) * .1), wall ? -2 : Math.max(2, vel.z * fw)), t: 0, chute: null, landed: false, spin: rnd(-4, 4) };
   breakApart(VEHM, vel, wall); updateStreaks(VEHM, 0, 0, 0, 0, false);
   sparks(p.clone().add(new T3.Vector3(0, .5, 0)), 60, sim.vz); puff(p, 'dust', 10); puff(p, 'smoke', 4);
-  if (b && !b.landing) { const y = wall ? clamp(p.y + 1, 2, b.h - 1) : b.h; if (wall) { bits(new T3.Vector3(0, y, b.z0 - .3), 34, 'glass', -sim.vz); decal(b, y); } if (!wall || p.y > b.h - 5) bits(new T3.Vector3(0, b.h, wall ? b.z0 + 1 : p.z), 26, 'tile', sim.vz); }
+  if (b && !b.landing) { const y = wall ? clamp(p.y + 1, 2, b.h - 1) : b.h; if (wall) { bits(new T3.Vector3(p.x, y, p.z), 34, 'glass', -sim.vz); decal(b, y, p.x, p.z); } if (!wall || p.y > b.h - 5) bits(new T3.Vector3(p.x, b.h, p.z + (wall ? 1 : 0)), 26, 'tile', sim.vz); }
   sfx('crash'); if (b && !b.landing) setTimeout(() => sfx('glass'), 120);
   endInfo = { kind: 'crash', dist: Math.max(0, sim.maxZ) };
 }
@@ -398,7 +482,7 @@ function finish(kind) {
   if (!save.first) { save.first = 1; money += 25; parts.push(['🎁 Pirmais lēciens', '+€25']); }
   const xp = Math.round(dist / 10) + (landed ? 5 : 0) + 2, lv0 = levelOf(save.xp).l;
   save.xp += xp; save.flights++; if (rec) save.best[vid] = dist;
-  const S = save.st; if (landed) S[{ plane: 'landP', scoot: 'landS', car: 'landC' }[vid]]++; else S.crash++; S.flips += sim.flips; S.roofs += sim.roofs;
+  const S = save.st; if (landed) S[{ plane: 'landP', scoot: 'landS', car: 'landC' }[vid]]++; else S.crash++; S.flips += sim.flips; S.roofs += sim.roofs; S.birds = (S.birds || 0) + birdsHit;
   walletAdd(money); persist(); medals(); hud(); placeBest();
   const lv1 = levelOf(save.xp).l;
   endInfo = { dist, money, xp, rec, landed };
@@ -451,24 +535,27 @@ function wireShop() { const sh = $('shop');
   const g = $('go'); if (g) g.onclick = () => go(); }
 
 // ================= Kamera un kadrs =================
-const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3();
+const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3(); let camPsi = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = clamp((now - lastT) / 1000, 0, .25); lastT = now; if (document.hidden) return;
   const paused = $('ov').classList.contains('on') && state === 'run';
   if (state === 'run' && !paused) {
-    acc += dt; runT += dt; const ip = { pitch: inp.pitch, turbo: inp.turbo, help: OPT.help };
-    while (acc >= DT && state === 'run') { prev.z = sim.z; prev.y = sim.y; prev.phi = sim.phi; sim.step(ip); acc -= DT; handleEvents(); }
-    const a = state === 'run' ? acc / DT : 1, z = prev.z + (sim.z - prev.z) * a, y = prev.y + (sim.y - prev.y) * a, ph = prev.phi + wrap(sim.phi - prev.phi) * a;
-    VEHM.g.position.set(0, y, z); VEHM.g.rotation.x = -ph;
+    acc += dt; runT += dt; const ip = { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
+    while (acc >= DT && state === 'run') { prev.z = sim.z; prev.y = sim.y; prev.x = sim.x; prev.phi = sim.phi; prev.psi = sim.psi; prev.bank = sim.bank; sim.step(ip); acc -= DT; handleEvents(); }
+    const a = state === 'run' ? acc / DT : 1, L2 = (k) => prev[k] + (sim[k] - prev[k]) * a, z = L2('z'), y = L2('y'), x = L2('x'), ph = prev.phi + wrap(sim.phi - prev.phi) * a;
+    VEHM.g.position.set(x, y, z); VEHM.g.rotation.set(-ph, L2('psi'), -L2('bank'));
+    if (state === 'run') updateBirds(dt);
     if (state === 'run') { const sp = sim.speed; if (VEHM.spin) VEHM.spin.rotation.z += dt * (sim.thr ? 60 : 8 + sp * .5);
       VEHM.flameM.forEach(f => { f.visible = sim.thr; if (sim.thr) f.scale.setScalar(.8 + Math.random() * .5); });
       updateStreaks(VEHM, dt, sp, sim.mode === 'air' ? sim.alpha : 0, sim.mode === 'air' ? sim.cl : 0, OPT.streaks);
-      $('dM').textContent = Math.max(0, Math.round(sim.maxZ)) + ' m'; $('dSub').textContent = `⬆ ${Math.max(0, Math.round(sim.y - surfAt(WORLD, sim.z).h))} m · ${Math.round(sp * 3.6)} km/h`;
+      $('dM').textContent = Math.max(0, Math.round(sim.maxZ)) + ' m'; $('dSub').textContent = `⬆ ${Math.max(0, Math.round(sim.y - surfAt(WORLD, sim.x, sim.z).h))} m · ${Math.round(sp * 3.6)} km/h`;
       if (ST.T) $('turbo').style.setProperty('--f', (sim.fuel / ST.fuel * 100) + '%');
       if (!sim.stall) $('warn').classList.remove('on');
       wind(sp); engine(sim.thr);
-      if (sim.thr && VEHM.flames.length && Math.random() < dt * 12) puff(tmp.set(0, y + .4, z - VEHM.len * .8 - 3), 'smoke', 1); }
+      const fx = Math.sin(sim.psi), fz = Math.cos(sim.psi);
+      if (sim.thr && VEHM.flames.length && Math.random() < dt * 12) puff(tmp.set(x - fx * (VEHM.len * .7), y + .4, z - fz * (VEHM.len * .7)), 'trail', 1);
+      if (sim.engDead && Math.random() < dt * 14) puff(tmp.set(x + fx * VEHM.len * .4, y + .7, z + fz * VEHM.len * .4), 'trail', 1); }
   } else if (state === 'shop') { shopT += dt; wind(0); engine(false); }
   if (GATE) { gateA += ((state === 'shop' || state === 'ready' ? 0 : 1) - gateA) * Math.min(1, dt * 6); GATE.userData.bar.rotation.z = gateA * 1.45 + (state === 'ready' ? leverK * .06 : 0); }
   if (state === 'crash' || state === 'end') { crashT += dt; updateDebris(dt); updatePilot(dt); wind(0); engine(false);
@@ -476,35 +563,41 @@ function frame(now) {
     if (state === 'crash' && ((PIL && PIL.landed && PIL.t - PIL.lt > 1.2) || crashT > 12)) finish('crash'); }
   updateFX(dt);
   // ēna
-  const vp = state === 'shop' || state === 'run' ? VEHM.g.position : PIL ? PIL.o.position : VEHM.g.position, sh = state === 'run' && sim && sim.mode !== 'ramp' ? surfAt(WORLD, vp.z).h : -9;
-  shadow.visible = sh > -1 && vp.y - sh < 60; if (shadow.visible) { const k = clamp(1 - (vp.y - sh) / 60, .2, 1); shadow.position.set(0, sh + .08, vp.z); shadow.scale.setScalar(VEHM.len * .45 * (1.4 - k * .4)); shadow.material.opacity = .3 * k; }
+  const vp = state === 'shop' || state === 'run' ? VEHM.g.position : PIL ? PIL.o.position : VEHM.g.position, sh = state === 'run' && sim && sim.mode !== 'ramp' ? surfAt(WORLD, vp.x, vp.z).h : -9;
+  shadow.visible = sh > -1 && vp.y - sh < 60; if (shadow.visible) { const k = clamp(1 - (vp.y - sh) / 60, .2, 1); shadow.position.set(vp.x, sh + .08, vp.z); shadow.scale.setScalar(VEHM.len * .45 * (1.4 - k * .4)); shadow.material.opacity = .3 * k; }
   // kamera
   const port = W < H;
   if (state === 'shop') { const p = VEHM.g.position, a = Math.sin(shopT * .25) * .6 + .75, r = VEHM.len * 1.3 + 4;
     camT.set(p.x + Math.sin(a) * r, p.y + 2.2 + r * .15, p.z + Math.cos(a) * r); camL.set(p.x, p.y + .9, p.z); camera.position.lerp(camT, 1 - Math.exp(-dt * 3)); }
   else if (state === 'run' || state === 'ready') { const p = VEHM.g.position, sp = state === 'ready' ? 0 : sim.speed, back = (port ? 6.5 : 5.2) + VEHM.len * .95 + sp * .045, up = 1.7 + VEHM.len * .32 + sp * .018;
-    const onR = state === 'ready' || sim.mode === 'ramp' || p.z < 0; let cy = p.y + up, cz = p.z - back;
-    if (onR) { const rs0 = (sim.mode === 'ramp' ? sim.s : RAMP.len) - back, rp = rampAt(RAMP, Math.max(0, rs0)); cy = Math.max(cy, rp.y + up + 1); cz = rp.z + Math.min(0, rs0); }
-    camT.set(0, cy, cz); camL.set(0, p.y + 1, p.z + 10 + sp * .25);
+    const onR = state === 'ready' || sim.mode === 'ramp' || p.z < 0; camPsi += wrap(sim.psi - camPsi) * Math.min(1, dt * 2.5); const hx = Math.sin(camPsi), hz = Math.cos(camPsi);
+    let cy = p.y + up, cz = p.z - back * hz, cx = p.x - back * hx;
+    if (onR) { const rs0 = (sim.mode === 'ramp' ? sim.s : RAMP.len) - back, rp = rampAt(RAMP, Math.max(0, rs0)); cy = Math.max(cy, rp.y + up + 1); cz = rp.z + Math.min(0, rs0); cx = p.x; }
+    camT.set(cx, cy, cz); const la = 10 + sp * .25; camL.set(p.x + hx * la, p.y + 1, p.z + hz * la);
     camera.position.lerp(camT, 1 - Math.exp(-dt * (onR ? 6 : 4))); }
   else { const tgt = PIL && crashT > 1.4 ? PIL.o.position : DEB[0] ? DEB[0].o.position : VEHM.g.position;
-    camT.set(8 + Math.min(6, crashT), tgt.y + 5 + Math.min(4, crashT), tgt.z - 14); camL.copy(tgt); camL.y += 1.5; camera.position.lerp(camT, 1 - Math.exp(-dt * 2)); }
+    camT.set(tgt.x + 8 + Math.min(6, crashT), tgt.y + 5 + Math.min(4, crashT), tgt.z - 14); camL.copy(tgt); camL.y += 1.5; camera.position.lerp(camT, 1 - Math.exp(-dt * 2)); }
   camera.lookAt(camL);
   if (camShake > 0) { camShake = Math.max(0, camShake - dt * 1.6); camera.position.x += rnd(-.3, .3) * camShake; camera.position.y += rnd(-.3, .3) * camShake; }
   renderer.render(scene, camera);
 }
 
 // ================= Vadība =================
-const ptr = new Map();
-function recalcPitch() { let up = 0, dn = 0; ptr.forEach(s => { if (s > 0) up = 1; else dn = 1; }); inp.pitch = (kUp ? 1 : 0) - (kDn ? 1 : 0) + up - dn; inp.pitch = clamp(inp.pitch, -1, 1); }
-let kUp = 0, kDn = 0;
-$('cv').addEventListener('pointerdown', e => { audioInit(); if (state !== 'run') return; ptr.set(e.pointerId, e.clientX < W / 2 ? 1 : -1); recalcPitch(); try { $('cv').setPointerCapture(e.pointerId); } catch (x) {} });
-['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('cv').addEventListener(ev, e => { ptr.delete(e.pointerId); recalcPitch(); }));
+// kursorsvira: parādās tur, kur pieskaras; velc ⬆⬇ – deguns, ⬅➡ – stūrē (lidmašīna ar spārniem). Tastatūra – bultiņas.
+const JR = 62; let joy = null, kUp = 0, kDn = 0, kL = 0, kR = 0;
+function recalcInput() { let jp = 0, jr = 0; if (joy) { const dz = v => Math.abs(v) < .14 ? 0 : clamp((v - Math.sign(v) * .14) / .86, -1, 1); jp = dz(-joy.dy / JR); jr = dz(joy.dx / JR); }
+  inp.pitch = clamp(jp + kUp - kDn, -1, 1); inp.roll = clamp(jr + kR - kL, -1, 1); }
+function joyDraw() { const b = $('joy'); if (!joy) { b.classList.remove('on'); return; } b.classList.add('on'); b.style.left = joy.x0 + 'px'; b.style.top = joy.y0 + 'px';
+  const k = Math.min(1, JR / (Math.hypot(joy.dx, joy.dy) || 1)); $('joyK').style.transform = `translate(${joy.dx * k}px,${joy.dy * k}px)`; }
+$('cv').addEventListener('pointerdown', e => { audioInit(); if (state !== 'run' || joy) return; joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 }; try { $('cv').setPointerCapture(e.pointerId); } catch (x) {} joyDraw(); recalcInput(); if (save.flights < 3) hints(false); });
+$('cv').addEventListener('pointermove', e => { if (!joy || e.pointerId !== joy.id) return; joy.dx = e.clientX - joy.x0; joy.dy = e.clientY - joy.y0; const l = Math.hypot(joy.dx, joy.dy); if (l > JR * 1.6) { joy.x0 += joy.dx * (1 - JR * 1.6 / l); joy.y0 += joy.dy * (1 - JR * 1.6 / l); joy.dx = e.clientX - joy.x0; joy.dy = e.clientY - joy.y0; } joyDraw(); recalcInput(); });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('cv').addEventListener(ev, e => { if (joy && e.pointerId === joy.id) { joy = null; joyDraw(); recalcInput(); } }));
+function joyReset() { joy = null; joyDraw(); recalcInput(); }
 const tb = $('turbo');
 tb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); inp.turbo = true; tb.classList.add('on'); try { tb.setPointerCapture(e.pointerId); } catch (x) {} if (navigator.vibrate) navigator.vibrate(15); });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => tb.addEventListener(ev, () => { inp.turbo = false; }));
-addEventListener('keydown', e => { if (e.repeat) return; if (e.key === 'ArrowUp' || e.key === 'w') kUp = 1; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 1; else if (e.key === ' ') { inp.turbo = true; e.preventDefault(); if (state === 'ready') release(); } else if (e.key === 'Enter' && (state === 'shop' || state === 'end')) go(); else if (e.key === 'Enter' && state === 'ready') release(); recalcPitch(); });
-addEventListener('keyup', e => { if (e.key === 'ArrowUp' || e.key === 'w') kUp = 0; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 0; else if (e.key === ' ') inp.turbo = false; recalcPitch(); });
+addEventListener('keydown', e => { if (e.repeat) return; if (e.key === 'ArrowUp' || e.key === 'w') kUp = 1; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 1; else if (e.key === 'ArrowLeft' || e.key === 'a') kL = 1; else if (e.key === 'ArrowRight' || e.key === 'd') kR = 1; else if (e.key === ' ') { inp.turbo = true; e.preventDefault(); if (state === 'ready') release(); } else if (e.key === 'Enter' && (state === 'shop' || state === 'end')) go(); else if (e.key === 'Enter' && state === 'ready') release(); recalcInput(); });
+addEventListener('keyup', e => { if (e.key === 'ArrowUp' || e.key === 'w') kUp = 0; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 0; else if (e.key === 'ArrowLeft' || e.key === 'a') kL = 0; else if (e.key === 'ArrowRight' || e.key === 'd') kR = 0; else if (e.key === ' ') inp.turbo = false; recalcInput(); });
 addEventListener('contextmenu', e => e.preventDefault());
 
 // ================= UI palīgi =================
@@ -555,6 +648,8 @@ function sfx(k) { if (!AC) return;
   else if (k === 'bump') { tone(120, 60, .15, 'triangle', .2); noise(.15, .2, 500); }
   else if (k === 'crash') { tone(90, 40, .5, 'triangle', .3); noise(.9, .5, 900); noise(.5, .3, 3000, .05); }
   else if (k === 'glass') for (let i = 0; i < 7; i++) tone(2400 + Math.random() * 2400, 1800 + Math.random() * 1200, .12, 'triangle', .05, i * .045 + Math.random() * .03);
+  else if (k === 'bird') { tone(1500, 900, .12, 'triangle', .07); tone(1400, 800, .14, 'triangle', .06, .14); noise(.12, .2, 2500); }
+  else if (k === 'sputter') for (let i = 0; i < 6; i++) { tone(90, 60, .08, 'sawtooth', .08, i * .13); noise(.08, .2, 600, i * .13); }
   else if (k === 'chute') { noise(.25, .3, 1200); tone(220, 180, .2, 'sine', .08, .05); } }
 
 // ================= Saglabāšana, nauda, medaļas =================
@@ -563,11 +658,12 @@ const LKEY = () => 'rpSave' + (UID ? ':' + UID : '');
 function persist() { try { localStorage.setItem(LKEY(), JSON.stringify(save)); } catch (e) {} if (UID) firebase.database().ref('rampa/saves/' + UID).set(save).catch(() => {}); }
 function walletAdd(m) { wallet = wallet + m; hudKey = ''; hud(); if (UID) TW.wallet.add(UID, m).then(v => { wallet = v; hudKey = ''; hud(); }).catch(() => {}); else try { localStorage.setItem('rpWalletDev', wallet); } catch (e) {} }
 function medals() { if (!UID || !window.TWA) return; const S = save.st, b = save.best;
-  TWA.sync(UID, { rpFlights: save.flights, rpPlane: b.plane || 0, rpLandP: S.landP, rpScoot: b.scoot || 0, rpLandS: S.landS, rpFlip: S.flips, rpCar: b.car || 0, rpRoof: S.roofs, rpCrash: S.crash, rpLevel: levelOf(save.xp).l })
+  TWA.sync(UID, { rpFlights: save.flights, rpPlane: b.plane || 0, rpLandP: S.landP, rpScoot: b.scoot || 0, rpLandS: S.landS, rpFlip: S.flips, rpCar: b.car || 0, rpRoof: S.roofs, rpCrash: S.crash, rpBird: S.birds || 0, rpLevel: levelOf(save.xp).l })
     .then(n => n.forEach((m, i) => setTimeout(() => toast(`🏅 Jauna medaļa!<br><span style="font-size:28px">${m.i}</span> ${TWA.title ? TWA.title(m) : m.t}`), 3600 * i + 2500))).catch(() => {}); }
 function fixSave() { const d = { plane: 0, scoot: 0, car: 0 }; save.best = Object.assign(d, save.best || {}); save.st = Object.assign({ landP: 0, landS: 0, landC: 0, crash: 0, flips: 0, roofs: 0 }, save.st || {});
   save.own = save.own || {}; if (!save.own.plane) save.own.plane = { wheel: 0, wing: 0, eng: 0, long: 0 }; if (!VEH[save.veh] || !save.own[save.veh]) save.veh = 'plane'; save.ramp = clamp(save.ramp || 0, 0, RAMPS.length - 1); }
-function start() { fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); hud(); requestAnimationFrame(frame);
+function start() { loadModels(start2); }
+function start2() { fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[save.ramp].h); resize(); openShop(); hud(); requestAnimationFrame(frame);
   if (!save.flights) setTimeout(() => banner('Uzlabo braucamrīku un spied 🚀 Aiziet!', 4), 600); }
 if (!ONLINE) { try { const s = JSON.parse(localStorage.getItem('rpSave')); if (s) save = Object.assign(save, s); wallet = +(localStorage.getItem('rpWalletDev') || 0); } catch (e) {} }
 if (ONLINE && window.firebase && window.TW_FIREBASE) {
@@ -579,7 +675,7 @@ if (ONLINE && window.firebase && window.TW_FIREBASE) {
     TW.wallet.watch(UID, v => { if (v != null) { wallet = v; hudKey = ''; hud(); } });
     if (window.TW) await TW.ready;
     // spēle vēl nav atvērta visiem – pagaidām tikai admini/moderatori var testēt
-    if (window.TW && !TW.isStaff(UID)) { fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[0].h); resize(); state = 'shop'; setVehicle(); requestAnimationFrame(frame);
+    if (window.TW && !TW.isStaff(UID)) { loadModels(() => { fixSave(); initStreaks(); buildCity(); buildRamp(RAMPS[0].h); resize(); state = 'shop'; setVehicle(); requestAnimationFrame(frame); });
       sheet(`<h2>🛫 Mega rampa</h2><p>Drīzumā! Spēle vēl top. 🔒</p><a class="main" style="display:block;text-align:center;text-decoration:none" href="../index.html">← Uz sākumlapu</a>`); return; }
     if (window.TW) TW.heartbeat(UID, () => ({ game: 'Mega rampa', where: state === 'run' || state === 'ready' ? `Lido ${VEH[save.veh].i} ${Math.round(sim ? sim.maxZ : 0)} m` : `Darbnīcā (līm. ${levelOf(save.xp).l})`, name: NAME, nick: NICK }));
     db.ref('kicks/' + UID).on('value', s => { const k = s.val(); if (k && k.until > TW.now()) { alert('Tevi uz laiku izmeta no spēles. Spēlē draudzīgi! 🙂'); location.href = '../index.html'; } }, () => {});

@@ -51,7 +51,7 @@
   tiers('skola', 'skLevel', 'sklv', [[5, '📏', 'Skolotājs', 'Teacher'], [10, '🧑‍🏫', 'Vecākais skolotājs', 'Senior teacher'], [20, '🏛️', 'Direktors', 'Principal']],
     n => `Sasniedzi ${n}. līmeni skolā`, n => `Reached level ${n} in the school game`);
 
-  // ---- Mega rampa (ctx: rpFlights, rpPlane, rpLandP, rpScoot, rpLandS, rpFlip, rpCar, rpRoof, rpCrash, rpLevel; attālumi metros) ----
+  // ---- Mega rampa (ctx: rpFlights, rpPlane, rpLandP, rpScoot, rpLandS, rpFlip, rpCar, rpRoof, rpCrash, rpBird, rpLevel; attālumi metros) ----
   tiers('rampa', 'rpFlights', 'rpf', [[1, '🛫', 'Pirmais lēciens', 'First jump'], [25, '🎢', '25 lēcieni', '25 jumps'], [100, '🏗️', '100 lēcieni', '100 jumps']],
     n => n === 1 ? 'Nobrauci no mega rampas' : `Nobrauci no rampas ${n} reizes`, n => `Went off the mega ramp ${n} time${n > 1 ? 's' : ''}`);
   tiers('rampa', 'rpPlane', 'rpp', [[100, '✈️', 'Lidmašīna 100 m', 'Plane 100 m'], [500, '🛩️', 'Lidmašīna 500 m', 'Plane 500 m'], [1000, '🌤️', 'Kilometrs gaisā', 'A kilometre in the air'], [2500, '🦅', 'Ērglis', 'Eagle']],
@@ -70,6 +70,8 @@
     n => n === 1 ? 'Atlēci no mājas jumta' : `Kopā ${n} lēcieni pa jumtiem`, n => `Bounced off ${n} roof${n > 1 ? 's' : ''}`);
   tiers('rampa', 'rpCrash', 'rpx', [[1, '🪂', 'Izpletnis', 'Parachute'], [10, '💥', 'Kaskadieris', 'Stunt double'], [50, '🎬', 'Kino kaskadieris', 'Movie stuntman']],
     n => n === 1 ? 'Pēc avārijas izlēci ar izpletni' : `${n} avārijas – katrā izlēci ar izpletni`, n => `${n} crashes – bailed out every time`);
+  tiers('rampa', 'rpBird', 'rpb', [[1, '🐦', 'Putnu draugs', 'Bird buddy'], [10, '🪶', 'Spalvu lietus', 'Feather shower']],
+    n => n === 1 ? 'Lidojumā satiki putnu (tas aizlidoja sveiks!)' : `Lidojumos satiki ${n} putnus`, n => `Bumped into ${n} bird${n > 1 ? 's' : ''} (they flew away fine!)`);
   tiers('rampa', 'rpLevel', 'rplv', [[5, '🎖️', 'Lēcējs', 'Jumper'], [10, '🏅', 'Mega lēcējs', 'Mega jumper'], [20, '👑', 'Rampas karalis', 'Ramp king']],
     n => `Sasniedzi ${n}. līmeni mega rampā`, n => `Reached level ${n} on the mega ramp`);
 
