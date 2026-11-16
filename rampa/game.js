@@ -729,7 +729,7 @@ const PAY = .65;
 function finish(kind) {
   if (state === 'end') return;
   const landed = kind === 'land', ej = ejected, dist = Math.max(0, Math.round(ej && PIL ? PIL.o.position.z : endInfo ? endInfo.dist : sim.maxZ)), vid = save.veh, old = save.best[vid] || 0, rec = dist > old && dist >= 5;
-  const parts = [['🎢 Par lēcienu', '€10'], ['📏 Attālums', '€' + Math.round(dist / 4)]]; let money = 10 + Math.round(dist / 4);
+  const parts = [['🎢 Par lēcienu', '€10'], ['📏 Attālums', '€' + Math.round(dist / 2)]]; let money = 10 + Math.round(dist / 2); // lidmašīna planē īsāk (krīt redzami) → vairāk par metru
   if (landed) { const b = Math.round(dist / 15) + 5; money += b; parts.push(['🛬 Nolaidies', '+€' + b]); }
   if (ej) { money += 3; parts.push(['🚀 Katapulta', '+€3']); }
   if (sim.flips) { money += sim.flips * 2; parts.push([`🤸 Salto ×${sim.flips}`, '+€' + sim.flips * 2]); }
