@@ -15,8 +15,8 @@
   function slot(i, n, zero, tiers, base, f, ic) { ic = ic || []; const lv = [Object.assign({ n: zero, i: ic[0] || i }, f(0))];
     for (let L = 1; L <= NL; L++) lv.push(Object.assign({ n: tiers[TIER(L)] + ' ' + ((L - 1) % 7 + 1), p: price(base, L), tier: TIER(L), i: ic[TIER(L) + 1] || i }, f(L)));
     return { i, n, lv }; }
-  const RAMPS = []; for (let L = 0; L <= NL; L++) { const h = Math.round(40 + 160 * Math.pow(L / NL, 1.1)); RAMPS.push({ h, n: h + ' m', p: L ? price(40, L) : 0 }); }
-  const LIP = 25, EXIT = 30 * D2R, SLOPE = 42 * D2R, R1 = 10, R2 = 48, FLAT = 3;
+  const RAMPS = []; for (let L = 0; L <= NL; L++) { const h = Math.round(55 + 165 * Math.pow(L / NL, 1.1)); RAMPS.push({ h, n: h + ' m', p: L ? price(40, L) : 0 }); }
+  const LIP = 18, EXIT = 30 * D2R, SLOPE = 42 * D2R, R1 = 10, R2 = 48, FLAT = 3;
   // rampas profils: plakans starts → izliekums → taisns slīpums → liels izliekums → atlēciena mala z=0, y=LIP, leņķis EXIT
   function rampProfile(H) {
     const drop = R1 * (1 - Math.cos(SLOPE)) + R2 * (1 - Math.cos(SLOPE)) - R2 * (1 - Math.cos(EXIT));
@@ -40,7 +40,7 @@
       slots: {
         body: slot('🥔', 'Šasija', 'Kartupelis', ['Kartona kaste', 'Saplākšņa', 'Alumīnija', 'Sacīkšu', 'Reaktīvā'], 20, L => L ? { cda: lin(.44, .15, L), m: lin(28, 55, L), crashV: lin(6.5, 11, L) } : { cda: .5, m: 20, crashV: 6 }, ['🥔', '📦', '🪵', '🔩', '🏎️', '🛩️']),
         wheel: slot('🛞', 'Riteņi', 'Nav', ['Ratiņu', 'Velo', 'Skrituļu', 'Sacīkšu', 'Gultņu'], 15, L => ({ mu: L ? expo(.06, .012, L) : .07, roll: .1 }), ['🚫', '🛒', '🚲', '🛼', '🏁', '⚙️']),
-        wing: slot('🪽', 'Spārni', 'Nav', ['Kartona', 'Saplākšņa', 'Pūķa', 'Deltaplāna', 'Planiera'], 25, L => L ? { S: lin(5.2, 10.4, L), ar: lin(5, 18, L), cd0: lin(.035, .014, L), m: lin(8, 19, L) } : { S: 0 }, ['🚫', '📦', '🪵', '🪁', '🦅', '🪽']),
+        wing: slot('🪽', 'Spārni', 'Nav', ['Kartona', 'Saplākšņa', 'Pūķa', 'Deltaplāna', 'Planiera'], 25, L => L ? { S: lin(7, 12.5, L), ar: lin(5, 18, L), cd0: lin(.035, .014, L), m: lin(8, 19, L) } : { S: 0 }, ['🚫', '📦', '🪵', '🪁', '🦅', '🪽']),
         eng: slot('🔥', 'Dzinējs', 'Nav', ['Ventilators', 'Propelleris', 'Raķete', 'Lielā raķete', 'Reaktīvais'], 70, L => L ? { T: lin(220, 1300, L), f: lin(3, 9, L), m: lin(4, 22, L) } : {}, ['🚫', '🌀', '✈️', '🚀', '🎆', '🔥']),
       } },
     scoot: { i: '🛴', n: 'Skūteris', p: 150, m: 70, cda: .3, crashV: 15, flips: true,
@@ -117,14 +117,14 @@
     airStep(inp) { const st = this.st, z0 = this.z, y0 = this.y, x0 = this.x;
       const gam = Math.atan2(this.vy, this.vz), sp0 = Math.hypot(this.vz, this.vy);
       // sānsvere un pagrieziens (koordinēts pagrieziens: psi' = g·tan(bank)/v)
-      if (st.S) { const tb = clamp(-(inp.roll || 0), -1, 1) * 38 * D2R; this.bank += clamp(tb - this.bank, -1.8 * DT, 1.8 * DT);
+      if (st.S) { const tb = clamp(-(inp.roll || 0), -1, 1) * 45 * D2R; this.bank += clamp(tb - this.bank, -2.6 * DT, 2.6 * DT);
         this.psi = clamp(this.psi + G * Math.tan(this.bank) / Math.max(8, sp0) * DT, -80 * D2R, 80 * D2R); }
       else { // bez spārniem – neliela stūrēšana gaisā (kā spēlēs)
         this.bank += (-(inp.roll || 0) * 14 * D2R - this.bank) * Math.min(1, DT * 5); this.psi = clamp(this.psi - (inp.roll || 0) * .45 * DT, -60 * D2R, 60 * D2R); }
       const cb = Math.cos(this.bank);
       if (st.S) { const per = .5 * RHO * sp0 * sp0 * st.S * st.aSlope + 1, mg = st.m * G;
         // augšup – līdz 3g (lēnā ātrumā tas nozīmē > 15° → cēlējspēks krīt); lejup – līdz −0,5g; palīgs – 1g lidojums (ar sānsveri vairāk), bet ne virs labākā planēšanas leņķa
-        const at = inp.pitch > 0 ? Math.min(20 * D2R, (1 + 2.6 * inp.pitch) * mg / per) : inp.pitch < 0 ? Math.max(-10 * D2R, (1 + 2 * inp.pitch) * mg * .6 / per) : inp.help !== false ? Math.min(st.aBest * 1.3, mg * clamp((Math.cos(gam) + 1.2 * (-Math.atan(1 / st.LD) - gam) * sp0 / G) / cb, 0, 2.5) / per) : wrap(this.phi - gam);
+        const at = inp.pitch > 0 ? Math.min(13.5 * D2R, (1 + 3 * inp.pitch) * mg / per) : inp.pitch < 0 ? Math.max(-10 * D2R, (1 + 2 * inp.pitch) * mg * .6 / per) : inp.help !== false ? Math.min(st.aBest * 1.3, mg * clamp((Math.cos(gam) + 1.2 * (-Math.atan(1 / st.LD) - gam) * sp0 / G) / cb, 0, 2.5) / per) : wrap(this.phi - gam);
         const want = wrap(gam + at - this.phi), rate = 2.6 * st.pitchK; this.w = clamp(want * 3, -rate, rate); this.phi += this.w * DT; }
       else { const acc = inp.pitch ? inp.pitch * (st.flips ? 9 : 6) : 0; this.w += (acc - this.w * (inp.pitch ? .4 : 1.6)) * DT;
         if (!inp.pitch && inp.help !== false && !st.flips) this.w += wrap(gam - this.phi) * 1.5 * DT; // lidmašīna bez spārniem lēnām nostājas pa vējam

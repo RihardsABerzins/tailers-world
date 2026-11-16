@@ -37,7 +37,7 @@ function genCity() {
       L.roof = R(); lots.push(L); obs.push(L);
     }
   }
-  const landing = { z0: 3, z1: 3 + 22 / Math.tan(28 * D2R), h: 22, landing: true };
+  const landing = { z0: 3, z1: 3 + 15 / Math.tan(28 * D2R), h: 15, landing: true };
   return { lots, parks, world: indexWorld({ obs, landing }) };
 }
 const CITY = genCity(), WORLD = CITY.world;
@@ -504,19 +504,18 @@ function go() {
 // svira: velc rokturi lejā līdz galam → barjera atveras un brauciens sākas
 function setLever(k) { leverK = k; $('knob').style.transform = `translateY(${k * 128}px)`; $('lever').style.setProperty('--k', k); }
 function release() { if (state !== 'ready') return; state = 'run'; setLever(1); $('lever').classList.remove('on'); sfx('clunk'); setTimeout(() => sfx('go'), 150);
-  $('turbo').classList.toggle('on', !!ST.T); hints(save.flights < 3); if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(30);
+  $('turbo').classList.toggle('on', !!ST.T); hints(true); if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(30);
  }
 { const kn = $('knob'); let drag = null;
   kn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); if (state !== 'ready') return; drag = { y: e.clientY, k: leverK }; try { kn.setPointerCapture(e.pointerId); } catch (x) {} sfx('tick'); });
   kn.addEventListener('pointermove', e => { if (!drag || state !== 'ready') return; const k = clamp(drag.k + (e.clientY - drag.y) / 128, 0, 1); setLever(k); if (k > .92) { drag = null; release(); } });
   const up = () => { if (!drag) return; drag = null; if (state === 'ready') { const k0 = leverK, t0 = performance.now(); const back = () => { const f = Math.min(1, (performance.now() - t0) / 200); if (state === 'ready') { setLever(k0 * (1 - f)); if (f < 1) requestAnimationFrame(back); } }; back(); } };
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => kn.addEventListener(ev, up)); }
-function hints(on) { const el = $('hintJ'); el.classList.toggle('on', on);
-  el.innerHTML = '🕹<small>⬆ ⬇ ⬅ ➡</small>'; }
+function hints(on) { const fl = !(ST && ST.S); $('padL').innerHTML = fl ? '↺' : '⬆'; $('padR').innerHTML = fl ? '↻' : '⬇'; $('padL').classList.toggle('on', on); $('padR').classList.toggle('on', on); }
 function handleEvents() {
   for (const e of sim.ev) { const k = e[0];
-    if (k === 'launch') { sfx('whoosh'); if (save.flights < 3) setTimeout(() => hints(false), 6000); }
-    else if (k === 'stall') { if (inp.pitch > 0) { warn('⚠️ Par stāvu!'); sfx('stall'); } }
+    if (k === 'launch') sfx('whoosh');
+
     else if (k === 'flip') { toast(`🤸 Salto ×${e[1]}!`); sfx('coin'); }
     else if (k === 'bounce') { puff(VEHM.g.position, 'dust', 3); camShake = .3; sfx('bump'); if (e[2]) toast('🏠 Lēciens pa jumtu!'); }
     else if (k === 'touch') { puff(VEHM.g.position, 'dust', 4); sfx('bump'); }
@@ -537,7 +536,7 @@ function startCrash(kind, v) {
 let ejected = false, runId = 0;
 function eject() { if (state !== 'run' || ejected || !sim || sim.mode !== 'air') return; ejected = true; joyReset(); inp.turbo = false; $('turbo').classList.remove('on'); $('eject').classList.remove('on'); hints(false);
   const hx = Math.sin(sim.psi), hz = Math.cos(sim.psi), pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); pil.rotation.set(-1.2, sim.psi, 0);
-  PIL = { o: pil, v: new T3.Vector3(hx * (sim.vz + 12), sim.vy + 5, hz * (sim.vz + 12)), t: 0, landed: false, eject: true };
+  PIL = { o: pil, v: new T3.Vector3(hx * (sim.vz + 5), Math.max(sim.vy, 0) + 10, hz * (sim.vz + 5)), t: 0, landed: false, eject: true };
   puff(pil.position, 'white', 3); sparks(pil.position.clone(), 14, sim.vz); sfx('eject'); camShake = .5; if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(40);  }
 function updatePilot(dt) { if (!PIL || PIL.landed) return; const P = PIL, o = P.o; P.t += dt;
   // izšautais pilots lido kā lode un krīt; pieskaroties zemei/jumtam – lidojums beidzas
@@ -659,16 +658,16 @@ function frame(now) {
 }
 
 // ================= Vadība =================
-// kursorsvira: parādās tur, kur pieskaras; velc ⬆⬇ – deguns, ⬅➡ – stūrē (lidmašīna ar spārniem). Tastatūra – bultiņas.
-const JR = 62; let joy = null, kUp = 0, kDn = 0, kL = 0, kR = 0;
-function recalcInput() { let jp = 0, jr = 0; if (joy) { const dz = v => Math.abs(v) < .14 ? 0 : clamp((v - Math.sign(v) * .14) / .86, -1, 1); jp = dz(-joy.dy / JR); jr = dz(joy.dx / JR); }
-  inp.pitch = clamp(jp + kUp - kDn, -1, 1); inp.roll = clamp(jr + kR - kL, -1, 1); }
-function joyDraw() { const b = $('joy'); if (!joy) { b.classList.remove('on'); return; } b.classList.add('on'); b.style.left = joy.x0 + 'px'; b.style.top = joy.y0 + 'px';
-  const k = Math.min(1, JR / (Math.hypot(joy.dx, joy.dy) || 1)); $('joyK').style.transform = `translate(${joy.dx * k}px,${joy.dy * k}px)`; }
-$('cv').addEventListener('pointerdown', e => { audioInit(); if (state !== 'run' || joy) return; joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 }; try { $('cv').setPointerCapture(e.pointerId); } catch (x) {} joyDraw(); recalcInput(); if (save.flights < 3) hints(false); });
-$('cv').addEventListener('pointermove', e => { if (!joy || e.pointerId !== joy.id) return; joy.dx = e.clientX - joy.x0; joy.dy = e.clientY - joy.y0; const l = Math.hypot(joy.dx, joy.dy); if (l > JR * 1.6) { joy.x0 += joy.dx * (1 - JR * 1.6 / l); joy.y0 += joy.dy * (1 - JR * 1.6 / l); joy.dx = e.clientX - joy.x0; joy.dy = e.clientY - joy.y0; } joyDraw(); recalcInput(); });
-['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('cv').addEventListener(ev, e => { if (joy && e.pointerId === joy.id) { joy = null; joyDraw(); recalcInput(); } }));
-function joyReset() { joy = null; joyDraw(); recalcInput(); }
+// vadība: ekrāns sadalīts uz pusēm – turi kreisajā pusē = deguns augšup, labajā = lejup (bez spārniem – griešanās);
+// turot pavelc pirkstu ⬅➡ – stūrē. Tastatūra – bultiņas.
+const TOUCH = new Map(); let kUp = 0, kDn = 0, kL = 0, kR = 0;
+function recalcInput() { let tp = 0, tr = 0, last = null; TOUCH.forEach(t => { tp += t.side; last = t; }); if (last) tr = clamp((last.x - last.x0) / 70, -1, 1);
+  inp.pitch = clamp(tp + kUp - kDn, -1, 1); inp.roll = clamp(tr + kR - kL, -1, 1); padDraw(); }
+function padDraw() { let l = 0, r = 0; TOUCH.forEach(t => t.side > 0 ? l = 1 : r = 1); $('padL').classList.toggle('hit', !!l); $('padR').classList.toggle('hit', !!r); }
+$('cv').addEventListener('pointerdown', e => { audioInit(); if (state !== 'run') return; TOUCH.set(e.pointerId, { side: e.clientX < W / 2 ? 1 : -1, x0: e.clientX, x: e.clientX }); try { $('cv').setPointerCapture(e.pointerId); } catch (x) {} recalcInput(); });
+$('cv').addEventListener('pointermove', e => { const t = TOUCH.get(e.pointerId); if (!t) return; t.x = e.clientX; recalcInput(); });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('cv').addEventListener(ev, e => { if (TOUCH.delete(e.pointerId)) recalcInput(); }));
+function joyReset() { TOUCH.clear(); recalcInput(); }
 const tb = $('turbo');
 tb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); inp.turbo = true; tb.classList.add('on'); try { tb.setPointerCapture(e.pointerId); } catch (x) {} if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(15); });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => tb.addEventListener(ev, () => { inp.turbo = false; }));
