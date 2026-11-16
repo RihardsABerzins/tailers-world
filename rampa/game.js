@@ -47,7 +47,7 @@ const renderer = new T3.WebGLRenderer({ canvas: $('cv'), antialias: (devicePixel
 renderer.setPixelRatio(Math.min(matchMedia('(pointer:coarse)').matches ? 1.5 : 2, devicePixelRatio || 1)); renderer.outputEncoding = T3.sRGBEncoding;
 const scene = new T3.Scene(); scene.background = new T3.Color(0x9fd3ff); scene.fog = new T3.Fog(0xbfe3ff, 240, 1250);
 const camera = new T3.PerspectiveCamera(62, 1, .3, 1350);
-scene.add(new T3.HemisphereLight(0xeaf6ff, 0x6a7d5a, .95)); const sun = new T3.DirectionalLight(0xfff4e0, .75); sun.position.set(-.6, 1, -.4); scene.add(sun);
+const hemi = new T3.HemisphereLight(0xeaf6ff, 0x6a7d5a, .95); scene.add(hemi); const sun = new T3.DirectionalLight(0xfff4e0, .75); sun.position.set(-.6, 1, -.4); scene.add(sun);
 const tex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new T3.CanvasTexture(c); if (rep) { t.wrapS = t.wrapT = T3.RepeatWrapping; } t.anisotropy = 4; return t; };
 const MATS = {}; const mat = (c, o) => { const k = c + JSON.stringify(o || {}); return MATS[k] || (MATS[k] = new T3.MeshLambertMaterial(Object.assign({ color: c }, o || {}))); };
 const m4 = new T3.Matrix4(), q0 = new T3.Quaternion(), v3 = new T3.Vector3(), col = new T3.Color();
@@ -65,10 +65,12 @@ function buildCity0() {
   const far = new T3.Mesh(new T3.PlaneGeometry(9000, 12000), mat(0x8fbf6a)); far.rotation.x = -Math.PI / 2; far.position.set(0, -.3, 4000); scene.add(far);
   // mājas – logi zīmēti šeiderī pēc pasaules koordinātām (nav jāstiepj tekstūra)
   const bm = new T3.MeshLambertMaterial({ color: 0xffffff });
-  bm.onBeforeCompile = s => { s.vertexShader = 'varying vec3 vWp; varying float vNy;\n' + s.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvWp = (modelMatrix * instanceMatrix * vec4(position,1.)).xyz; vNy = normal.y;');
-    s.fragmentShader = 'varying vec3 vWp; varying float vNy;\n' + s.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+  bm.onBeforeCompile = s => { s.uniforms.uNight = UNIGHT; s.vertexShader = 'varying vec3 vWp; varying float vNy;\n' + s.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvWp = (modelMatrix * instanceMatrix * vec4(position,1.)).xyz; vNy = normal.y;');
+    s.fragmentShader = 'uniform float uNight; varying vec3 vWp; varying float vNy;\n' + s.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += winLit * uNight * vec3(1., .78, .42);').replace('#include <color_fragment>', `#include <color_fragment>
+      float winLit = 0.;
       if (vNy < .5 && vWp.y > 1.2) { vec2 c = vec2(fract((vWp.x + vWp.z) / 3.6), fract(vWp.y / 3.3)); float w = step(.2, c.x) * step(c.x, .8) * step(.28, c.y) * step(c.y, .86);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.42, .55, .68) + .12 * fract(sin(dot(floor(vWp.xy / 3.4), vec2(12.9, 78.2))) * 437.5), w * .9); }
+        float rn = fract(sin(dot(floor(vec2(vWp.x + vWp.z, vWp.y) / vec2(3.6, 3.3)), vec2(12.9, 78.2))) * 437.5);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.42, .55, .68) + .12 * rn, w * .9); winLit = w * step(.5, rn) * (.6 + .4 * rn); }
       if (vNy > .5) diffuseColor.rgb *= .78; else diffuseColor.rgb *= mix(.62, 1., smoothstep(0., 7., vWp.y));`); };
   const box = new T3.BoxGeometry(1, 1, 1).translate(0, .5, .5);
   const L = CITY.lots, bI = new T3.InstancedMesh(box, bm, L.length);
@@ -90,14 +92,42 @@ function buildCity0() {
   const wedge = wedgeGeo(), wl = L.filter(b => b.w), wI = new T3.InstancedMesh(wedge, new T3.MeshLambertMaterial({ map: rampTex() }), wl.length + 1);
   wl.forEach((b, i) => wI.setMatrixAt(i, m4.compose(v3.set((b.x0 + b.x1) / 2, b.h - b.w, b.z0), q0, new T3.Vector3(b.x1 - b.x0, b.w, b.z1 - b.z0))));
   const LR = WORLD.landing; wI.setMatrixAt(wl.length, m4.compose(v3.set(0, 0, LR.z0), q0, new T3.Vector3(22, LR.h, LR.z1 - LR.z0))); scene.add(wI);
-  // parki un koki
-  const P = CITY.parks, pI = new T3.InstancedMesh(new T3.BoxGeometry(1, .3, 1), mat(0x7cbf5a), P.length); const trees = [], R = mulberry(77);
-  P.forEach((p, i) => { pI.setMatrixAt(i, m4.compose(v3.set((p.x0 + p.x1) / 2, .15, (p.z0 + p.z1) / 2), q0, new T3.Vector3(p.x1 - p.x0, 1, p.z1 - p.z0)));
-    for (let n = 0; n < 9; n++) trees.push([p.x0 + 3 + R() * (p.x1 - p.x0 - 6), p.z0 + 3 + R() * (p.z1 - p.z0 - 6), 2.5 + R() * 2.5, R()]); });
+  // parki: zāliens, dzīvžogs, celiņi krustā, soliņi, dīķi; koki – Kenney CC0 modeļi (ja ielādēti)
+  const P = CITY.parks, pI = new T3.InstancedMesh(new T3.BoxGeometry(1, .3, 1), mat(0x7cbf5a), P.length); const trees = [], R = mulberry(77), paths = [], hedges = [], benches = [], ponds = [];
+  P.forEach((p, i) => { const cx = (p.x0 + p.x1) / 2, cz = (p.z0 + p.z1) / 2, w = p.x1 - p.x0, d = p.z1 - p.z0;
+    pI.setMatrixAt(i, m4.compose(v3.set(cx, .15, cz), q0, new T3.Vector3(w, 1, d)));
+    paths.push([cx, cz, 3, d - 2], [cx, cz, w - 2, 3]);
+    hedges.push([cx, p.z0 + .6, w, 1.2], [cx, p.z1 - .6, w, 1.2], [p.x0 + .6, cz, 1.2, d], [p.x1 - .6, cz, 1.2, d]);
+    benches.push([cx + 3, cz + 6, 0], [cx - 3, cz - 6, Math.PI], [cx + 6, cz - 3, Math.PI / 2]);
+    const pond = R() < .35; if (pond) ponds.push([cx + w * .22, cz + d * .22, 5 + R() * 3]);
+    for (let n = 0; n < 10; n++) { const x = p.x0 + 4 + R() * (w - 8), z = p.z0 + 4 + R() * (d - 8); if (Math.abs(x - cx) < 3 || Math.abs(z - cz) < 3) continue; if (pond && Math.hypot(x - cx - w * .22, z - cz - d * .22) < 9) continue; trees.push([x, z, 5 + R() * 4, R()]); } });
   scene.add(pI);
-  const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 0), mat(0xffffff), trees.length);
-  trees.forEach(([x, z, r, t], i) => { tr.setMatrixAt(i, m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1))); cr.setMatrixAt(i, m4.compose(v3.set(x, 3 + r * .8, z), q0, new T3.Vector3(r, r * 1.2, r))); cr.setColorAt(i, col.set(t < .5 ? 0x4a9a3c : 0x5d8f2f)); });
-  scene.add(tr); scene.add(cr);
+  const flatI = (list, geo, c, y) => { const m = new T3.InstancedMesh(geo, mat(c), list.length); list.forEach(([x, z, sx, sz], i) => m.setMatrixAt(i, m4.compose(v3.set(x, y, z), q0, new T3.Vector3(sx, 1, sz)))); scene.add(m); };
+  flatI(paths, new T3.BoxGeometry(1, .06, 1), 0xe6d8b8, .32); flatI(hedges, new T3.BoxGeometry(1, 1.1, 1).translate(0, .55, 0), 0x3f8a3a, .3);
+  { const pm = new T3.InstancedMesh(new T3.CylinderGeometry(1, 1, .1, 18), mat(0x4aa3df), ponds.length); ponds.forEach(([x, z, r], i) => pm.setMatrixAt(i, m4.compose(v3.set(x, .34, z), q0, new T3.Vector3(r, 1, r)))); scene.add(pm);
+    const bg = new T3.BoxGeometry(1.8, .12, .5).translate(0, .5, 0), bI2 = new T3.InstancedMesh(bg, mat(0x9b6b3d), benches.length), qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0);
+    benches.forEach(([x, z, r], i) => bI2.setMatrixAt(i, m4.compose(v3.set(x, .3, z), qq.setFromAxisAngle(up, r), new T3.Vector3(1, 1, 1)))); scene.add(bI2); }
+  // ielu koki gar ietvēm (dažos kvartālos)
+  const RT = mulberry(41); CITY.lots.forEach(b => { if (RT() < .12 && Math.abs(b.x0) < 400) trees.push([b.x0 - 1.2, b.z0 + RT() * (b.z1 - b.z0), 4 + RT() * 2, RT()]); });
+  if (TREES.length) { const qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0), groups = TREES.map(() => []); trees.forEach((t, i) => groups[Math.floor(t[3] * TREES.length) % TREES.length].push(t));
+    TREES.forEach((parts, k) => parts.forEach(pt => { const im = new T3.InstancedMesh(pt.geo, pt.mat, groups[k].length); groups[k].forEach(([x, z, h], i) => im.setMatrixAt(i, m4.compose(v3.set(x, .3, z), qq.setFromAxisAngle(up, (x * 7 + z * 13) % 6.28), new T3.Vector3(h, h, h)))); scene.add(im); })); }
+  else { const tr = new T3.InstancedMesh(new T3.CylinderGeometry(.3, .4, 3, 5).translate(0, 1.5, 0), mat(0x6b4a2e), trees.length), cr = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 0), mat(0xffffff), trees.length);
+    trees.forEach(([x, z, h, t], i) => { const r = h * .45; tr.setMatrixAt(i, m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1))); cr.setMatrixAt(i, m4.compose(v3.set(x, 3 + r * .8, z), q0, new T3.Vector3(r, r * 1.2, r))); cr.setColorAt(i, col.set(t < .5 ? 0x4a9a3c : 0x5d8f2f)); });
+    scene.add(tr); scene.add(cr); }
+  // cilvēki: ietvēs, parkos un skatītāji pie nolaišanās rampas (vienkārši low-poly – instancēti, 4 krāsu slāņi)
+  { const people = [], RP2 = mulberry(99);
+    CITY.lots.forEach(b => { if (Math.abs(b.x0) < 300 && RP2() < .35) people.push([b.x0 - .8, b.z0 + RP2() * (b.z1 - b.z0), RP2() * 6.28]); });
+    P.forEach(p => { if (Math.abs(p.x0) < 400) for (let n = 0; n < 4; n++) people.push([(p.x0 + p.x1) / 2 + (RP2() - .5) * 2, p.z0 + 4 + RP2() * (p.z1 - p.z0 - 8), RP2() * 6.28]); });
+    for (let n = 0; n < 46; n++) { const sx = n % 2 ? 1 : -1; people.push([sx * (15 + RP2() * 9), -10 + RP2() * 70, sx > 0 ? -Math.PI / 2 : Math.PI / 2]); }
+    const SK = [0xf2c9a0, 0xe0ac80, 0xc68642, 0x8d5524, 0xffdbac], SH = [0xe53935, 0x1e88e5, 0x43a047, 0xfdd835, 0xec407a, 0xfb8c00, 0x8e24aa, 0x26c6da, 0xffffff], PA = [0x2b3a67, 0x37474f, 0x5d4037, 0x212121, 0x1565c0];
+    const Cy = (r, h, y, x) => new T3.CylinderGeometry(r, r * .9, h, 6).translate(x || 0, y, 0);
+    const layers = [[mergeGeos([new T3.SphereGeometry(.17, 7, 5).translate(0, 1.5, 0)]), SK], [mergeGeos([Cy(.2, .55, 1.08), Cy(.06, .5, 1.05, -.27), Cy(.06, .5, 1.05, .27)]), SH], [mergeGeos([Cy(.08, .78, .4, -.1), Cy(.08, .78, .4, .1)]), PA]];
+    const qq = new T3.Quaternion(), up = new T3.Vector3(0, 1, 0);
+    layers.forEach(([g, pal], L) => { const im = new T3.InstancedMesh(g, mat(0xffffff), people.length); people.forEach(([x, z, r], i) => { const s = .9 + (i * 37 % 10) / 40; im.setMatrixAt(i, m4.compose(v3.set(x, 0, z), qq.setFromAxisAngle(up, r), new T3.Vector3(s, s, s))); im.setColorAt(i, col.set(pal[(i * (7 + L * 3)) % pal.length])); }); scene.add(im); }); }
+  // ielu lampas (naktī spīd)
+  { const lamps = []; for (let z = -400; z < CITY_Z; z += 35) for (let j = -4; j <= 4; j++) lamps.push([j * BLK + BLK / 2 - 5.5, z]);
+    const pole = new T3.InstancedMesh(new T3.CylinderGeometry(.09, .12, 6, 5).translate(0, 3, 0), mat(0x5a6170), lamps.length), head = new T3.InstancedMesh(new T3.SphereGeometry(.38, 8, 6).translate(0, 6.1, 0), LAMPM, lamps.length);
+    lamps.forEach(([x, z], i) => { m4.compose(v3.set(x, 0, z), q0, new T3.Vector3(1, 1, 1)); pole.setMatrixAt(i, m4); head.setMatrixAt(i, m4); }); scene.add(pole); scene.add(head); }
   // mašīnas ielās
   const RC = mulberry(5), cars = []; for (let i = 0; i < 220; i++) { const along = RC() < .5, lane = RC() < .5 ? -3.5 : 3.5; let x, z, ry;
     if (along) { x = (Math.floor(RC() * 8) - 4) * BLK + BLK / 2 + lane; z = -300 + RC() * 2600; ry = 0; } else { x = (RC() - .5) * 560; z = Math.floor(RC() * 36) * BLK + lane; ry = Math.PI / 2; }
@@ -110,7 +140,7 @@ function buildCity0() {
     [[-.86, -1.3], [.86, -1.3], [-.86, 1.3], [.86, 1.3]].forEach(([wx, wz], k) => { wv.set(wx, 0, wz).applyQuaternion(qy); cw.setMatrixAt(i * 4 + k, m4.compose(v3.set(x + wv.x, 0, z + wv.z), qy, new T3.Vector3(1, 1, 1))); }); });
   scene.add(cb); scene.add(cc); scene.add(cw); if (cd) scene.add(cd);
   // mākoņi
-  const cl = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 1), new T3.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9aa7b5 }), 70), RM = mulberry(9);
+  const cl = new T3.InstancedMesh(new T3.IcosahedronGeometry(1, 1), CLOUDM, 70), RM = mulberry(9);
   for (let i = 0; i < 70; i++) { const s = 18 + RM() * 30; cl.setMatrixAt(i, m4.compose(v3.set((RM() - .5) * 1600, 160 + RM() * 160, -300 + RM() * (CITY_Z + 600)), q0, new T3.Vector3(s * 2, s * .55, s * 1.4))); }
   scene.add(cl);
   // attāluma zīmes ik pēc 100 m
@@ -118,6 +148,22 @@ function buildCity0() {
     const pole = new T3.Mesh(POLE, mat(0x8a8f99)); pole.position.set(-35, 6.5, z); scene.add(pole); }
 }
 const POLE = new T3.CylinderGeometry(.15, .15, 13, 5);
+// ---- diena un nakts (kā citās spēlēs: 6 min diennakts, sākas 10:00; naktī 21–6) ----
+const DAYLEN = 360; let DAYT = 0; const DAY0 = 10 / 24 * DAYLEN;
+const hourNow = () => ((DAYT + DAY0) % DAYLEN) / DAYLEN * 24, isNight = () => { const h = hourNow(); return h >= 21 || h < 6; };
+function dayLight() { const h = hourNow(); if (h >= 7 && h < 19) return 1; if (h >= 21 || h < 5) return 0; return h < 12 ? (h - 5) / 2 : 1 - (h - 19) / 2; }
+const UNIGHT = { value: 0 }, CLOUDM = new T3.MeshLambertMaterial({ color: 0xffffff, emissive: 0x9aa7b5 }), SKY = [new T3.Color(0x0b1430), new T3.Color(0x9fd3ff), new T3.Color(0xff9a6a)], FOGC = [new T3.Color(0x1a2440), new T3.Color(0xbfe3ff)];
+const STARS = (() => { const n = 700, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, t = Math.random() * 6.28, r = Math.sqrt(1 - u * u); a[i * 3] = r * Math.cos(t) * 1200; a[i * 3 + 1] = Math.abs(u) * 1200 + 60; a[i * 3 + 2] = r * Math.sin(t) * 1200; }
+  const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.BufferAttribute(a, 3)); const s = new T3.Points(g, new T3.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false })); s.frustumCulled = false; scene.add(s); return s; })();
+let dayKey = -1;
+function applyDay() { const d = dayLight(), k = Math.round(d * 60) + (isNight() ? 1000 : 0); if (k === dayKey) return; dayKey = k;
+  const dusk = d > 0 && d < 1 ? 1 - Math.abs(d - .5) * 2 : 0;
+  scene.background.copy(SKY[0]).lerp(SKY[1], d).lerp(SKY[2], dusk * .5); scene.fog.color.copy(FOGC[0]).lerp(FOGC[1], d).lerp(SKY[2], dusk * .35);
+  hemi.intensity = .3 + .65 * d; sun.intensity = .1 + .65 * d; sun.color.setHex(dusk > .3 ? 0xffb27a : 0xfff4e0);
+  UNIGHT.value = 1 - d; CLOUDM.emissive.setHex(d > .5 ? 0x9aa7b5 : 0x2a3348); LAMPM.color.setHex(d < .5 ? 0xffd27a : 0xd8dde6); STARS.material.opacity = Math.max(0, 1 - d * 2.5); hudKey = ''; }
+const TREES = [], LAMPM = new T3.MeshBasicMaterial({ color: 0xd8dde6 });
+function mergeGeos(list) { const pos = [], nor = []; list.forEach(g => { g = g.index ? g.toNonIndexed() : g; pos.push(...g.attributes.position.array); nor.push(...g.attributes.normal.array); });
+  const g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(nor, 3)); return g; }
 // pilsētas instancētos objektus sadala 350 m gabalos pa z un zīmē tikai tuvos gabalus (telefonā mazāk trijstūru → neraustās)
 const CHUNKS = [], CH = 350;
 function chunkCity(list) { for (const m of list) { if (!m.isInstancedMesh) continue; const groups = new Map(), mt = new T3.Matrix4(), c = new T3.Color();
@@ -186,11 +232,18 @@ const LOOKC = () => ({ skin: LOOK.skin || '#f2c9a0', body: LOOK.hood && LOOK.hoo
 // ---- Blendera modeļi (models.glb; avots models_src.blend): katrs objekts – atsevišķa daļa, materiālu nosaukumi nosaka krāsu ----
 const MODELS = {};
 function loadModels(cb) {
-  const go2 = () => { try { new T3.GLTFLoader().load('models.glb?v=1', g => { g.scene.children.forEach(o => { MODELS[o.name] = o; }); cb(); }, undefined, () => cb()); } catch (e) { cb(); } };
+  const go2 = () => { try { const ld = new T3.GLTFLoader(), get = u => new Promise(r => ld.load(u, g => r(g.scene), undefined, () => r(null)));
+    (async () => { const g = await get('models.glb?v=1'); if (g) g.children.forEach(o => { MODELS[o.name] = o; });
+      for (const n of ['tree_oak', 'tree_default', 'tree_fat', 'tree_pineRoundA']) { const sc = await get('../atra-palidziba/models/nature/' + n + '.glb'); if (sc) TREES.push(treeParts(sc)); }
+      cb(); })(); } catch (e) { cb(); } };
   if (T3.GLTFLoader) return go2();
   const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'; s.onload = go2; s.onerror = () => cb(); document.head.appendChild(s);
 }
 const GLASS = {};
+// Kenney koks → daļas ar augstumu 1 (mērogo instancēs)
+function treeParts(sc) { sc.updateMatrixWorld(true); const box = new T3.Box3().setFromObject(sc), sz = box.getSize(new T3.Vector3()), c = box.getCenter(new T3.Vector3()), out = [];
+  sc.traverse(o => { if (!o.isMesh) return; const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); g.translate(-c.x, -box.min.y, -c.z); g.scale(1 / sz.y, 1 / sz.y, 1 / sz.y); out.push({ geo: g, mat: mat(o.material.color.getHex()) }); });
+  return out; }
 // klons ar Lambert materiāliem; tint – { materiāla_nosaukums: krāsa }
 function mdl(name, tint) { const src = MODELS[name]; if (!src) return null; const o = src.clone(true);
   o.traverse(m => { if (!m.isMesh) return; const mm = m.material, nm = mm.name, c = tint && tint[nm] != null ? tint[nm] : mm.color.getHex();
@@ -226,28 +279,28 @@ function buildVehicle2(vid, sel, st) {
   if (vid === 'plane') {
     const hb = sel.wheel ? .84 : .53, pc = 0xe8483e;
     V.body = put(mdl('Body', { paint: pc }), 0, hb, 0, 'body'); put(mdl('Nose'), 0, hb, 0); put(mdl('Canopy'), 0, hb, 0); put(mdl('Fin', { paint: pc }), 0, hb, 0); put(mdl('HStab'), 0, hb, 0);
-    if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing || 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
-    if (sel.wheel) { const wr = .2 + sel.wheel * .025; [-.55, .55].forEach(x => { const w = put(mdl('Wheel'), x, wr, .45); w.scale.setScalar(wr); add(Cyl(.035, .035, hb - wr - .2, 6), mat(0x9aa0aa), x * .8, wr + (hb - wr - .2) / 2, .45); });
+    if (st.S) { const b = st.span, c = st.chord; ['WingL', 'WingR'].forEach(n => { const w = put(mdl(n, { wing: WING_C[sel.wing ? VEH.plane.slots.wing.lv[sel.wing].tier + 1 : 0] }), 0, hb, 0, 'wing'); w.scale.set(b / 2, Math.min(1.4, c * 1.2), c); }); }
+    if (sel.wheel) { const wr = .2 + sel.wheel * .004; [-.55, .55].forEach(x => { const w = put(mdl('Wheel'), x, wr, .45); w.scale.setScalar(wr); add(Cyl(.035, .035, hb - wr - .2, 6), mat(0x9aa0aa), x * .8, wr + (hb - wr - .2) / 2, .45); });
       const tw = put(mdl('Wheel'), 0, .1, -1.55); tw.scale.setScalar(.1); }
-    const e = sel.eng || 0;
+    const e = sel.eng ? [1, 2, 3, 3, 4][VEH.plane.slots.eng.lv[sel.eng].tier] : 0;
     if (e === 1 || e === 2) { const pr = put(mdl('Prop'), 0, hb, 0); pr.scale.setScalar(e === 1 ? .42 : .95); V.spin = pr; if (e === 1) add(new T3.TorusGeometry(.44, .035, 8, 24), mat(0xdddddd), 0, hb, 2.36); }
     if (e === 3) { add(Cyl(.2, .2, 1.2).rotateX(Math.PI / 2), mat(0xd23c2c), 0, hb - .5, -.3); add(new T3.ConeGeometry(.2, .35, 16).rotateX(Math.PI / 2), mat(0xf5f5f5), 0, hb - .5, .47); V.flames.push([0, hb - .5, -.95, .5]); }
     if (e === 4) { add(Cyl(.3, .22, 1.7).rotateX(Math.PI / 2), mat(0x8c939e), 0, hb + .62, -.6); add(new T3.TorusGeometry(.3, .05, 8, 20), mat(0x555a63), 0, hb + .62, .25); V.flames.push([0, hb + .62, -1.5, .7]); }
     const p = makePerson('sit'); p.scale.setScalar(.72); p.position.set(0, hb - .3, .32); g.add(p); V.pilot = p;
     V.len = 4.7; V.flow = { ax: .55, ay: .55, az: 2.3, cy: hb + .05, cz: 0, blunt: st.S ? .3 : .45, drag: .5, wing: st.S ? { b: st.span, c: st.chord, y: hb, z: .25 } : null };
   } else if (vid === 'scoot') {
-    const wr = .11 + (sel.wheel || 0) * .012;
+    const wr = .11 + (sel.wheel || 0) * .0018;
     V.body = put(mdl('SDeck'), 0, wr - .11, 0, 'body'); put(mdl('SStem'), 0, wr - .11, 0);
     [-.42, .42].forEach(z => { const w = put(mdl('Wheel'), 0, wr, z); w.scale.setScalar(wr); });
     const aero = sel.aero || 0, p = makePerson(aero ? 'crouch' : 'stand'); p.position.set(0, wr + .08, -.06); g.add(p); V.pilot = p;
-    if (sel.eng) { [-.12, .12].forEach(x => add(Cyl(.09, .09, .5), mat(0xd23c2c), x, wr + 1.05 - aero * .08, -.3)); V.flames.push([-.12, wr + .75, -.3, .35, true], [.12, wr + .75, -.3, .35, true]); }
+    if (sel.eng) { [-.12, .12].forEach(x => add(Cyl(.09, .09, .5), mat(0xd23c2c), x, wr + 1.05 - (aero ? .08 : 0), -.3)); V.flames.push([-.12, wr + .75, -.3, .35, true], [.12, wr + .75, -.3, .35, true]); }
     V.len = 1.4; V.flow = { ax: .35, ay: .8, az: .45, cy: .95, cz: 0, blunt: clamp((st.cda - .1) / .22, 0, 1), drag: clamp(st.cda / .3, .4, 1), wing: null };
   } else {
-    const wr = .36 + (sel.wheel || 0) * .07, lift = wr - .36, cc = 0x1e88e5;
+    const wr = .36 + (sel.wheel || 0) * .008, lift = wr - .36, cc = 0x1e88e5;
     V.body = put(mdl('CBody', { paint: cc }), 0, lift, 0, 'body'); put(mdl('CCabin', { paint: cc }), 0, lift, 0);
     [-1, 1].forEach(sx => [-1.3, 1.3].forEach(z => { const w = put(mdl('Wheel'), sx * .84, wr, z); w.scale.setScalar(wr); }));
     if (sel.aero >= 1) { add(new T3.BoxGeometry(1.75, .06, .38), mat(0x111111), 0, 1.45 + lift, -1.85); [-.6, .6].forEach(x => add(new T3.BoxGeometry(.06, .3, .1), mat(0x111111), x, 1.28 + lift, -1.85)); }
-    if (sel.aero >= 2) add(new T3.BoxGeometry(1.86, .12, 4.0), mat(0x111111), 0, .3 + lift, 0);
+    if (sel.aero >= 15) add(new T3.BoxGeometry(1.86, .12, 4.0), mat(0x111111), 0, .3 + lift, 0);
     if (sel.eng) { [-.5, .5].forEach(x => { add(Cyl(.12, .12, .5).rotateX(Math.PI / 2), mat(0x8c939e), x, .45 + lift, -2.15); V.flames.push([x, .45 + lift, -2.5, .5]); }); }
     const p = makePerson('sit'); p.scale.setScalar(.85); p.position.set(-.38, .22 + lift, .15); g.add(p); V.pilot = p;
     V.len = 4.4; V.flow = { ax: .95, ay: .7, az: 2.1, cy: .85 + lift, cz: 0, blunt: clamp((st.cda - .3) / .5, 0, 1), drag: clamp(st.cda / .8, .4, 1), wing: null };
@@ -260,7 +313,7 @@ function buildVehicle2(vid, sel, st) {
 // Līnijas aprēķina katrā kadrā no vienkārša plūsmas lauka ap braucamrīku (elipsoīds + spārns + virpuļi + turbulenta vaga).
 // Krāsa: gaiši dzeltena – brīva plūsma, balta – gaiss paātrinās (pāri spārnam), oranža/sarkana – sitas pret neveiklu priekšgalu, zilganā – virpuļojoša vaga.
 // Pa līnijām skrien „komētas” (tekstūra slīd), ātrumā garākas un ātrākas. Bez spēku bultām.
-const STRK = { grp: null, mesh: null, N: 60, K: 28, t: 0, seeds: [] };
+const STRK = { grp: null, mesh: null, N: 24, K: 26, t: 0, seeds: [] };
 function initStreaks() {
   const { N, K } = STRK, nv = N * K * 2, g = new T3.BufferGeometry(), idx = [];
   g.setAttribute('position', new T3.BufferAttribute(new Float32Array(nv * 3), 3)); g.setAttribute('color', new T3.BufferAttribute(new Float32Array(nv * 4), 4)); g.setAttribute('uv', new T3.BufferAttribute(new Float32Array(nv * 2), 2));
@@ -430,13 +483,13 @@ addEventListener('resize', () => { resize(); });
 function go() {
   if (state !== 'shop' && state !== 'end') return;
   audioInit(); closeSheet(); $('shop').classList.remove('on'); setVehicle(); clearFX();
-  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0 }; camPsi = 0; camSnap = true; resetBirds(); ejected = false; $('eject').classList.remove('on'); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
+  sim = new Sim(ST, RAMP, WORLD); prev = { z: sim.z, y: sim.y, x: 0, phi: sim.phi, psi: 0, bank: 0 }; camPsi = 0; camSnap = true; resetBirds(); ejected = false; runId++; $('eject').classList.remove('on'); acc = 0; runT = 0; crashT = 0; endInfo = null; state = 'ready'; document.body.classList.add('run'); viewOffset();
   gateA = 0; leverK = 0; setLever(0); $('lever').classList.add('on'); $('dist').classList.add('on'); $('dM').textContent = '0 m'; $('dSub').textContent = VEH[save.veh].i + ' ' + VEH[save.veh].n;
 }
 // svira: velc rokturi lejā līdz galam → barjera atveras un brauciens sākas
 function setLever(k) { leverK = k; $('knob').style.transform = `translateY(${k * 128}px)`; $('lever').style.setProperty('--k', k); }
 function release() { if (state !== 'ready') return; state = 'run'; setLever(1); $('lever').classList.remove('on'); sfx('clunk'); setTimeout(() => sfx('go'), 150);
-  $('turbo').classList.toggle('on', !!ST.T); hints(save.flights < 3); if (navigator.vibrate) navigator.vibrate(30);
+  $('turbo').classList.toggle('on', !!ST.T); hints(save.flights < 3); if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(30);
  }
 { const kn = $('knob'); let drag = null;
   kn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); if (state !== 'ready') return; drag = { y: e.clientY, k: leverK }; try { kn.setPointerCapture(e.pointerId); } catch (x) {} sfx('tick'); });
@@ -466,11 +519,11 @@ function startCrash(kind, v) {
   if (!ejected) endInfo = { kind: 'crash', dist: Math.max(0, sim.maxZ) };
 }
 // 🪂 katapulta: pilots izšaujas kā lode uz priekšu, pēc brīža sāk krist ātrāk un tad atver izpletni; braucamrīks lido tālāk viens
-let ejected = false;
+let ejected = false, runId = 0;
 function eject() { if (state !== 'run' || ejected || !sim || sim.mode !== 'air') return; ejected = true; joyReset(); inp.turbo = false; $('turbo').classList.remove('on'); $('eject').classList.remove('on'); hints(false);
   const hx = Math.sin(sim.psi), hz = Math.cos(sim.psi), pil = VEHM.pilot; scene.attach(pil); setPose(pil, 'stand'); pil.rotation.set(-1.2, sim.psi, 0);
   PIL = { o: pil, v: new T3.Vector3(hx * (sim.vz + 12), sim.vy + 5, hz * (sim.vz + 12)), t: 0, landed: false, eject: true };
-  puff(pil.position, 'white', 3); sparks(pil.position.clone(), 14, sim.vz); sfx('eject'); camShake = .5; if (navigator.vibrate) navigator.vibrate(40);  }
+  puff(pil.position, 'white', 3); sparks(pil.position.clone(), 14, sim.vz); sfx('eject'); camShake = .5; if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(40);  }
 function updatePilot(dt) { if (!PIL || PIL.landed) return; const P = PIL, o = P.o; P.t += dt;
   // izšautais pilots lido kā lode un krīt; pieskaroties zemei/jumtam – lidojums beidzas
   P.v.y -= GR * 1.35 * dt; o.rotation.order = 'YXZ'; o.rotation.set(Math.atan2(Math.hypot(P.v.x, P.v.z), P.v.y), Math.atan2(P.v.x, P.v.z), 0);
@@ -493,7 +546,7 @@ function finish(kind) {
   const lv1 = levelOf(save.xp).l;
   endInfo = { dist, money, xp, rec, landed };
   state = 'end'; $('eject').classList.remove('on'); document.body.classList.remove('run'); $('dist').classList.remove('on'); $('turbo').classList.remove('on'); hints(false); inp.turbo = false;
-  setTimeout(() => {
+  const rid = ++runId; setTimeout(() => { if (state !== 'end' || rid !== runId) return;
     sheet(`<h2 style="text-align:center">${landed ? '🛬' : ej ? '🚀🧍' : '💥'} ${VEH[vid].i}</h2>
       <div class="big">${dist} m</div>${rec ? '<p style="text-align:center;font-weight:900;color:#ffd34d">🏆 Rekords!</p>' : `<p style="text-align:center;color:#c9d2ff">🏆 ${Math.round(old)} m</p>`}
       <div class="res"><div class="part"><span>💰</span><b>+€${money}</b></div><div class="part"><span>⭐</span><b>+${xp}</b></div></div>
@@ -516,11 +569,12 @@ function renderShop() {
   if (!o) { h += `<div class="vlock"><div style="font-size:54px">${V.i}</div><button class="buy ${wallet < V.p ? 'no' : ''}" id="buyV" style="width:100%;min-height:54px;font-size:17px">Nopirkt €${V.p}</button></div>`; sh.innerHTML = h; wireShop(); return; }
   const sel = selOf(vid);
   for (const [k, S] of Object.entries(V.slots)) { const lv = sel[k], have = o[k] || 0, nx = S.lv[have + 1];
-    h += `<div class="slot"><i>${S.i}</i><div><b>${S.n}</b><small>${S.lv[lv].n}</small><div class="lvs">${S.lv.map((_, i) => `<button data-k="${k}" data-l="${i}" class="${i === lv ? 'on' : ''} ${i <= have ? 'own' : ''}" ${i > have ? 'disabled' : ''}>${i || '–'}</button>`).join('')}</div></div>
-      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">€${nx.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
+    h += `<div class="slot"><i>${S.i}</i><div><b>${S.n} <span class="lvn">${lv}/${RP.NL}</span></b><small>${S.lv[lv].n}</small>
+      <div class="lvs"><button data-k="${k}" data-l="${lv - 1}" ${lv > 0 ? '' : 'disabled'}>◀</button><div class="lvbar"><i style="width:${have / RP.NL * 100}%"></i><u style="width:${lv / RP.NL * 100}%"></u></div><button data-k="${k}" data-l="${lv + 1}" ${lv < have ? '' : 'disabled'}>▶</button></div></div>
+      ${nx ? `<button class="buy ${wallet < nx.p ? 'no' : ''}" data-buy="${k}">+1<br>€${nx.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>`; }
   const r = RAMPS[save.ramp], rn = RAMPS[save.ramp + 1];
-  h += `<div class="slot"><i>🏗️</i><div><b>Rampa</b><small>${r.h} m</small><div class="pips">${RAMPS.map((_, i) => `<u class="${i <= save.ramp ? 'on' : ''}"></u>`).join('')}</div></div>
-    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">€${rn.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>
+  h += `<div class="slot"><i>🏗️</i><div><b>Rampa <span class="lvn">${save.ramp}/${RP.NL}</span></b><small>${r.h} m</small><div class="lvs"><div class="lvbar"><i style="width:${save.ramp / RP.NL * 100}%"></i><u style="width:${save.ramp / RP.NL * 100}%"></u></div></div></div>
+    ${rn ? `<button class="buy ${wallet < rn.p ? 'no' : ''}" data-buy="ramp">+1<br>€${rn.p}</button>` : '<button class="buy max" disabled>MAX</button>'}</div>
     <p style="margin:6px 0 0;font-size:13px;color:#c9d2ff">🏆 <b style="color:#ffd34d">${Math.round(save.best[vid] || 0)} m</b></p>
     <button id="go">🚀 Aiziet!</button>`;
   sh.innerHTML = h; wireShop();
@@ -540,6 +594,7 @@ const camT = new T3.Vector3(), camL = new T3.Vector3(), tmp = new T3.Vector3(), 
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = clamp((now - lastT) / 1000, 0, .25); lastT = now; if (document.hidden) return;
+  DAYT += dt; applyDay(); STARS.position.copy(camera.position); if ((DAYT * 2 | 0) !== hudSec) { hudSec = DAYT * 2 | 0; hudKey = ''; hud(); }
   const paused = $('ov').classList.contains('on') && state === 'run';
   if (state === 'run' && !paused) {
     acc += dt; runT += dt; const ip = ejected ? { pitch: 0, roll: 0, turbo: false, help: true } : { pitch: inp.pitch, roll: inp.roll, turbo: inp.turbo, help: OPT.help };
@@ -600,7 +655,7 @@ $('cv').addEventListener('pointermove', e => { if (!joy || e.pointerId !== joy.i
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => $('cv').addEventListener(ev, e => { if (joy && e.pointerId === joy.id) { joy = null; joyDraw(); recalcInput(); } }));
 function joyReset() { joy = null; joyDraw(); recalcInput(); }
 const tb = $('turbo');
-tb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); inp.turbo = true; tb.classList.add('on'); try { tb.setPointerCapture(e.pointerId); } catch (x) {} if (navigator.vibrate) navigator.vibrate(15); });
+tb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); inp.turbo = true; tb.classList.add('on'); try { tb.setPointerCapture(e.pointerId); } catch (x) {} if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(15); });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => tb.addEventListener(ev, () => { inp.turbo = false; }));
 addEventListener('keydown', e => { if (e.repeat) return; if (e.key === 'ArrowUp' || e.key === 'w') kUp = 1; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 1; else if (e.key === 'ArrowLeft' || e.key === 'a') kL = 1; else if (e.key === 'ArrowRight' || e.key === 'd') kR = 1; else if (e.key === ' ') { inp.turbo = true; e.preventDefault(); if (state === 'ready') release(); } else if (e.key === 'Enter' && (state === 'shop' || state === 'end')) go(); else if (e.key === 'Enter' && state === 'ready') release(); recalcInput(); });
 addEventListener('keyup', e => { if (e.key === 'ArrowUp' || e.key === 'w') kUp = 0; else if (e.key === 'ArrowDown' || e.key === 's') kDn = 0; else if (e.key === 'ArrowLeft' || e.key === 'a') kL = 0; else if (e.key === 'ArrowRight' || e.key === 'd') kR = 0; else if (e.key === ' ') inp.turbo = false; recalcInput(); });
@@ -614,9 +669,9 @@ function closeSheet() { $('ov').classList.remove('on'); }
 let toastT = 0; function toast(t) { const el = $('toast'); el.innerHTML = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2400); }
 let banT = 0; function banner(t, s) { const el = $('banner'); el.innerHTML = t; el.classList.add('on'); clearTimeout(banT); banT = setTimeout(() => el.classList.remove('on'), (s || 3) * 1000); }
 let warnT = 0; function warn(t) { const el = $('warn'); el.textContent = t; el.classList.add('on'); clearTimeout(warnT); warnT = setTimeout(() => el.classList.remove('on'), 1200); }
-let hudKey = '';
-function hud() { const lv = levelOf(save.xp), key = [lv.l, lv.cur, wallet].join('|'); if (key === hudKey) return; hudKey = key;
-  $('sLv').textContent = `🛫 ${lv.l}. līm.`; $('sXp').style.width = (lv.cur / lv.need * 100) + '%';
+let hudKey = '', hudSec = 0;
+function hud() { const lv = levelOf(save.xp), key = [lv.l, lv.cur, wallet, Math.floor(hourNow() * 6)].join('|'); if (key === hudKey) return; hudKey = key;
+  const hh = hourNow(); $('sLv').textContent = `🛫 ${lv.l}. līm. · ${isNight() ? '🌙' : '☀️'} ${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.floor(hh % 1 * 60)).padStart(2, '0')}`; $('sXp').style.width = (lv.cur / lv.need * 100) + '%';
   $('sMoney').innerHTML = `<b style="color:${wallet < 0 ? '#ff5a6a' : '#ffd34d'};font-size:14px;display:inline">💰 €${wallet}</b>`;
   if (state === 'shop' && $('shop').classList.contains('on')) { const s = $('shop').querySelector('h3 small'); if (s) s.textContent = `💰 €${wallet}`; } }
 $('gear').onclick = e => { e.stopPropagation(); audioInit(); if ($('ov').classList.contains('on') && !$('setOk')) { toast('⚙ Iestatījumi – kad aizver šo logu'); return; }

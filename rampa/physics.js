@@ -8,7 +8,13 @@
   const wrap = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
 
   // ---- rampas (kopīgas visiem braucamrīkiem) ----
-  const RAMPS = [{ h: 40, n: 'Koka rampa', p: 0 }, { h: 60, n: 'Augstā rampa', p: 60 }, { h: 85, n: 'Ūdenstornis', p: 200 }, { h: 120, n: 'Debesskrāpis', p: 550 }, { h: 160, n: 'Mega rampa', p: 1300 }];
+  // ---- uzlabojumi: katrai pozīcijai 35 līmeņi (0 = sākums). Efekts aug pakāpeniski, cena ~×1,15 katrā līmenī ----
+  const NL = 35, TIER = L => Math.min(4, Math.floor((L - 1) / 7)), price = (base, L) => Math.round(base * Math.pow(1.15, L - 1) / 5) * 5 || 5;
+  const lin = (a, b, L) => a + (b - a) * (L - 1) / (NL - 1), expo = (a, b, L) => a * Math.pow(b / a, (L - 1) / (NL - 1));
+  function slot(i, n, zero, tiers, base, f) { const lv = [Object.assign({ n: zero }, f(0))];
+    for (let L = 1; L <= NL; L++) lv.push(Object.assign({ n: tiers[TIER(L)] + ' ' + ((L - 1) % 7 + 1), p: price(base, L), tier: TIER(L) }, f(L)));
+    return { i, n, lv }; }
+  const RAMPS = []; for (let L = 0; L <= NL; L++) { const h = Math.round(40 + 160 * Math.pow(L / NL, 1.1)); RAMPS.push({ h, n: h + ' m', p: L ? price(40, L) : 0 }); }
   const LIP = 25, EXIT = 30 * D2R, SLOPE = 42 * D2R, R1 = 10, R2 = 48, FLAT = 3;
   // rampas profils: plakans starts → izliekums → taisns slīpums → liels izliekums → atlēciena mala z=0, y=LIP, leņķis EXIT
   function rampProfile(H) {
@@ -29,33 +35,30 @@
   // ---- braucamrīki un uzlabojumi ----
   // wheel: mu – berze rampā, roll – ripošana pa zemi; wing: S laukums, ar [īsie, garie]; eng: T vilce (N), f degviela (s); aero: cda
   const VEH = {
-    plane: { i: '✈️', n: 'Lidmašīna', p: 0, m: 120, cda: .3, crashV: 8, pitchK: 1, d: 'Planē ar spārniem. Garāki spārni – tālāk!',
+    plane: { i: '✈️', n: 'Lidmašīna', p: 0, m: 120, cda: .3, crashV: 8,
       slots: {
-        wheel: { i: '🛞', n: 'Riteņi', lv: [{ n: 'Nav – slīd uz vēdera', mu: .07, roll: .5 }, { n: 'Ratiņu riteņi', mu: .06, roll: .15, p: 20 }, { n: 'Velo riteņi', mu: .03, roll: .08, p: 90 }, { n: 'Gultņu riteņi', mu: .015, roll: .05, p: 260 }] },
-        wing: { i: '🪽', n: 'Spārni', lv: [{ n: 'Nav – kūleņo', S: 0 }, { n: 'Kartona', S: 4.5, ar: [3, 5], cd0: .035, m: 6, p: 30 }, { n: 'Saplākšņa', S: 5.5, ar: [4, 7], cd0: .028, m: 9, p: 120 },
-          { n: 'Pūķa auduma', S: 6.5, ar: [5, 10], cd0: .022, m: 9, p: 350 }, { n: 'Deltaplāna', S: 8, ar: [6, 13], cd0: .018, m: 12, p: 900 }, { n: 'Planiera', S: 9, ar: [8, 18], cd0: .014, m: 14, p: 2000 }] },
-        eng: { i: '🔥', n: 'Dzinējs', lv: [{ n: 'Nav' }, { n: 'Galda ventilators', T: 260, f: 4, m: 4, p: 100 }, { n: 'Propelleris', T: 480, f: 6, m: 9, p: 350 }, { n: 'Svētku raķete', T: 1400, f: 3, m: 8, p: 900 }, { n: 'Reaktīvais dzinējs', T: 1000, f: 8, m: 22, p: 2500 }] },
+        wheel: slot('🛞', 'Riteņi', 'Nav', ['Ratiņu', 'Velo', 'Skrituļu', 'Sacīkšu', 'Gultņu'], 15, L => ({ mu: L ? expo(.06, .012, L) : .07, roll: .1 })),
+        wing: slot('🪽', 'Spārni', 'Nav', ['Kartona', 'Saplākšņa', 'Pūķa', 'Deltaplāna', 'Planiera'], 25, L => L ? { S: lin(5.2, 10.4, L), ar: lin(5, 18, L), cd0: lin(.035, .014, L), m: lin(8, 19, L) } : { S: 0 }),
+        eng: slot('🔥', 'Dzinējs', 'Nav', ['Ventilators', 'Propelleris', 'Raķete', 'Lielā raķete', 'Reaktīvais'], 70, L => L ? { T: lin(220, 1300, L), f: lin(3, 9, L), m: lin(4, 22, L) } : {}),
       } },
-    scoot: { i: '🛴', n: 'Skūteris', p: 150, m: 70, cda: .3, crashV: 15, flips: true, d: 'Viegls un ātrs rampā. Neplanē, bet var mest salto!',
+    scoot: { i: '🛴', n: 'Skūteris', p: 150, m: 70, cda: .3, crashV: 15, flips: true,
       slots: {
-        wheel: { i: '🛞', n: 'Riteņi', lv: [{ n: 'Plastmasas', mu: .06, roll: .08 }, { n: 'Gumijas', mu: .035, roll: .05, p: 40 }, { n: 'Sacīkšu', mu: .018, roll: .035, p: 150 }, { n: 'Keramikas gultņi', mu: .008, roll: .025, p: 420 }] },
-        aero: { i: '🪖', n: 'Aerodinamika', lv: [{ n: 'Stāvus', cda: .3 }, { n: 'Pieliecies', cda: .23, p: 60 }, { n: 'Ķivere un tērps', cda: .18, p: 220 }, { n: 'Pilots-raķete', cda: .14, p: 600 }] },
-        eng: { i: '🚀', n: 'Raķešu soma', lv: [{ n: 'Nav' }, { n: 'Mazā raķete', T: 260, f: 2.5, m: 3, p: 300 }, { n: 'Dubultraķete', T: 420, f: 3.5, m: 5, p: 1000 }] },
+        wheel: slot('🛞', 'Riteņi', 'Parastie', ['Gumijas', 'Sporta', 'Sacīkšu', 'Keramikas', 'Super'], 25, L => ({ mu: L ? expo(.05, .006, L) : .06, roll: .05 })),
+        aero: slot('🪖', 'Aerodinamika', 'Stāvus', ['Pieliecies', 'Ķivere', 'Tērps', 'Aero tērps', 'Raķete'], 30, L => ({ cda: L ? lin(.27, .13, L) : .3 })),
+        eng: slot('🚀', 'Raķešu soma', 'Nav', ['Mazā', 'Raķete', 'Dubultā', 'Turbo', 'Super'], 150, L => L ? { T: lin(200, 650, L), f: lin(2, 5, L), m: lin(3, 8, L) } : {}),
       } },
-    car: { i: '🚗', n: 'Mašīna', p: 500, m: 1100, cda: .8, crashV: 30, bounce: true, flips: true, d: 'Smaga – lido ātri, ripo tālu un lēkā pa jumtiem.',
+    car: { i: '🚗', n: 'Mašīna', p: 500, m: 1100, cda: .8, crashV: 30, bounce: true, flips: true,
       slots: {
-        wheel: { i: '🛞', n: 'Riteņi un atsperes', lv: [{ n: 'Parastie', mu: .03, roll: .025, rest: .3 }, { n: 'Sporta', mu: .02, roll: .018, rest: .42, p: 80 }, { n: 'Rallija', mu: .015, roll: .014, rest: .52, p: 260 }, { n: 'Monstru trakā', mu: .012, roll: .012, rest: .62, p: 750 }] },
-        aero: { i: '🏁', n: 'Aerodinamika', lv: [{ n: 'Kaste', cda: .8 }, { n: 'Spoilers', cda: .62, p: 150 }, { n: 'Sacīkšu virsbūve', cda: .48, p: 500 }] },
-        eng: { i: '💨', n: 'Nitro', lv: [{ n: 'Nav' }, { n: 'Nitro', T: 4500, f: 3, m: 20, p: 400 }, { n: 'Super nitro', T: 7000, f: 4, m: 30, p: 1300 }] },
+        wheel: slot('🛞', 'Riteņi', 'Parastie', ['Sporta', 'Rallija', 'Bezceļu', 'Monstru', 'Lēcēju'], 50, L => ({ mu: L ? expo(.026, .008, L) : .03, roll: .02, rest: L ? lin(.34, .72, L) : .3 })),
+        aero: slot('🏁', 'Aerodinamika', 'Kaste', ['Spoilers', 'Sporta', 'Sacīkšu', 'Aero', 'Raķetes forma'], 80, L => ({ cda: L ? lin(.75, .4, L) : .8 })),
+        eng: slot('💨', 'Nitro', 'Nav', ['Nitro', 'Super', 'Mega', 'Ultra', 'Raķete'], 250, L => L ? { T: lin(3000, 9000, L), f: lin(2, 5, L), m: lin(15, 35, L) } : {}),
       } },
   };
-
-  // kopējie parametri no izvēlētajiem līmeņiem; sel = { wheel: n, wing: n, eng: n, aero: n, long: bool }
   function stats(vid, sel) {
     const V = VEH[vid], S = V.slots, lv = k => S[k] ? S[k].lv[clamp(sel[k] || 0, 0, S[k].lv.length - 1)] : null;
     const w = lv('wheel'), wi = lv('wing'), e = lv('eng'), a = lv('aero');
     const st = { vid, m: V.m, cda: a ? a.cda : V.cda, mu: w.mu, roll: w.roll, rest: w.rest || 0, crashV: V.crashV, S: 0, AR: 0, cd0: 0, T: 0, fuel: 0, flips: !!V.flips, bounce: !!V.bounce, wheels: (sel.wheel || 0) > 0 || vid !== 'plane', pitchK: 1, brake: { plane: .35, scoot: .3, car: .14 }[vid] };
-    if (wi && wi.S) { const long = !!sel.long; st.S = wi.S * (long ? 1.15 : 1); st.AR = wi.ar[long ? 1 : 0]; st.cd0 = wi.cd0; st.m += wi.m * (long ? 1.4 : 1); st.pitchK = long ? .7 : 1.15; st.span = Math.sqrt(st.S * st.AR); st.chord = st.S / st.span; }
+    if (wi && wi.S) { st.S = wi.S; st.AR = wi.ar; st.cd0 = wi.cd0; st.m += wi.m; st.pitchK = .85; st.span = Math.sqrt(st.S * st.AR); st.chord = st.S / st.span; }
     if (e && e.T) { st.T = e.T; st.fuel = e.f; st.m += e.m; }
     if (vid === 'plane' && !st.wheels) st.crashV = 6;
     st.aSlope = st.AR ? 2 * Math.PI * st.AR / (st.AR + 2) : 0; // cēlējspēka līknes slīpums (1/rad)
@@ -162,6 +165,6 @@
     done(k) { this.mode = 'done'; this.ev.push(['done', k]); }
   }
 
-  const P = { G, RHO, DT, D2R, RAMPS, VEH, LIP, EXIT, rampProfile, rampAt, stats, forces, CL, surfAt, roofH, inside, indexWorld, Sim, wrap, clamp };
+  const P = { G, RHO, DT, D2R, NL, RAMPS, VEH, LIP, EXIT, rampProfile, rampAt, stats, forces, CL, surfAt, roofH, inside, indexWorld, Sim, wrap, clamp };
   if (typeof module !== 'undefined') module.exports = P; else root.RP = P;
 })(this);

@@ -154,4 +154,6 @@ body.run #banner{bottom:calc(150px + env(safe-area-inset-bottom))}
 @media (orientation:landscape) and (max-height:560px){ #eject{top:auto;bottom:calc(20px + env(safe-area-inset-bottom));right:calc(270px + env(safe-area-inset-right))} }
 #quit{position:fixed;right:calc(10px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));min-height:46px;padding:0 16px;border-radius:23px;border:1px solid #ffffff55;background:#0f1220aa;color:#fff;font-weight:900;font-size:15px;z-index:8;display:none}
 body.run #quit{display:block}
-.lvs{display:flex;gap:3px;margin-top:4px}.lvs button{min-width:30px;height:32px;flex:1;max-width:40px;border-radius:9px;border:2px solid #ffffff22;background:#ffffff0c;color:#ffffff55;font-weight:900;font-size:13px;padding:0}.lvs button.own{color:#fff;background:#57e38933;border-color:#57e38966}.lvs button.on{border-color:#ffd34d;background:#ffd34d33;color:#ffd34d}
+.lvs{display:flex;gap:6px;align-items:center;margin-top:4px}.lvs button{width:38px;height:34px;border-radius:10px;border:2px solid #ffffff33;background:#ffffff14;color:#fff;font-weight:900;font-size:14px;padding:0;flex:none}.lvs button:disabled{opacity:.3}
+.lvbar{position:relative;flex:1;height:10px;border-radius:5px;background:#ffffff1c;overflow:hidden}.lvbar i{position:absolute;inset:0 auto 0 0;background:#57e38955}.lvbar u{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#57e389,#ffd34d);border-radius:5px}
+.lvn{font-size:12px;color:#ffd34d;font-weight:900;margin-left:4px}
