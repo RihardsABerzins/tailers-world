@@ -82,15 +82,19 @@
   A.en = () => { try { return (localStorage.getItem('twLang') || 'lv') === 'en'; } catch (e) { return false; } };
   A.title = m => A.en() ? m.te : m.t;
   A.desc = m => A.en() ? m.de : m.d;
-  // Ielādē manas medaļas (vienreiz)
-  A.load = async uid => {
-    if (A.uid === uid && A.owned) return A.owned;
-    A.uid = uid; A.owned = {};
-    try { A.owned = (await firebase.database().ref('ach/' + uid).get()).val() || {}; } catch (e) {}
-    return A.owned;
+  // Ielādē manas medaļas (vienreiz; vienlaicīgi izsaukumi gaida to pašu ielādi – citādi tukšs saraksts → vecās medaļas rādās kā jaunas)
+  A.load = uid => {
+    if (A.uid === uid && A._lp) return A._lp;
+    A.uid = uid; A.owned = null;
+    return A._lp = (async () => { let o = {}; try { o = (await firebase.database().ref('ach/' + uid).get()).val() || {}; } catch (e) {} A.owned = o; return o; })();
   };
-  // Piešķir medaļas, kuru nosacījumi izpildīti; atgriež jaunās
-  A.sync = async (uid, ctx) => {
+  // Jau parādītās medaļas šajā ierīcē – katru rāda tikai vienreiz
+  const seenKey = uid => 'twMedSeen:' + uid;
+  const seenGet = uid => { try { return JSON.parse(localStorage.getItem(seenKey(uid)) || '{}'); } catch (e) { return {}; } };
+  const seenAdd = (uid, ids) => { try { const s = seenGet(uid); ids.forEach(id => s[id] = 1); localStorage.setItem(seenKey(uid), JSON.stringify(s)); } catch (e) {} };
+  // Piešķir medaļas, kuru nosacījumi izpildīti; atgriež jaunās (pēc kārtas, ne vienlaicīgi)
+  A._q = Promise.resolve();
+  A.sync = (uid, ctx) => A._q = A._q.catch(() => {}).then(async () => {
     await A.load(uid);
     const c = Object.assign({}, ctx);
     const fresh = L.filter(m => !A.owned[m.id] && m.ok(c));
@@ -98,8 +102,9 @@
     const upd = {}; fresh.forEach(m => { upd[m.id] = Date.now(); A.owned[m.id] = upd[m.id]; });
     try { await firebase.database().ref('ach/' + uid).update(upd); } catch (e) {}
     document.dispatchEvent(new Event('tw-medals'));
-    return fresh;
-  };
+    const seen = seenGet(uid), show = fresh.filter(m => !seen[m.id]); seenAdd(uid, fresh.map(m => m.id));
+    return show;
+  });
   // Apmeklējumu dienas: pēc kārtas (n), labākā sērija (best), kopā (days). users/{uid}/visits
   const day = d => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
   A.visit = async uid => {
