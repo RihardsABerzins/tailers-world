@@ -20,7 +20,7 @@
 <script>window.twIsAdmin=window.twIsAdmin||(()=>false);</script>
 <script src="tw-common.js?v=6"></script>
 <script src="tw-social.js?v=4"></script>
-<script src="tw-ach.js?v=5"></script>
+<script src="tw-ach.js?v=6"></script>
 <style>
   :root{--bg:#120f24;--card:#1f1a3a;--line:#ffffff1f;--text:#fff8ff;--muted:#c4bde6;--pink:#ff5fa2;--yellow:#ffd34d;--blue:#5ac8ff;--green:#7cff8a;--red:#ff6b7a}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -301,6 +301,10 @@ GAMES.forEach((g,i)=>{
     <div class="btns"><a class="btn play" href="${g.url}">▶ Spēlēt</a>${g.players?`<a class="btn ghost" href="${g.players}">👥 Citi spēlētāji</a>`:''}</div></div>`;
   grid.appendChild(d);
 });
+// nākamā spēle – redzama ar bildi, bet aizslēgta; admini/moderatori var testēt
+const soon=document.createElement('div'); soon.className='card soon';
+soon.innerHTML=`<div class="thumb" style="position:relative"><img class="thumb" src="skola/cover.svg" alt="Skola" style="filter:grayscale(.55) brightness(.7)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:54px">🔒</span></div><div class="body"><p class="title">🏫 Skola</p><p class="desc">Drīzumā! Vadi stundu, atrodi pareizo atbildi un pieķer draiskuļus, pirms viņi izjoko klasi.</p><div class="btns"><a class="btn play" id="skTest" href="skola/index.html" style="display:none">🛠 Testēt (admins)</a></div></div>`;
+grid.appendChild(soon);
 if(SUPPORT_URL){ const b=$('supportBtn'); b.href=SUPPORT_URL; b.target='_blank'; b.rel='noopener'; b.textContent='💛 Atbalstīt'; b.removeAttribute('aria-disabled'); }
 
 // ---- drauga uzaicinājums (?draugs=lietotājvārds) ----
@@ -369,7 +373,7 @@ let ME=null, HB=null;
 function paintMe(){ if(!ME) return; const disp=TW.display(ME.name,ME.nick), r=TW.role(ME.uid), mc=TWA.count(TWA.owned), fancy=r||mc>=50;
   $('meName').innerHTML=fancy?(r?'':'👤 ')+TW.nameHTML(disp,ME.uid,mc):'👤 '+disp.replace(/[<>&]/g,'');
   $('hello').innerHTML=`Sveiks, ${fancy?TW.nameHTML(disp,ME.uid,mc):disp.replace(/[<>&]/g,'')}! <span class="wave">👋</span>`;
-  $('panelLink').style.display=r?'inline-flex':'none'; }
+  $('panelLink').style.display=r?'inline-flex':'none'; const st=$('skTest'); if(st) st.style.display=r?'inline-flex':'none'; }
 document.addEventListener('tw-roles',paintMe); document.addEventListener('tw-medals',paintMe);
 function curLang(){ try{ return localStorage.getItem('twLang')||'lv'; }catch(e){ return 'lv'; } }
 function paintLang(l){ document.querySelectorAll('#profForm .seg button').forEach(b=>b.classList.toggle('on',b.dataset.l===l)); }

@@ -102,5 +102,16 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Teksti rakstīti latviski uzreiz (bez lang.js). Saglabāšana `ap/saves/{uid}`, medaļas grupa `ap` (apCalls, apSaved, apCpr, apPerfect, apLevel), mediķis zīmēts pēc `users/{uid}/look`.
 - Kešatmiņa: mainot style.css/game.js/cases.js, palielini `?v=` atra-palidziba/index.html.
 
+## Skola (`/skola/`)
+- Tu vadi stundu: 8 jautājumi uz tāfeles, 4 skolēni paceļ rokas ar atbilžu burbuļiem – pieskaries tam, kuram pareizā. Nepareizi → „Mācību brīdis” (pareizā atbilde + paskaidrojums, poga „Saprotu →”), bez soda. Telefonā vertikāli soli 2×2, citur rindā.
+- **Draiskuļi** (`PRANKS`: lidmašīna, varde, telefons, košļene, bungas, snauda): virs galvas ❗ brīdinājums (`warnDur`), tad joks 2,6 s. Pieskaries laikus → „Pieķerts”, jautrs fakts (toast), noskaņojums +6/+3; palaid garām → klase smejas, noskaņojums −10. Pirmajā stundā mācības ar dzelteno baneri (1. jautājumā joku nav, 2. – lēns). Atvērts logs = pauze (`LT` neiet).
+- **Klases noskaņojums** 0–100 (sākas 70) – josla augšā.
+- Priekšmeti (`SUBJ`): mat, lv, daba, val, mix (5 fakti + 3 matemātika). Klase 1.–3. / 4.–6. (`save.band`, lobijā un ⚙).
+- **Matemātika ģenerēta** (`mathQ`, līmenis `save.ml` 1–8, pielāgojas: pareizi +0,34, nepareizi −0,5). **Fakti** – `questions.js` (`FACTS`), jaunus pievieno saraksta BEIGĀS (id pēc kārtas priekšmetā). Kļūdas atkārto nākamajās stundās (`save.miss`), nesen redzētos atliek (`save.seen`).
+- Atlīdzība: €3 + €2 par pareizo + €1 par pieķerto (+€5, ja noskaņojums ≥80; +€5 par 8/8); XP 10 par pareizo + 5 par pieķerto (+20 par 8/8); zvaigznes 7+/5+/citādi 1.
+- 🛍 Klases rotājumi (`DECO`, kopīgā nauda, `save.deco`) redzami klasē.
+- Saglabāšana `skola/saves/{uid}`, medaļas grupa `skola` (skLessons, skPerfect, skCaught, skCorrect, skLevel).
+- Pagaidām **tikai adminiem/moderatoriem** (citiem „Drīzumā” – slēgums game.js; sākumlapā aizslēgta kartīte ar 🛠 `skTest`). Kešatmiņa: mainot failus, palielini `?v=` skola/index.html.
+
 ## Plānots
 - "Atbalsti mani" saite sākumlapā.

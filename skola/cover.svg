@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8ead0"/><stop offset="1" stop-color="#ecd3a8"/></linearGradient>
+    <linearGradient id="brd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f6a4f"/><stop offset="1" stop-color="#24533d"/></linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#wall)"/>
+  <rect y="300" width="640" height="100" fill="#b57e4a"/>
+  <rect x="110" y="26" width="420" height="150" rx="14" fill="#8a5a2b" stroke="#2a2230" stroke-width="4"/>
+  <rect x="122" y="38" width="396" height="126" rx="8" fill="url(#brd)"/>
+  <text x="320" y="96" text-anchor="middle" font-family="Comic Sans MS,Chalkboard SE,sans-serif" font-size="40" font-weight="700" fill="#fff">7 · 8 = ?</text>
+  <text x="320" y="140" text-anchor="middle" font-family="Comic Sans MS,Chalkboard SE,sans-serif" font-size="22" fill="#ffffffb0">Skola</text>
+  <text x="560" y="80" font-size="44">🍎</text>
+  <g stroke="#2a2230" stroke-width="3">
+    <!-- 4 skolēni ar paceltām rokām -->
+    <g transform="translate(110 300)"><line x1="26" y1="-60" x2="46" y2="-118" stroke="#3d8bff" stroke-width="14" stroke-linecap="round"/><circle cx="48" cy="-124" r="10" fill="#f2c9a0"/><rect x="-34" y="-72" width="68" height="70" rx="20" fill="#3d8bff"/><circle cy="-96" r="30" fill="#f2c9a0"/><path d="M-31 -100a31 31 0 0 1 62 0z" fill="#5a3a22"/><circle cx="-10" cy="-94" r="4" fill="#2a2230" stroke="none"/><circle cx="10" cy="-94" r="4" fill="#2a2230" stroke="none"/><path d="M-10 -80q10 9 20 0" fill="none"/></g>
+    <g transform="translate(250 300)"><line x1="26" y1="-60" x2="46" y2="-118" stroke="#ff6b8a" stroke-width="14" stroke-linecap="round"/><circle cx="48" cy="-124" r="10" fill="#f6d3b3"/><rect x="-34" y="-72" width="68" height="70" rx="20" fill="#ff6b8a"/><circle cy="-96" r="30" fill="#f6d3b3"/><path d="M-31 -100a31 31 0 0 1 62 0z" fill="#e0b04a"/><circle cx="-10" cy="-94" r="4" fill="#2a2230" stroke="none"/><circle cx="10" cy="-94" r="4" fill="#2a2230" stroke="none"/><path d="M-10 -80q10 9 20 0" fill="none"/></g>
+    <g transform="translate(390 300)"><rect x="-34" y="-72" width="68" height="70" rx="20" fill="#2ecc71"/><circle cy="-96" r="30" fill="#e9b48a"/><path d="M-31 -100a31 31 0 0 1 62 0z" fill="#c2552b"/><circle cx="-6" cy="-94" r="4" fill="#2a2230" stroke="none"/><circle cx="14" cy="-94" r="4" fill="#2a2230" stroke="none"/><path d="M-10 -78q14 6 22 -6" fill="none"/><circle cy="-158" r="20" fill="#ff3b4e"/><text y="-147" text-anchor="middle" font-family="sans-serif" font-size="30" font-weight="900" fill="#fff" stroke="none">!</text></g>
+    <g transform="translate(530 300)"><line x1="26" y1="-60" x2="46" y2="-118" stroke="#a66bff" stroke-width="14" stroke-linecap="round"/><circle cx="48" cy="-124" r="10" fill="#c98f63"/><rect x="-34" y="-72" width="68" height="70" rx="20" fill="#a66bff"/><circle cy="-96" r="30" fill="#c98f63"/><path d="M-31 -100a31 31 0 0 1 62 0z" fill="#1e1a1a"/><circle cx="-10" cy="-94" r="4" fill="#2a2230" stroke="none"/><circle cx="10" cy="-94" r="4" fill="#2a2230" stroke="none"/><path d="M-10 -80q10 9 20 0" fill="none"/></g>
+    <!-- soli -->
+    <rect x="40" y="290" width="140" height="70" rx="6" fill="#d9a066"/><rect x="180" y="290" width="140" height="70" rx="6" fill="#d9a066"/><rect x="320" y="290" width="140" height="70" rx="6" fill="#d9a066"/><rect x="460" y="290" width="140" height="70" rx="6" fill="#d9a066"/>
+  </g>
+  <text x="430" y="290" font-size="30">✈️</text>
+</svg>

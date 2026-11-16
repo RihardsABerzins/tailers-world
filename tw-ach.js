@@ -6,7 +6,7 @@
 // Ar 50 medaļām vārds sarkani spīd, ar 100 – zili (TW.nameHTML / spēles vārda zīme).
 (function(){
   const A = window.TWA = { owned: null, uid: null };
-  A.GROUPS = [{ g: 'profils', t: '👤 Profils un draugi' }, { g: 'grafiti', t: '🎨 Graffiti RPG' }, { g: 'ap', t: '🚑 Ātrā palīdzība' }];
+  A.GROUPS = [{ g: 'profils', t: '👤 Profils un draugi' }, { g: 'grafiti', t: '🎨 Graffiti RPG' }, { g: 'ap', t: '🚑 Ātrā palīdzība' }, { g: 'skola', t: '🏫 Skola' }];
   const L = A.LIST = [];
   const add = (g, id, i, t, te, d, de, ok) => L.push({ g, id, i, t, te, d, de, ok });
   // Pakāpju medaļas: rows = [[skaits, ikona, nosaukums, nosaukums EN, id?]]
@@ -38,6 +38,18 @@
     n => n === 1 ? 'Izsaukums ar 95%+ rezultātu' : `${n} izsaukumi ar 95%+`, n => `${n} call${n > 1 ? 's' : ''} with 95%+`);
   tiers('ap', 'apLevel', 'aplv', [[5, '🩹', 'Mediķis', 'Medic'], [10, '🏅', 'Pieredzējis mediķis', 'Senior medic'], [20, '👑', 'Brigādes vadītājs', 'Crew chief']],
     n => `Sasniedzi ${n}. līmeni ātrajā palīdzībā`, n => `Reached level ${n} in the ambulance game`);
+
+  // ---- Skola (ctx: skLessons, skPerfect, skCaught, skCorrect, skLevel) ----
+  tiers('skola', 'skLessons', 'skl', [[1, '🏫', 'Pirmā stunda', 'First lesson'], [10, '📚', '10 stundas', '10 lessons'], [50, '🎓', '50 stundas', '50 lessons'], [100, '🍎', 'Gada skolotājs', 'Teacher of the year']],
+    n => n === 1 ? 'Novadīji pirmo stundu' : `Novadīji ${n} stundas`, n => `Taught ${n} lesson${n > 1 ? 's' : ''}`);
+  tiers('skola', 'skPerfect', 'skp', [[1, '💯', 'Visi pareizi', 'All correct'], [10, '🌟', '10 izcilas stundas', '10 perfect lessons']],
+    n => n === 1 ? 'Stunda bez nevienas kļūdas' : `${n} stundas bez kļūdām`, n => `${n} lesson${n > 1 ? 's' : ''} without mistakes`);
+  tiers('skola', 'skCaught', 'skc', [[5, '👀', 'Ērgļa acs', 'Eagle eye'], [25, '🕵️', 'Draiskuļu ķērājs', 'Prankster catcher'], [100, '🦉', 'Neviens neizslīd', 'Nobody slips by']],
+    n => `Pieķēri ${n} draiskuļus`, n => `Caught ${n} pranksters`);
+  tiers('skola', 'skCorrect', 'skr', [[100, '✏️', '100 pareizas atbildes', '100 right answers'], [500, '📖', '500 pareizas atbildes', '500 right answers']],
+    n => `Kopā ${n} pareizas atbildes stundās`, n => `${n} right answers in lessons`);
+  tiers('skola', 'skLevel', 'sklv', [[5, '📏', 'Skolotājs', 'Teacher'], [10, '🧑‍🏫', 'Vecākais skolotājs', 'Senior teacher'], [20, '🏛️', 'Direktors', 'Principal']],
+    n => `Sasniedzi ${n}. līmeni skolā`, n => `Reached level ${n} in the school game`);
 
   // ---- Graffiti RPG ----
   tiers('grafiti', 'painted', 'paint', [[1, '🎨', 'Pirmais grafiti', 'First graffiti'], [10, '🖍️', '10 sienas', '10 walls'], [25, '🖌️', 'Ielu mākslinieks', 'Street artist'], [50, '🧱', '50 sienas', '50 walls'], [100, '🌈', 'Grafiti meistars', 'Graffiti master'], [250, '🏙️', '250 sienas', '250 walls'], [500, '🎭', '500 sienas', '500 walls'], [1000, '🗿', '1000 sienas', '1000 walls'], [2000, '🏛️', 'Pilsētas leģenda', 'City legend']],
