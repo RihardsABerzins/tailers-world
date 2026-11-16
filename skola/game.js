@@ -777,7 +777,7 @@ function hud() {
 const TIERS = ['', 'viegli', 'vidēji', 'grūti'];
 // instrukcija pirms pirmās stundas (kopīgais TW.intro); vēlreiz – ⚙ „❓ Kā spēlēt”
 const INTRO = [{ img: 'intro/1.webp', t: 'Pieskaries skolēnam ar pareizo atbildi' }, { img: 'intro/2.webp', t: 'Redzi ❗? Ātri pieskaries draiskulim!' },
-  { img: 'intro/3.webp', t: '🚽 Laist uz tualeti? Šmaucējs smīn' }, { img: 'intro/4.webp', t: '☕ Kafija dod enerģiju' }, { ico: '📁', t: 'Par grūtu? Mapītē izvēlies klasi' }];
+  { img: 'intro/3.webp', t: '🚽 Laist uz tualeti? Šmaucējs smīn' }, { img: 'intro/4.webp', t: '☕ Kafija dod enerģiju' }, { img: 'intro/5.webp', t: 'Par grūtu? Mapītē izvēlies klasi' }];
 const intro = force => window.TW && TW.intro ? TW.intro('skola', INTRO, force) : Promise.resolve();
 function lobby() {
   if (L) L.st = 'end'; banner('');
