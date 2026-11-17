@@ -134,7 +134,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - Pirmajā stundā mācības ar dzelteno baneri (1. jautājumā joku nav, 2. – lēns). Atvērts logs = pauze (`LT` neiet).
 - Atlīdzība: €3 + €5 par pareizo + €1 par pieķerto + €1 par pareizu tualetes lēmumu (+€5, ja noskaņojums ≥80; +€5 par 8/8; +€10 dienas beigās); XP 10 par pareizo + 5 par pieķerto/tualeti (+20 par 8/8).
 - 🛍 Klases rotājumi (`DECO`, kopīgā nauda, `save.deco`). Saglabāšana `skola/saves/{uid}`, medaļas grupa `skola` (stundas, bez kļūdām, pieķertie, pareizās atbildes, līmenis, tualetes lēmumi `save.wcOk`, pilnas skolas dienas `day/4`, sasniegtā klase, kafija `save.coffee`, rotājumi+tāfeles).
-- Pagaidām **tikai adminiem/moderatoriem** (slēgums game.js; sākumlapā aizslēgta kartīte ar 🛠 `skTest`). Kešatmiņa: mainot failus, palielini `?v=` skola/index.html.
+- Publiska kopš 2026-11-17 (kartīte sākumlapas `GAMES`). Kešatmiņa: mainot failus, palielini `?v=` skola/index.html.
 
 ## Mega rampa (`/rampa/`)
 - **3D skats no aizmugures** (three.js r128 + GLTFLoader): darbnīca → „🚀 Aiziet!” → **svira** (`#lever`, `release()`) → barjera paceļas → milzu U-rampa → lidojums. **Jebkurš pieskāriens** zemei/jumtam **uzreiz beidz lidojumu** – nav ripošanas un nav izpletņa. Avārijā daļas atlūzt, rezultāts pēc ~0,9 s. **Ietriecoties mājas sienā**, cilvēciņš paliek iesprūdis sienā (`splat()`: izplestas rokas/kājas, ar seju pret sienu, plaisa aiz viņa; kamera rāda viņu ~2,4 s, `FOCUS`). Poga **✖ Beigt** – pārtrauc bez naudas. Poga **🚀 Katapulta** (lidojumā) – pilots izšaujas uz augšu un nedaudz uz priekšu, krīt ātrāk; kur nokrīt (zeme/jumts) – tur paliek, sienā – ielīp. Lidmašīna bez pilota turpina lidot, nodur degunu un fonā ietriecas/uzsprāgst (`explodePlane()`, uguns + dūmi); kamera seko pilotam un pagriežas uz lidmašīnu, ja tā ir priekšā. Rezultāts – kad pilots nokritis un lidmašīna uzsprāgusi (vai 4 s); attālums = pilota vieta (+€3). **Mašīna/skūteris**: katapulta strādā arī lēkājot/ripojot; vadītājs izšaujas uz augšu un uz priekšu, bet braucamrīks (`sim.coast`) neuzsprāgst – pieskaroties zemei pāriet `ground` režīmā, aizripo (bremzes ×3) un apstājas (sprāgst tikai avārijā).
@@ -160,7 +160,7 @@ Mini spēļu vietne https://tailersworld.lv (GitHub Pages, repo `RihardsABerzins
 - **Gaisa plūsmas līnijas** (`flowAt` + `updateStreaks`, 24 līnijas): elipsoīds, spārna augšplūsma/lejupplūsma, virpuļi aiz spārnu galiem, turbulenta vaga; pa līnijām slīd „komētas” gandrīz gaisa ātrumā (ierobežots ~25 m/s, lai kadros nemirgo). Dzeltena – brīva plūsma, balta – paātrinās, oranža/sarkana – neveikls priekšgals, zilgana – vaga. Bez spēku bultām; iestatījumos var izslēgt.
 - **Putni** (`BIRDS`, bariņi pa 3): ietriecoties nobirst spalvas, putns aizlido; trāpījums priekšā ar dzinēju → dzinējs apstājas (dūmo).
 - Kamera piesieta braucamrīkam (gludi mainās tikai nobīde – neraustās). Saglabāšana `rampa/saves/{uid}`, medaļas grupa `rampa` (rpFlights, rpPlane, rpLandP, rpScoot, rpLandS, rpFlip, rpCar, rpRoof, rpCrash, rpBird, rpLevel). Iestatījumi: ⚙ kā citās spēlēs + 🧭 palīgs, 🌬 strīpas.
-- Pagaidām **tikai adminiem/moderatoriem** (slēgums game.js; sākumlapā kartīte ar 🛠 `rpTest`). Kešatmiņa: mainot failus, palielini `?v=` rampa/index.html. Lokāli (http) bez konta, nauda – `localStorage rpWalletDev`.
+- Publiska kopš 2026-11-17 (kartīte sākumlapas `GAMES`). Kešatmiņa: mainot failus, palielini `?v=` rampa/index.html. Lokāli (http) bez konta, nauda – `localStorage rpWalletDev`.
 
 ## Plānots
 - "Atbalsti mani" saite sākumlapā.

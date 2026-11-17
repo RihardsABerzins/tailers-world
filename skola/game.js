@@ -865,8 +865,6 @@ if (ONLINE && window.firebase && window.TW_FIREBASE) {
     save.miss = save.miss || []; save.seen = save.seen || []; save.deco = save.deco || {}; save.boards = save.boards || { green: 1 }; save.board = save.board || 'green'; save.day = save.day || 0; energy = save.en ?? 100;
     TW.wallet.watch(UID, v => { if (v != null) { wallet = v; hudKey = ''; hud(); } });
     if (window.TW) await TW.ready;
-    // spēle vēl nav atvērta visiem – pagaidām tikai admini/moderatori var testēt
-    if (window.TW && !TW.isStaff(UID)) { resize(); pickKids(); requestAnimationFrame(frame); sheet(`<h2>🏫 Skola</h2><p>Drīzumā! Spēle vēl top. 🔒</p><a class="main" style="display:block;text-align:center;text-decoration:none" href="../index.html">← Uz sākumlapu</a>`); return; }
     if (window.TW) TW.heartbeat(UID, () => ({ game: 'Skola', where: L && L.st !== 'end' ? `Stundā (${L.n + 1}/${QN})` : `Līm. ${levelOf(save.xp).l}`, name: NAME, nick: NICK, lv: levelOf(save.xp).l }));
     db.ref('kicks/' + UID).on('value', s => { const k = s.val(); if (k && k.until > TW.now()) { alert('Tevi uz laiku izmeta no spēles. Spēlē draudzīgi! 🙂'); location.href = '../index.html'; } }, () => {});
     if (window.TWA && TWA.load) TWA.load(UID).catch(() => {});
