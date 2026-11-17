@@ -153,7 +153,7 @@ const HOODS=['#e53935','#1e88e5','#43a047','#fdd835','#ec407a','#fb8c00','#8e24a
 const npcs=Array.from({length:150},()=>({bg:(Math.random()*16)|0,x:rnd(200,WORLD_W-200),y:rnd(574,604),dir:Math.random()<.5?-1:1,t:rnd(1,4),pause:0,speed:rnd(35,75),
   hood:HOODS[(Math.random()*HOODS.length)|0],skin:SKINS[(Math.random()*SKINS.length)|0],cap:['#222','#444','#6d4c41','#37474f'][(Math.random()*4)|0],
   pants:['#2b3a67','#3e2723','#212121','#455a64'][(Math.random()*4)|0],step:rnd(0,6),face:'side',flip:1,bubble:null,bt:0,snitch:Math.random()<.35,watch:0,called:false,callT:0,seen:false}));
-const TRAFFIC_M=[['kk:car_sedan',165],['kk:car_taxi',165],['kk:car_hatchback',150],['kk:car_stationwagon',168],['kk:car_sedan',165],['kk:car_taxi',165],['van',175],['suv',170],['truck',180],['delivery',195],['garbage-truck',205]]; // KayKit + Kenney kravas (KayKit tādu nav)
+const TRAFFIC_M=[['kk:car_sedan',165],['kk:car_sedan_red',165],['kk:car_sedan_yel',165],['kk:car_taxi',165],['kk:car_hatchback',150],['kk:car_stationwagon',170]]; // visas KayKit (sarkanā/dzeltenā – pārkrāsots sedans)
 const traffic=Array.from({length:30},(_,i)=>{ const left=i%2===0, tm=TRAFFIC_M[(Math.random()*TRAFFIC_M.length)|0]; return {x:rnd(0,WORLD_W),dir:left?-1:1,y:left?662:700,speed:rnd(150,260),L:i%6===3?168:tm[1],model:i%6===3?'kk:car_police':tm[0],spin:0,
   color:['#ef5350','#42a5f5','#66bb6a','#ffee58','#ab47bc','#eceff1','#ff7043'][(Math.random()*7)|0],cop:i%6===3}; }); // katra 6. mašīna – policijas patrulis
 
@@ -395,22 +395,33 @@ function drawSprite(g,x,y,s,o){
 // mašīna no sāniem; L – garums ekrānā, y – riteņu pieskāriens
 // ---- KayKit (CC0, Kay Lousberg) pilsētas elementi – viens atlants sprites/kk/atlas.webp (iecepts no 3D, 2× izšķirtspēja) ----
 // up_X – mājas X augšējais stāvs ar jumta malu, awn_X – markīze no mājas X pirmā stāva, rekvizīti, koki, mašīnas (sānskats, skatās pa labi)
-const KK={ok:false,R:{"tree1":[4,4,318,416],"streetlight":[326,4,116,413],"tree3":[446,4,309,351],"up_B":[759,4,611,327],"up_C":[4,424,459,327],"up_D":[467,424,611,327],"up_E":[4,755,763,327],"up_F":[771,755,763,327],"up_G":[4,1086,763,327],"up_H":[771,1086,763,327],"door":[4,1417,160,280],"car_taxi":[168,1417,469,217],"car_police":[641,1417,469,206],"car_sedan":[4,1701,469,184],"car_hatchback":[477,1701,403,184],"car_stationwagon":[884,1701,469,184],"bush":[1357,1701,72,145],"dumpster":[4,1889,206,115],"crate":[214,1889,216,86],"firehydrant":[434,1889,51,85],"crate_buns":[489,1889,180,72],"awn_E":[673,1889,763,54],"awn_H":[4,2008,305,54],"awn_A":[313,2008,459,54],"awn_G":[776,2008,456,54],"bench":[1236,2008,152,38]}};
-(()=>{ const i=new Image(); i.onload=()=>{ KK.img=i; KK.ok=true; lots.forEach(l=>{ l.img=null; }); }; i.src='sprites/kk/atlas.webp?v=2'; })(); // ielādējas – mājas pārzīmē KayKit stilā
+const KK={ok:false,R:{"tree1":[4,4,318,416],"streetlight":[326,4,116,413],"bld_H":[446,4,241,354],"tree3":[691,4,309,351],"up_B":[1004,4,611,327],"up_C":[4,424,459,327],"up_D":[467,424,611,327],"up_E":[4,755,763,327],"up_F":[771,755,763,327],"up_G":[4,1086,763,327],"up_H":[771,1086,763,327],"bld_C":[4,1417,145,270],"bld_D":[153,1417,193,270],"bld_E":[350,1417,241,270],"bld_F":[595,1417,241,270],"bld_G":[840,1417,241,270],"car_taxi":[1085,1417,470,232],"car_police":[4,1691,470,228],"car_sedan":[478,1691,471,210],"car_sedan_red":[953,1691,471,210],"car_sedan_yel":[4,1923,471,210],"car_stationwagon":[479,1923,471,210],"car_hatchback":[954,1923,404,209],"door_b":[1362,1923,98,204],"bld_B":[4,2137,193,186],"watertower":[201,2137,120,161],"shopwin":[325,2137,249,160],"bush":[578,2137,72,145],"dumpster":[654,2137,206,115],"crate":[864,2137,216,86],"firehydrant":[1084,2137,51,85],"crate_buns":[1139,2137,180,72],"awn_E":[4,2327,763,54],"awn_H":[771,2327,305,54],"awn_A":[1080,2327,459,54],"awn_G":[4,2385,456,54],"bench":[464,2385,152,38]}};
+(()=>{ const i=new Image(); i.onload=()=>{ KK.img=i; KK.ok=true; lots.forEach(l=>{ l.img=null; }); FAR=null; }; i.src='sprites/kk/atlas.webp?v=4'; })(); // ielādējas – mājas pārzīmē KayKit stilā
 const LAMPO=()=>KK.ok?6:0; // KayKit laternas galva ~6 px tālāk pa labi – gaismas konuss tai līdzi
 function kkDraw(g,n,x,y,w,h,flip){ const r=KK.R[n]; if(flip){ g.save(); g.translate(x+w,y); g.scale(-1,1); g.drawImage(KK.img,r[0],r[1],r[2],r[3],0,0,w,h); g.restore(); } else g.drawImage(KK.img,r[0],r[1],r[2],r[3],x,y,w,h); }
 // fasāde: KayKit māju augšējie stāvi blakus, aizpilda platumu w starp y0 un y1 (lokāli)
-function kkFacade(g,w,seed,y0,y1){ const R=mulberry(seed+5), set='BCDEFGH', h=y1-y0; let x=-R()*140; while(x<w){ const n='up_'+set[(R()*set.length)|0], r=KK.R[n], ww=r[2]*h/r[3]; kkDraw(g,n,x,y0,ww,h); x+=ww; } }
+function kkFacade(g,w,seed,y0,y1,towers){ const R=mulberry(seed+5), set='BCDEFGH', h=y1-y0, segs=[]; let x=-R()*140; while(x<w){ const n='up_'+set[(R()*set.length)|0], r=KK.R[n], ww=r[2]*h/r[3]; kkDraw(g,n,x,y0,ww,h); segs.push({n,x,w:ww}); x+=ww; }
+  if(towers) segs.forEach(sg=>{ if(R()<.45){ const tx=clamp(sg.x+sg.w*(.25+R()*.5),20,w-56); kkDraw(g,'watertower',tx,y0-46,36,48); } }); // ūdenstornis uz jumta
+  return segs; }
+// pirmais stāvs tajā pašā krāsā kā māja virs tā: no katras mājas augšējā stāva sienas joslas (rindas 40–75, bez logiem) izstiepts līdz zemei + ēnojums + cokols
+function kkGround(g,segs,w,y0,y1){ segs.forEach(sg=>{ const r=KK.R[sg.n]; g.drawImage(KK.img,r[0],r[1]+40,r[2],35,sg.x,y0,sg.w,y1-y0); });
+  const sh=g.createLinearGradient(0,y0,0,y1); sh.addColorStop(0,'rgba(0,0,0,.12)'); sh.addColorStop(.12,'rgba(0,0,0,0)'); sh.addColorStop(1,'rgba(10,10,40,.18)'); g.fillStyle=sh; g.fillRect(0,y0,w,y1-y0);
+  const pl=g.createLinearGradient(0,y1-16,0,y1); pl.addColorStop(0,'#b9bdc6'); pl.addColorStop(1,'#8e939e'); g.fillStyle=pl; g.fillRect(0,y1-16,w,16); g.fillStyle='rgba(255,255,255,.35)'; g.fillRect(0,y1-16,w,2);
+  g.save(); g.globalCompositeOperation='saturation'; g.fillStyle='rgba(128,128,128,.62)'; g.fillRect(0,0,w,y1); g.globalCompositeOperation='source-atop'; g.fillStyle='rgba(22,18,48,.36)'; g.fillRect(0,0,w,y1); g.restore(); } // tumšāka tēma (fasāde + pirmais stāvs)
+// 9 daļu mērogošana (rāmis paliek tikpat biezs): KayKit skatloga rāmis jebkurā izmērā
+function kk9(g,n,x,y,w,h,L,T,Rb,Bb){ const r=KK.R[n], sx=[0,L,r[2]-Rb,r[2]], sy=[0,T,r[3]-Bb,r[3]], dx=[x,x+L/2,x+w-Rb/2,x+w], dy=[y,y+T/2,y+h-Bb/2,y+h];
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++){ if(i===1&&j===1) continue; g.drawImage(KK.img,r[0]+sx[i],r[1]+sy[j],sx[i+1]-sx[i],sy[j+1]-sy[j],dx[i],dy[j],dx[i+1]-dx[i],dy[j+1]-dy[j]); } }
 // markīze no KayKit mājas pirmā stāva, izstiepta platumā (kafejnīca – sarkana, picērija – oranža, krāsu depo – tirkīza, pārējie – zila)
 const KK_AWN={cafe:'awn_E',pizza:'awn_H',paint:'awn_A'};
 function kkAwning(g,kind,x,y,w,h){ kkDraw(g,KK_AWN[kind]||'awn_G',x,y,w,h); }
-const KK_CAR={'kk:car_sedan':'sedan','kk:car_taxi':'taxi','kk:car_hatchback':'hatchback-sports','kk:car_stationwagon':'suv','kk:car_police':'police'}; // ja atlants nav ielādēts
-const CAR_MODEL={hatch:'kk:car_hatchback',sport:'sedan-sports',super:'race-future'};
-function drawKKCar(g,x,y,dir,L,o){ const r=KK.R[o.model.slice(3)], w=L, h=L*r[3]/r[2];
-  g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(x,y+2,L*.52,6,0,0,7); g.fill();
-  g.save(); g.imageSmoothingQuality='high'; g.translate(x,y); g.scale(dir,1); g.drawImage(KK.img,r[0],r[1],r[2],r[3],-w/2,-h,w,h);
-  if(o.lights!==false){ g.globalCompositeOperation='lighter'; g.fillStyle='#fff1b555'; g.shadowColor='#ffe28a'; g.shadowBlur=18; g.fillRect(L*.44,-h*.55,L*.05,h*.16); g.fillStyle='#ff303055'; g.shadowColor='#f00'; g.fillRect(-L*.5,-h*.55,L*.03,h*.16); }
-  if(o.siren!=null){ const on=Math.sin(o.siren)>0; g.globalCompositeOperation='lighter'; g.shadowBlur=22; g.shadowColor=g.fillStyle=on?'#ff1744':'#2979ff'; g.beginPath(); g.arc(on?-L*.03:L*.03,-h*.93,L*.05,0,7); g.fill(); }
+const KK_CAR={'kk:car_sedan':'sedan','kk:car_sedan_red':'sedan-sports','kk:car_sedan_yel':'race-future','kk:car_taxi':'taxi','kk:car_hatchback':'hatchback-sports','kk:car_stationwagon':'suv','kk:car_police':'police'}; // ja atlants nav ielādēts
+const CAR_MODEL={hatch:'kk:car_hatchback',sport:'kk:car_sedan_red',super:'kk:car_sedan_yel'};
+// KayKit mašīna sānskatā (kamera nedaudz no augšas – redzams jumts, bez pagrieziena; skatās pa labi); L – garums ekrānā, y – riteņu pieskāriens
+function drawKKCar(g,x,y,dir,L,o){ const r=KK.R[o.model.slice(3)], w=L*1.02, h=w*r[3]/r[2];
+  g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(x,y+1,L*.53,6,0,0,7); g.fill();
+  g.save(); g.imageSmoothingQuality='high'; g.translate(x,y); g.scale(dir,1); g.drawImage(KK.img,r[0],r[1],r[2],r[3],-w/2,-h+3,w,h);
+  if(o.lights!==false){ g.globalCompositeOperation='lighter'; g.fillStyle='#fff1b555'; g.shadowColor='#ffe28a'; g.shadowBlur=18; g.fillRect(w*.44,-h*.42,w*.05,h*.14); g.fillStyle='#ff303055'; g.shadowColor='#f00'; g.fillRect(-w*.5,-h*.48,w*.03,h*.13); }
+  if(o.siren!=null){ const on=Math.sin(o.siren)>0; g.globalCompositeOperation='lighter'; g.shadowBlur=22; g.shadowColor=g.fillStyle=on?'#ff1744':'#2979ff'; g.beginPath(); g.arc(-w*.07,-h*.9,L*.05,0,7); g.fill(); }
   g.restore(); }
 function drawCarSprite(g,x,y,dir,L,o){ const ci=Math.max(0,SPR.cars.indexOf(o.model)), w=L/.962, h=w*SPR.ch/SPR.cw;
   g.save(); g.imageSmoothingQuality='high'; g.translate(x,y); g.fillStyle='rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(0,2,L*.52,6,0,0,7); g.fill(); g.scale(dir,1);
@@ -449,6 +460,7 @@ const playerOutfit=()=>{ const c=colorById(save.color).hex, L=lookOf(); return {
 const mkCanvas=(w,h)=>{ const c=document.createElement('canvas'); c.width=w*2; c.height=h*2; const g=c.getContext('2d'); g.scale(2,2); return {c,g}; };
 const SKY_W=1800;
 function makeSkyline(seed,minH,maxH,fill,winCols,neon){
+  if(KK.ok) return kkSkyline(seed,minH,maxH,fill,neon);
   // tālās mājas KayKit stilā: plakans jumts ar malu, dažiem ūdenstornis, regulāras logu rindas ar palodzēm
   const {c,g}=mkCanvas(SKY_W,BASE), R=mulberry(seed); let x=-20;
   while(x<SKY_W){ const w=70+R()*110, h=minH+R()*(maxH-minH), top=BASE-h;
@@ -461,6 +473,13 @@ function makeSkyline(seed,minH,maxH,fill,winCols,neon){
     x+=w+(R()<.3?14:0); }
   return c;
 }
+// fona pilsēta: īstas KayKit mājas (bld_X) dažādos augstumos, iekrāsotas slāņa krāsā (tālāk – tumšāk/zilgani)
+function kkSkyline(seed,minH,maxH,fill,neon){ const {c,g}=mkCanvas(SKY_W,BASE), R=mulberry(seed), set='BCDEFGH'; let x=-30;
+  while(x<SKY_W){ const n='bld_'+set[(R()*set.length)|0], r=KK.R[n], h=minH+110+R()*(maxH-minH)*1.25, w=r[2]*h/r[3]; /* augstākas – redzamas virs ielas jumtiem */ kkDraw(g,n,x,BASE-h,w,h); x+=w+(R()<.25?10+R()*20:-4); }
+  g.globalCompositeOperation='saturation'; g.fillStyle='rgba(128,128,128,.7)'; g.fillRect(0,0,SKY_W,BASE);
+  g.globalCompositeOperation='source-atop'; g.fillStyle=fill; g.globalAlpha=neon?.62:.74; g.fillRect(0,0,SKY_W,BASE); g.globalAlpha=1; g.globalCompositeOperation='source-over';
+  if(neon){ for(let i=0;i<18;i++){ const col=['#ff4fd8','#4dd0e1','#ffb347','#b2ff59'][(R()*4)|0]; g.save(); g.shadowColor=col; g.shadowBlur=14; g.fillStyle=col; g.globalAlpha=.8; g.fillRect(R()*SKY_W,BASE-80-R()*200,4,40+R()*60); g.restore(); } }
+  return c; }
 let FAR=null, MID=null, STARS=[], FGimg=null, camRoll=0;
 function makeForeground(){ const {c,g}=mkCanvas(SKY_W,720), R=mulberry(77); g.filter='blur(3px)'; g.fillStyle='rgba(6,8,18,.9)';
   for(let x=0;x<SKY_W;x+=140+R()*170){ const h=36+R()*70; g.beginPath(); g.ellipse(x,730,50+R()*50,h,0,Math.PI,0); g.fill(); }
@@ -502,7 +521,36 @@ function windowItems(g,kind,x,y,w,h){
   else if(kind==='barber'){ rr(g,x+30,y+h-50,40,10,4,'#d32f2f'); rr(g,x+34,y+h-40,6,40,2,'#bbb'); rr(g,x+w-110,y+h-60,50,20,6,'#2b2b33'); rr(g,x+w-100,y+h-40,10,40,3,'#999'); g.fillStyle='#fff'; g.fillRect(x+w-70,y+18,36,52); g.fillStyle='#8ee3ff44'; g.fillRect(x+w-66,y+22,28,44); }
   g.restore();
 }
+// ---- KayKit māju gabali: augšējais stāvs + tā paša krāsā pirmais stāvs; zīmēšanas panelis, durvis, skatlogi, slēptuves – tajās pašās vietās ----
+function renderWallLotKK(l){ const w=l.w, {c,g}=mkCanvas(w,LH), B=LH-10, T=62;
+  const segs=kkFacade(g,w,l.seed,T-14,212,true); kkGround(g,segs,w,210,B);
+  const px=(w-PANEL.w)/2, py=PANEL.y-LY0;
+  g.fillStyle='#0005'; g.fillRect(px-12,py-12,PANEL.w+24,PANEL.h+24);
+  g.drawImage(bgBrick,0,0,720,440,px,py,PANEL.w,PANEL.h);
+  g.strokeStyle='#f4f4f6'; g.lineWidth=9; g.strokeRect(px-4.5,py-4.5,PANEL.w+9,PANEL.h+9); g.strokeStyle='rgba(0,0,30,.25)'; g.lineWidth=2; g.strokeRect(px-9.5,py-9.5,PANEL.w+19,PANEL.h+19);
+  [px+60,px+PANEL.w-60].forEach(x=>{ g.fillStyle='#3a3f4a'; g.fillRect(x-2,py-30,4,18); rr(g,x-10,py-38,20,10,3,'#4a505c'); g.fillStyle='#fff7d6'; g.fillRect(x-8,py-30,16,3); });
+  rr(g,w/2-52,py-64,104,22,6,'#2a2f3a'); g.fillStyle=l.free?'#ff4fd8':l.rep?'#5ad1ff':TIER_COL[l.tier]; g.font='bold 13px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(l.free?'FREESTYLE':l.rep?'REPEAT ME':'LEVEL '+(l.tier+1),w/2,py-53);
+  if(l.hide) kkDraw(g,'dumpster',12,B-58,104,58);
+  l.img=c; }
+function renderShopLotKK(l){ const w=l.w, {c,g}=mkCanvas(w,LH), R=mulberry(l.seed), info=l.info, B=LH-10, T=62;
+  const segs=kkFacade(g,w,l.seed,T-14,210,true); kkGround(g,segs,w,208,B);
+  // izkārtne: gaišs KayKit dēlis ar veikala krāsas malu
+  const sx=40, sy=212, sw_=w-240; g.save(); g.shadowColor='rgba(0,0,0,.35)'; g.shadowBlur=6; g.shadowOffsetY=3; rr(g,sx,sy,sw_,52,12,'#fbf7ee'); g.restore();
+  g.strokeStyle=info.neon; g.lineWidth=5; g.beginPath(); g.roundRect(sx+3,sy+3,sw_-6,46,10); g.stroke();
+  g.font='900 32px system-ui, sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='#2b2836'; g.fillText(info.name,sx+sw_/2,sy+27);
+  l.sign={x:sx,y:sy+LY0,w:sw_,h:52};
+  const ax=30, aw=w-200, ay=276, ah=36; kkAwning(g,l.kind,ax-4,ay,aw+8,ah+10);
+  const wx=ax+14, wy=326, ww=aw-28, wh=108;
+  const wg=g.createLinearGradient(0,wy,0,wy+wh); wg.addColorStop(0,'#bfa984'); wg.addColorStop(1,'#8c6c4c'); g.fillStyle=wg; g.fillRect(wx-2,wy-2,ww+4,wh+4);
+  windowItems(g,l.kind,wx,wy,ww,wh); g.fillStyle='rgba(30,24,50,.22)'; g.fillRect(wx-2,wy-2,ww+4,wh+4); // mazāk gaiša vitrīna
+  g.fillStyle='rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(wx+30,wy); g.lineTo(wx+90,wy); g.lineTo(wx+40,wy+wh); g.lineTo(wx-20,wy+wh); g.closePath(); g.fill();
+  kk9(g,'shopwin',wx-11,wy-11,ww+22,wh+24,24,22,24,32);
+  l.window={x:wx+ww/2,y:wy+wh/2+LY0};
+  const dx=w-160, dy=326; kkDraw(g,'door_b',dx-6,dy-8,80,B-dy+8);
+  if(R()<.7) kkDraw(g,'firehydrant',w-58,B-42,25,42); if(R()<.8) kkDraw(g,'bush',6,B-72,36,72); if(R()<.6) kkDraw(g,'bench',ax+aw/2-38,B-19,76,19);
+  l.img=c; }
 function renderShopLot(l){
+  if(KK.ok) return renderShopLotKK(l);
   const w=l.w, {c,g}=mkCanvas(w,LH), R=mulberry(l.seed), info=l.info, B=LH-10; // B = ietves mala lokāli
   const T=62;
   // korpuss
@@ -550,6 +598,7 @@ function renderShopLot(l){
   l.img=c;
 }
 function renderWallLot(l){
+  if(KK.ok) return renderWallLotKK(l);
   const w=l.w, {c,g}=mkCanvas(w,LH), R=mulberry(l.seed), B=LH-10, T=62;
   const upper=['#3f5a73','#7a5a2e','#4c4a6e','#6b3f4a'][(l.i/2|0)%4];
   // augšējā apmetuma daļa
@@ -918,13 +967,15 @@ function render(){
       ctx.fillStyle=c.hex; ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x-74,y,8,0,7); ctx.fill(); ctx.stroke();
       ctx.font='bold 14px system-ui'; ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(own?`Paint: ${c.name}`:`🛒 Buy: ${c.name}`,x+10,y+1); ctx.restore(); } });
   // ietve
-  const sw=ctx.createLinearGradient(0,BASE,0,612); sw.addColorStop(0,'#3d3f4c'); sw.addColorStop(1,'#2b2d38'); ctx.fillStyle=sw; ctx.fillRect(vx0-60,BASE,vx1-vx0+120,52);
+  const KP=KK.ok?{s0:'#6c707d',s1:'#5a5e6b',seam:'rgba(20,20,40,.25)',c0:'#9095a2',c1:'#4f5360',r0:'#33363f',r1:'#24262e',f0:'#5d616e',f1:'#4b4f5b',f2:'#16171e'}:{s0:'#3d3f4c',s1:'#2b2d38',seam:'rgba(255,255,255,.07)',c0:'#7b7e8d',c1:'#4a4c58',r0:'#24252e',r1:'#12131a',f0:'#33353f',f1:'#2a2c35',f2:'#0b0c12'}; // KayKit ietve/ceļš
+  const sw=ctx.createLinearGradient(0,BASE,0,612); sw.addColorStop(0,KP.s0); sw.addColorStop(1,KP.s1); ctx.fillStyle=sw; ctx.fillRect(vx0-60,BASE,vx1-vx0+120,52);
   ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(vx0-60,BASE,vx1-vx0+120,6);
-  ctx.strokeStyle='rgba(255,255,255,.07)'; ctx.lineWidth=2; for(let x=Math.floor(vx0/110)*110;x<vx1+110;x+=110){ ctx.beginPath(); ctx.moveTo(x,BASE+6); ctx.lineTo(x-8,612); ctx.stroke(); }
+  ctx.strokeStyle=KP.seam; ctx.lineWidth=2; for(let x=Math.floor(vx0/110)*110;x<vx1+110;x+=110){ ctx.beginPath(); ctx.moveTo(x,BASE+6); ctx.lineTo(x-8,612); ctx.stroke(); }
   ctx.beginPath(); ctx.moveTo(vx0-60,586); ctx.lineTo(vx1+60,586); ctx.stroke();
-  ctx.fillStyle='#7b7e8d'; ctx.fillRect(vx0-60,612,vx1-vx0+120,5); ctx.fillStyle='#4a4c58'; ctx.fillRect(vx0-60,617,vx1-vx0+120,8);
-  const rd=ctx.createLinearGradient(0,625,0,740); rd.addColorStop(0,'#24252e'); rd.addColorStop(1,'#12131a'); ctx.fillStyle=rd; ctx.fillRect(vx0-60,625,vx1-vx0+120,140);
-  { ctx.fillStyle='#4a4c58'; ctx.fillRect(vx0-60,765,vx1-vx0+120,7); ctx.fillStyle='#7b7e8d'; ctx.fillRect(vx0-60,772,vx1-vx0+120,4); const fs=ctx.createLinearGradient(0,776,0,1400); fs.addColorStop(0,'#33353f'); fs.addColorStop(.12,'#2a2c35'); fs.addColorStop(1,'#0b0c12'); ctx.fillStyle=fs; ctx.fillRect(vx0-60,776,vx1-vx0+120,700);
+  ctx.fillStyle=KP.c0; ctx.fillRect(vx0-60,612,vx1-vx0+120,5); ctx.fillStyle=KP.c1; ctx.fillRect(vx0-60,617,vx1-vx0+120,8);
+  const rd=ctx.createLinearGradient(0,625,0,740); rd.addColorStop(0,KP.r0); rd.addColorStop(1,KP.r1); ctx.fillStyle=rd; ctx.fillRect(vx0-60,625,vx1-vx0+120,140);
+  if(KK.ok){ ctx.fillStyle='#f2b134'; ctx.fillRect(vx0-60,632,vx1-vx0+120,3); ctx.fillRect(vx0-60,756,vx1-vx0+120,3); } // KayKit dzeltenās malu līnijas
+  { ctx.fillStyle=KP.c1; ctx.fillRect(vx0-60,765,vx1-vx0+120,7); ctx.fillStyle=KP.c0; ctx.fillRect(vx0-60,772,vx1-vx0+120,4); const fs=ctx.createLinearGradient(0,776,0,1400); fs.addColorStop(0,KP.f0); fs.addColorStop(.12,KP.f1); fs.addColorStop(1,KP.f2); ctx.fillStyle=fs; ctx.fillRect(vx0-60,776,vx1-vx0+120,700);
     ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=2; for(let x=Math.floor(vx0/110)*110;x<vx1+110;x+=110){ ctx.beginPath(); ctx.moveTo(x,776); ctx.lineTo(x+10,840); ctx.stroke(); } }
   ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=4; ctx.setLineDash([70,56]); ctx.beginPath(); ctx.moveTo(Math.floor((vx0-60)/126)*126,681); // svītras piesaistītas pasaulei, nevis kamerai
   ctx.lineTo(vx1+60,681); ctx.stroke(); ctx.setLineDash([]);
@@ -988,6 +1039,9 @@ function render(){
   if(mode!=='draw'&&!hidden) list.push({y:GROUND,fn:drawPlayer});
   police.offs.forEach(o=>list.push({y:o.y,fn:()=>drawOfficer(o)}));
   if(NET.on&&!inMetro) Object.values(NET.others).forEach(o=>{ if(o.hid) return; o.dx+=(o.x-o.dx)*.08; const mv=Math.abs(o.x-o.dx)>3; if(mv) o.step+=.25; if(o.dx<vx0-80||o.dx>vx1+80) return; list.push({y:GROUND-2,fn:()=>drawOther(o,mv)}); });
+  // fokuss uz spēlētāju: mīksta gaismas aura uz sienas un ietves aiz tēla (galvenais tēls izceļas no mierīgākā fona)
+  if(KK.ok&&!inMetro&&mode!=='draw'&&!hidden){ const fx_=player.x, fy_=GROUND-player.h-50, g_=ctx.createRadialGradient(fx_,fy_,10,fx_,fy_,150); g_.addColorStop(0,'rgba(255,236,190,.26)'); g_.addColorStop(.5,'rgba(255,236,190,.1)'); g_.addColorStop(1,'rgba(255,236,190,0)');
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.fillStyle=g_; ctx.fillRect(fx_-150,fy_-150,300,300); ctx.restore(); }
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.fn());
   if(mode!=='draw'&&!hidden&&save.food<25&&!(NET.on&&chatBubble(NET.uid))) drawHunger(player.x+22,GROUND-player.h-78);
   drawGuideArrow();
@@ -1010,7 +1064,7 @@ function render(){
   const hole=(x,y,r,a=1)=>{ const sx=SX(x), sy=SY(y), R=r*Zs; if(sx<-R||sx>W+R||sy<-R||sy>H+R) return; const g=lg.createRadialGradient(sx,sy,0,sx,sy,R); g.addColorStop(0,`rgba(0,0,0,${a})`); g.addColorStop(1,'rgba(0,0,0,0)'); lg.fillStyle=g; lg.fillRect(sx-R,sy-R,R*2,R*2); };
   lampXs.forEach(x=>hole(x+30+LAMPO(),BASE-150,300,.95));
   if(inMetro){ for(let x=M0;x<=M1;x+=300) hole(x,BASE-140,330,.98); }
-  lots.forEach(l=>{ if(l.window) hole(l.x+l.window.x,l.window.y,230,.8); });
+  lots.forEach(l=>{ if(l.window) hole(l.x+l.window.x,l.window.y,KK.ok?170:230,KK.ok?.55:.8); });
   walls.forEach(w=>{ hole(w.px+PANEL.w/2,w.py+PANEL.h/2+10,w.art?260:200,w.art?.85:.55); });
   if(mode!=='draw') hole(player.x,GROUND-40,190,.8);
   traffic.forEach(c=>hole(c.x+c.dir*c.L*.8,c.y-24,170,.8));
@@ -1023,7 +1077,7 @@ function render(){
   lots.forEach(l=>{ if(l.kind==='wall'){ if(l.art){ const n=hexN(l.glow); glow(l.px+PANEL.w/2,l.py+PANEL.h/2,300,`rgba(${n[0]},${n[1]},${n[2]},A)`,(.2+.05*Math.sin(time*3+l.x))*(.5+.5*nt)); } return; }
     if(!l.sign) return; const n=hexN(l.info.neon), fl=.8+.2*Math.sin(time*7+l.i*3)*(Math.sin(time*.9+l.i)>.92?-1:1);
     glow(l.x+l.sign.x+l.sign.w/2,l.sign.y+26,Math.max(l.sign.w*.7,160),`rgba(${n[0]},${n[1]},${n[2]},A)`,.17*fl*(.35+.65*nt));
-    glow(l.x+l.window.x,l.window.y,240,'rgba(255,190,110,A)',.16*(.3+.7*nt)); });
+    glow(l.x+l.window.x,l.window.y,240,'rgba(255,190,110,A)',(KK.ok?.07:.16)*(.3+.7*nt)); });
   [police.car,...police.extra].forEach(pc=>{ if(!pc) return; const on=Math.sin(pc.siren)>0; glow(pc.x,pc.y-70,340,on?'rgba(255,23,68,A)':'rgba(41,121,255,A)',.5); });
   ctx.globalCompositeOperation='source-over';
   // bloom
@@ -1419,6 +1473,7 @@ function renderMetroLot(l){
   const bg=g.createLinearGradient(0,T,0,B); bg.addColorStop(0,'#2d3648'); bg.addColorStop(1,'#1b212e'); g.fillStyle=bg; g.fillRect(0,T,w,B-T);
   g.strokeStyle='rgba(255,255,255,.05)'; g.lineWidth=1; for(let x=0;x<w;x+=28){ g.beginPath(); g.moveTo(x,T); g.lineTo(x,B); g.stroke(); } for(let y=T;y<B;y+=28){ g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); }
   rr(g,-6,T-14,w+12,18,3,'#1a1f2b'); rr(g,-6,T-14,w+12,4,2,'rgba(255,255,255,.2)');
+  if(KK.ok){ g.clearRect(0,0,w,B); const segs=kkFacade(g,w,l.seed,T-14,210,true); kkGround(g,segs,w,208,B); } // KayKit māja aiz metro zīmēm
   g.save(); g.shadowColor='#5aa8e8'; g.shadowBlur=6; g.fillStyle='#0c1424'; g.beginPath(); g.arc(mx,150,52,0,7); g.fill(); g.strokeStyle='#5aa8e8'; g.lineWidth=7; g.beginPath(); g.arc(mx,150,46,0,7); g.stroke(); g.restore();
   g.fillStyle='#f4f1ea'; g.font='900 64px system-ui'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('M',mx,153);
   rr(g,mx-150,222,300,36,8,'#0c1424'); g.fillStyle='#cfe6ff'; g.font='bold 19px system-ui'; g.fillText(l.ds===0?'CENTRAL STATION':'STATION · '+DIST_NAMES[l.ds*10].toUpperCase(),mx,241);
